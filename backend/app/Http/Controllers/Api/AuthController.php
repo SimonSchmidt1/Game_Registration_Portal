@@ -16,8 +16,10 @@ class AuthController extends Controller
         // 1. Validácia dát
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users', 'regex:/^[0-9]{7}@ucm\.sk$/'],
+            'password' => ['required', 'confirmed', Rules\Password::min(8)->letters()->mixedCase()->numbers()->symbols()],
+        ], [
+            'email.regex' => 'Email musí byť v tvare: 7 číslic@ucm.sk (napr. 1234567@ucm.sk)'
         ]);
 
         // 2. Vytvorenie používateľa
@@ -44,8 +46,10 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $request->validate([
-            'email' => 'required|email',
+            'email' => ['required', 'email', 'regex:/^[0-9]{7}@ucm\.sk$/'],
             'password' => 'required',
+        ], [
+            'email.regex' => 'Email musí byť v tvare: 7 číslic@ucm.sk (napr. 1234567@ucm.sk)'
         ]);
 
         $user = User::where('email', $request->email)->first();

@@ -28,7 +28,7 @@ class TeamController extends Controller
             $team->load('members:id,name');
             // Zistíme, či je používateľ Scrum Master (z pivot tabuľky)
             $pivot = $team->members()->where('user_id', $user->id)->first()?->pivot;
-            $isScrumMaster = $pivot && strtolower($pivot->role_in_team) === 'scrum master';
+            $isScrumMaster = $pivot && $pivot->role_in_team === 'scrum_master';
             return response()->json([
                 'team' => $team,
                 'is_scrum_master' => $isScrumMaster,

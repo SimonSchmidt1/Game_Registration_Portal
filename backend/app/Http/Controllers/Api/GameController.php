@@ -35,16 +35,24 @@ class GameController extends Controller
         // Zistenie tímu, ku ktorému sa má hra priradiť
         $team = Team::findOrFail($request->team_id);
 
-        // --- ZLEPŠENÁ KONTROLA OPRÁVNENIA (Scrum Master) ---
-        // Používame priame overenie v pivotnej tabuľke, či existuje záznam s rolou 'scrum_master'
-        $isScrumMaster = $team->members()
+        // --- KONTROLA OPRÁVNENIA (Scrum Master) ---
+        // Používame DB query pre spoľahlivé overenie role v pivotnej tabuľke
+        $isScrumMaster = \DB::table('team_user')
+            ->where('team_id', $team->id)
             ->where('user_id', $user->id)
-            ->wherePivot('role_in_team', 'scrum_master')
+            ->where('role_in_team', 'scrum_master')
             ->exists();
 
         if (!$isScrumMaster) {
             // Ak zlyhá, vrátime chybu
-            return response()->json(['message' => 'Hru môže pridať iba Scrum Master tímu.'], 403);
+            return response()->json([
+                'message' => 'Hru môže pridať iba Scrum Master tímu.',
+                'debug' => [
+                    'user_id' => $user->id,
+                    'team_id' => $team->id,
+                    'is_scrum_master' => $isScrumMaster
+                ]
+            ], 403);
         }
         // -----------------------------------------------------
 

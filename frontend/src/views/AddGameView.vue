@@ -77,6 +77,7 @@
           </button>
 
           <button
+            type="button"
             :class="['px-4 py-2 rounded-lg border border-gray-700 transition-colors', videoType === 'url' ? 'bg-teal-600 text-white hover:bg-teal-700' : 'bg-gray-700 text-gray-300 hover:bg-gray-600']"
             @click="videoType = 'url'"
           >
@@ -99,6 +100,7 @@
             name="video"
             mode="basic"
             accept="video/*"
+            :maxFileSize="20971520"
             chooseLabel="Vybrať video súbor (max. 20MB)"
             @select="onFileSelect($event, 'trailer')"
             @clear="onFileClear('trailer')"
@@ -121,6 +123,7 @@
                 name="splash_screen"
                 mode="basic"
                 accept="image/*"
+                :maxFileSize="5242880"
                 chooseLabel="Vybrať obrázok"
                 @select="onFileSelect($event, 'splash_screen')"
                 @clear="onFileClear('splash_screen')"
@@ -137,6 +140,7 @@
                 name="source_code"
                 mode="basic"
                 accept=".zip,.rar,.7z"
+                :maxFileSize="52428800"
                 chooseLabel="Vybrať archív"
                 @select="onFileSelect($event, 'source_code')"
                 @clear="onFileClear('source_code')"
@@ -153,6 +157,7 @@
                 name="export"
                 mode="basic"
                 accept=".exe,.apk,.zip"
+                :maxFileSize="52428800"
                 chooseLabel="Vybrať export"
                 @select="onFileSelect($event, 'export')"
                 @clear="onFileClear('export')"
@@ -189,6 +194,7 @@ import FileUpload from 'primevue/fileupload'
 import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
 
+const API_URL = import.meta.env.VITE_API_URL
 const toast = useToast()
 
 // -------------------------
@@ -243,25 +249,22 @@ function onFileClear(type) {
 
 // <-- FUNKCIA PRESUNUTÁ Z TEMPLATU SEM
 async function checkIfTeamHasGame(currentTeamId) {
-    if (!currentTeamId) return; 
+    if (!currentTeamId) return; 
 
-    try {
-      const res = await fetch(`http://127.0.0.1:8000/api/games`, {
-        headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' }
-      });
-      if (res.ok) {
-        const games = await res.json();
-        // Nájde, či akákoľvek hra patrí tomuto tímu
-        teamHasGame.value = Array.isArray(games) && games.some(g => g.team && g.team.id == currentTeamId);
-      }
-    } catch (err) {
-      // fallback: povolí formulár, ale zaloguje chybu
-      console.error("Chyba pri kontrole existujúcej hry:", err);
-      teamHasGame.value = false;
-    }
-}
-
-// -------------------------
+    try {
+      const res = await fetch(`${API_URL}/api/games`, {
+        headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' }
+      });
+      if (res.ok) {
+        const games = await res.json();
+        // Nájde, či akákoľvek hra patrí tomuto tímu
+        teamHasGame.value = Array.isArray(games) && games.some(g => g.team && g.team.id == currentTeamId);
+      }
+    } catch (err) {
+      // fallback: povolí formulár
+      teamHasGame.value = false;
+    }
+}// -------------------------
 // Data Submission
 // -------------------------
 async function loadUserTeamStatus() {
@@ -272,12 +275,10 @@ async function loadUserTeamStatus() {
         return;
     }
 
-    try {
-        const res = await fetch('http://127.0.0.1:8000/api/user/team', { 
-            headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' }
-        });
-        
-        if (res.ok) {
+    try {
+        const res = await fetch(`${API_URL}/api/user/team`, { 
+            headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' }
+        });        if (res.ok) {
             const data = await res.json();
             if (data.team) {
                 teamId.value = data.team.id;
@@ -300,15 +301,20 @@ async function loadUserTeamStatus() {
 
 
 async function submitForm() {
-    // Pridaná kontrola aj na teamHasGame
-    if (!teamId.value || !isScrumMaster.value || teamHasGame.value) {
-        toast.add({ severity: 'error', summary: 'Chyba oprávnenia', detail: 'Nemáte povolenie pridať hru alebo tím už hru pridal.', life: 5000 });
-        return;
-    }
+    console.log('🚀 Submit form started');
+    console.log('📊 teamId:', teamId.value);
+    console.log('📊 isScrumMaster:', isScrumMaster.value);
+    console.log('📊 teamHasGame:', teamHasGame.value);
+    
+    // Pridaná kontrola aj na teamHasGame
+    if (!teamId.value || !isScrumMaster.value || teamHasGame.value) {
+        console.error('❌ Authorization check failed');
+        toast.add({ severity: 'error', summary: 'Chyba oprávnenia', detail: 'Nemáte povolenie pridať hru alebo tím už hru pridal.', life: 5000 });
+        return;
+    }
 
-    loadingSubmit.value = true;
-    
-    let formattedReleaseDate = null;
+    console.log('✅ Authorization checks passed, proceeding with submission');
+    loadingSubmit.value = true;    let formattedReleaseDate = null;
     if (releaseDate.value) {
         const date = new Date(releaseDate.value);
         const year = date.getFullYear();
@@ -333,24 +339,22 @@ async function submitForm() {
     if (files.value.splash_screen.file) {
         formData.append('splash_screen', files.value.splash_screen.file);
     }
-    if (files.value.source_code.file) {
-        formData.append('source_code', files.value.source_code.file);
-    }
-    if (files.value.export.file) {
-        formData.append('export', files.value.export.file);
-    }
+    if (files.value.source_code.file) {
+        formData.append('source_code', files.value.source_code.file);
+    }
+    if (files.value.export.file) {
+        formData.append('export', files.value.export.file);
+    }
 
-    try {
-        const res = await fetch('http://127.0.0.1:8000/api/games', {
-            method: 'POST',
-            headers: { 
-                'Authorization': `Bearer ${token.value}`,
-                'Accept': 'application/json' 
-            },
-            body: formData,
-        });
-
-        const data = await res.json();
+    try {
+        const res = await fetch(`${API_URL}/api/games`, {
+            method: 'POST',
+            headers: { 
+                'Authorization': `Bearer ${token.value}`,
+                'Accept': 'application/json' 
+            },
+            body: formData,
+        });        const data = await res.json();
         
         if (res.ok) {
             toast.add({ severity: 'success', summary: 'Úspech', detail: `Hra "${data.game.title}" bola úspešne zverejnená!`, life: 5000 });
@@ -365,29 +369,28 @@ async function submitForm() {
             description.value = '';
             videoUrl.value = '';
             videoType.value = 'upload';
-            files.value.trailer = { file: null, name: '' };
-            files.value.splash_screen = { file: null, name: '' };
-            files.value.source_code = { file: null, name: '' };
-            files.value.export = { file: null, name: '' }; // <-- OPRAVENÝ PREKLEP TU
-            
-        } else {
-            let errorMessage = data.message || 'Chyba pri nahrávaní hry.';
-            if (data.errors) {
-                const errorMessages = Object.values(data.errors).flat().join('; ');
-                errorMessage += `: ${errorMessages}`;
-            }
-            toast.add({ severity: 'error', summary: 'Chyba nahrávania', detail: errorMessage, life: 8000 });
-            console.error('❌ Chyba pri odosielaní:', data);
-        }
-    } catch (error) {
-        toast.add({ severity: 'fatal', summary: 'Chyba siete', detail: 'Problém s komunikáciou so serverom.', life: 8000 });
-        console.error('❌ Chyba siete:', error);
-    } finally {
-        loadingSubmit.value = false;
-    }
+            files.value.trailer = { file: null, name: '' };
+            files.value.splash_screen = { file: null, name: '' };
+            files.value.source_code = { file: null, name: '' };
+            files.value.export = { file: null, name: '' };
+            
+        } else {
+            let errorMessage = data.message || 'Chyba pri nahrávaní hry.';
+            if (data.errors) {
+                const errorMessages = Object.values(data.errors).flat().join('; ');
+                errorMessage += `: ${errorMessages}`;
+            }
+            console.error('❌ Game submission failed:', errorMessage);
+            console.error('❌ Full error data:', data);
+            toast.add({ severity: 'error', summary: 'Chyba nahrávania', detail: errorMessage, life: 8000 });
+        }
+    } catch (error) {
+        console.error('❌ Network error during game submission:', error);
+        toast.add({ severity: 'fatal', summary: 'Chyba siete', detail: 'Problém s komunikáciou so serverom.', life: 8000 });
+    } finally {
+        loadingSubmit.value = false;
+    }
 }
-
-
 onMounted(() => {
     loadUserTeamStatus();
 })

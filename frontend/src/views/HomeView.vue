@@ -280,7 +280,7 @@ import Tooltip from 'primevue/tooltip';
 
 const vTooltip = Tooltip; 
 
-
+const API_URL = import.meta.env.VITE_API_URL
 const toast = useToast()
 
 // -------------------------
@@ -312,11 +312,9 @@ async function joinTeam() {
     // Očistíme kód pre prípad, že ho používateľ skopíroval s bielymi znakmi
     const cleanCode = joinTeamCode.value.trim() 
     const payload = JSON.stringify({ invite_code: cleanCode });
-    
-    console.log('Odosielam JSON (s invite_code):', payload);
 
     try {
-        const res = await fetch('http://127.0.0.1:8000/api/teams/join', { 
+        const res = await fetch(`${API_URL}/api/teams/join`, { 
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json', 
@@ -357,7 +355,6 @@ async function joinTeam() {
             }
         }
     } catch (err) {
-        console.error('❌ FATÁLNA CHYBA SIETE pri pripájaní k tímu. Server pravdepodobne nie je spustený alebo je nedostupný.', err)
         joinTeamError.value = 'Chyba siete/servera. (Server nedostupný)'
         toast.add({ severity: 'fatal', summary: 'Chyba Siete', detail: 'Server je nedostupný (Connection refused). Overte, či beží na porte 8000.', life: 10000 })
     } finally {
@@ -402,7 +399,7 @@ async function createTeam() {
     formData.append('name', teamName.value);
     formData.append('academic_year_id', academicYear.value);
 
-    const res = await fetch('http://127.0.0.1:8000/api/teams', {
+    const res = await fetch(`${API_URL}/api/teams`, {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' },
       body: formData,
@@ -426,7 +423,6 @@ async function createTeam() {
       toast.add({ severity: 'error', summary: 'Chyba Registrácie', detail: errorMessage, life: 8000 });
     }
   } catch (err) {
-    console.error('❌ FATÁLNA CHYBA SIETE pri vytváraní tímu. Server pravdepodobne nie je spustený alebo je nedostupný.', err);
     teamMessage.value = 'Chyba pri spojení s backendom. Server nedostupný.';
     toast.add({ severity: 'fatal', summary: 'Chyba Pripojenia', detail: 'Server je nedostupný (Connection refused). Overte, či beží na porte 8000.', life: 10000 });
   } finally {
@@ -440,7 +436,6 @@ const copyTeamCode = async (code) => {
     await navigator.clipboard.writeText(code);
     toast.add({ severity: 'info', summary: 'Kód skopírovaný', detail: 'Kód bol skopírovaný do schránky.', life: 3000 });
   } catch (err) {
-    console.error('Chyba pri kopírovaní: ', err);
     toast.add({ severity: 'warn', summary: 'Kopírovanie zlyhalo', detail: 'Nepodarilo sa skopírovať kód. Prosím, skopírujte ho ručne.', life: 3000 });
   }
 }
@@ -472,7 +467,7 @@ const filteredGames = computed(() => {
   )
 })
 const viewGameDetail = (game) => {
-    console.log('Zobrazenie detailu hry:', game.title);
+    // TODO: Implement game detail view
     // Tu by nasledovala logika pre presmerovanie/otvorenie detailu
 }
 
@@ -481,13 +476,13 @@ const viewGameDetail = (game) => {
 // -------------------------
 async function loadAcademicYears() {
     try {
-        const res = await fetch('http://127.0.0.1:8000/api/academic-years', {
+        const res = await fetch(`${API_URL}/api/academic-years`, {
         headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' }
         })
         if (!res.ok) return
         academicYears.value = await res.json()
     } catch (err) {
-        console.error('❌ FATÁLNA CHYBA SIETE pri načítaní akademických rokov. Server pravdepodobne nie je spustený alebo je nedostupný.', err)
+        // Silent fail - academic years are optional for display
     }
 }
 
@@ -496,7 +491,7 @@ async function loadTeamStatus() {
     if (!token.value) return; 
     try {
         // TÁTO ROTA BOLA CHÝBAJÚCA
-        const res = await fetch('http://127.0.0.1:8000/api/user/team', { 
+        const res = await fetch(`${API_URL}/api/user/team`, { 
             headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' }
         })
         
@@ -536,14 +531,13 @@ async function loadTeamStatus() {
 async function loadAllGames() {
     loadingGames.value = true
     try {
-        const res = await fetch('http://127.0.0.1:8000/api/games', {
+        const res = await fetch(`${API_URL}/api/games`, {
             headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' }
         })
 
         if (res.ok) {
             const data = await res.json()
-            games.value = data 
-            console.log('Načítané hry:', games.value)
+            games.value = data
         } else if (res.status === 404) {
             toast.add({ severity: 'error', summary: 'Chyba Načítania Hier (404)', detail: 'Chýba routa GET /api/games. Pridajte ju, prosím, do routes/api.php.', life: 10000 })
         }

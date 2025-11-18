@@ -5,12 +5,22 @@ import LoginView from '../views/LoginView.vue'
 
 const routes = [
   { path: '/', name: 'Home', component: HomeView },
-  { path: '/add', name: 'AddGame', component: AddGameView },
   { path: '/login', name: 'Login', component: LoginView },
+  { path: '/add', name: 'AddGame', component: AddGameView, meta: { requiresAuth: true } },
 ]
 const router = createRouter({
   history: createWebHistory(),
   routes,
+})
+
+router.beforeEach((to, from, next) => {
+  const token = localStorage.getItem('access_token')
+
+  if (to.meta.requiresAuth && !token) {
+    next('/login')
+  } else {
+    next()
+  }
 })
 
 export default router

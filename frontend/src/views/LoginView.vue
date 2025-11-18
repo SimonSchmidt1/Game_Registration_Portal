@@ -4,8 +4,8 @@
 
     <form @submit.prevent="login">
       <div class="mb-4">
-        <label class="block mb-1 font-medium">Používateľské meno</label>
-        <InputText v-model="username" class="w-full" required />
+        <label class="block mb-1 font-medium">Email</label>
+        <InputText v-model="email" class="w-full" required />
       </div>
 
       <div class="mb-6">
@@ -13,27 +13,61 @@
         <InputText v-model="password" type="password" class="w-full" required />
       </div>
 
-      <Button label="Prihlásiť sa" icon="pi pi-sign-in" class="w-full" />
+      <Button type="submit" label="Prihlásiť sa" icon="pi pi-sign-in" class="w-full" />
     </form>
 
-    <p v-if="message" class="text-green-600 mt-4 text-center">{{ message }}</p>
+    <!-- Toast komponent -->
+    <Toast />
   </div>
 </template>
 
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import axios from 'axios'
+import { useToast } from 'primevue/usetoast'
+import InputText from 'primevue/inputtext'
+import Button from 'primevue/button'
+import Toast from 'primevue/toast'
 
 const router = useRouter()
-const username = ref('')
-const password = ref('')
-const message = ref('')
+const toast = useToast()
 
-function login() {
-  if (username.value && password.value) {
-    localStorage.setItem('user', username.value)
-    message.value = 'Prihlásenie úspešné ✅'
+const email = ref('')
+const password = ref('')
+
+async function login() {
+  try {
+    const response = await axios.post('http://127.0.0.1:8000/api/login', {
+      email: email.value,
+      password: password.value
+    })
+
+    localStorage.setItem('access_token', response.data.access_token)
+    localStorage.setItem('user', JSON.stringify(response.data.user))
+
+    // Poslanie eventu pre Navbar
+    window.dispatchEvent(new Event('login'))
+
+    // Toast upozornenie
+    toast.add({ 
+      severity: 'success', 
+      summary: 'Prihlásenie', 
+      detail: 'Prihlásenie úspešné', 
+      life: 3000 
+    })
+
     setTimeout(() => router.push('/'), 1000)
+
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Chyba',
+      detail: error.response?.status === 401
+        ? 'Nesprávny email alebo heslo ❌'
+        : 'Chyba pri prihlásení ❌',
+      life: 3000
+    })
   }
 }
 </script>

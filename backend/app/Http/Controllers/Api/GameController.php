@@ -1,0 +1,115 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use App\Models\Game;
+use App\Models\Team;
+use Illuminate\Support\Facades\Storage; // Pridávame pre prácu so súbormi
+
+class GameController extends Controller
+{
+    /**
+     * Uloží novú hru. Dostupné len pre Scrum Mastera, pokiaľ tím ešte nemá hru.
+     */
+    public function store(Request $request)
+    {
+        // 1. Validácia vstupu
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'release_date' => 'nullable|date',
+            'team_id' => 'required|exists:teams,id',
+            'category' => 'required|string|max:255',
+            
+            'trailer' => 'nullable|file|mimes:mp4,mov,avi|max:20480', // 20MB
+            'trailer_url' => 'nullable|url|max:255',
+            'splash_screen' => 'nullable|image|max:5120', // 5MB
+            'source_code' => 'nullable|file|mimes:zip,rar,7z|max:51200', // 50MB
+            'export' => 'nullable|file|mimes:zip,exe,apk|max:51200', // 50MB
+        ]);
+
+        $user = $request->user();
+        
+        // Zistenie tímu, ku ktorému sa má hra priradiť
+        $team = Team::findOrFail($request->team_id);
+
+        // --- ZLEPŠENÁ KONTROLA OPRÁVNENIA (Scrum Master) ---
+        // Používame priame overenie v pivotnej tabuľke, či existuje záznam s rolou 'scrum_master'
+        $isScrumMaster = $team->members()
+            ->where('user_id', $user->id)
+            ->wherePivot('role_in_team', 'scrum_master')
+            ->exists();
+
+        if (!$isScrumMaster) {
+            // Ak zlyhá, vrátime chybu
+            return response()->json(['message' => 'Hru môže pridať iba Scrum Master tímu.'], 403);
+        }
+        // -----------------------------------------------------
+
+        // 3. Kontrola, či tím už má hru (Tím môže mať len jednu registrovanú hru)
+        if ($team->games()->exists()) {
+            return response()->json(['message' => 'Tím už má pridelenú hru. Na zmenu použite úpravu (edit).'], 422);
+        }
+
+        // 4. Vytvorenie inštancie hry
+        $game = new Game();
+        $game->title = $request->title;
+        $game->description = $request->description;
+        $game->release_date = $request->release_date;
+        $game->team_id = $team->id;
+        // Uistite sa, že academic_year_id je správne, ak ho model Team nemá, musíte ho poslať cez request.
+        // Predpokladáme, že Team ho má.
+        $game->academic_year_id = $team->academic_year_id; 
+        $game->category = $request->input('category');
+
+        // 5. Spracovanie traileru (súbor má prednosť pred URL)
+        if ($request->hasFile('trailer')) {
+            $game->trailer_path = $request->file('trailer')->store('games/trailers', 'public');
+        } elseif ($request->filled('trailer_url')) {
+            $game->trailer_path = $request->input('trailer_url');
+        }
+
+        // 6. Spracovanie ostatných súborov
+        if ($request->hasFile('splash_screen')) {
+            $game->splash_screen_path = $request->file('splash_screen')->store('games/splash_screens', 'public');
+        }
+        if ($request->hasFile('source_code')) {
+            $game->source_code_path = $request->file('source_code')->store('games/source_codes', 'public');
+        }
+        if ($request->hasFile('export')) {
+            $game->export_path = $request->file('export')->store('games/exports', 'public');
+        }
+
+        $game->save();
+
+        return response()->json(['game' => $game], 201);
+    }
+
+    public function index(Request $request)
+    {
+        // Môžete filtrovať, napr. podľa akademického roku, ak je to potrebné pre prehľad.
+        // Zatiaľ len vrátime všetky.
+        $games = Game::with('team.members', 'academicYear')->get();
+
+        return response()->json($games);
+    }
+
+    // 🔹 Získať hry tímu (pre prihláseného člena)
+    public function myGames(Request $request)
+    {
+        $user = $request->user();
+        $team = $user->teams()->first();
+
+        if (!$team) {
+            // Používateľ nie je v tíme, vrátime prázdny zoznam alebo vhodnú správu
+            return response()->json(['games' => [], 'message' => 'Nie si v tíme.'], 200); 
+        }
+
+        // Načítame hru tímu (Tím by mal mať len jednu hru, ale relácia je one-to-many)
+        $games = $team->games()->get();
+
+        return response()->json(['games' => $games], 200);
+    }
+}

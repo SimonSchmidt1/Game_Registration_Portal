@@ -24,6 +24,9 @@ class User extends Authenticatable
         'password',
         'role',
         'team_id',
+        'avatar_path',
+        'verification_token',
+        'failed_login_attempts',
     ];
 
     /**

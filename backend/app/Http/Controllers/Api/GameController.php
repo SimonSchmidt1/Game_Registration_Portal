@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Game;
 use App\Models\Team;
+use App\Models\GameRating;
 use Illuminate\Support\Facades\Storage; // Pridávame pre prácu so súbormi
 
 class GameController extends Controller
@@ -97,11 +98,25 @@ class GameController extends Controller
 
     public function index(Request $request)
     {
-        // Môžete filtrovať, napr. podľa akademického roku, ak je to potrebné pre prehľad.
-        // Zatiaľ len vrátime všetky.
-        $games = Game::with('team.members', 'academicYear')->get();
-
+        $games = Game::with('team.members', 'academicYear')
+            ->get()
+            ->map(function ($game) {
+                // Ensure rating and rating_count reflect current data if ratings exist
+                $game->rating = $game->rating_count > 0 ? (float) $game->rating : 0.0;
+                return $game;
+            });
         return response()->json($games);
+    }
+
+    // 🔹 Jedna konkrétna hra podľa ID
+    public function show(Request $request, $id)
+    {
+        $game = Game::with('team.members','academicYear')->find($id);
+        if (!$game) {
+            return response()->json(['message' => 'Hra nebola nájdená.'], 404);
+        }
+        // rating už cache-ovaný v stĺpci rating, rating_count počty hlasov
+        return response()->json(['game' => $game]);
     }
 
     // 🔹 Získať hry tímu (pre prihláseného člena)
@@ -119,5 +134,80 @@ class GameController extends Controller
         $games = $team->games()->get();
 
         return response()->json(['games' => $games], 200);
+    }
+
+    // 🔹 Zvýšiť počet zobrazení hry
+    public function incrementViews(Request $request, $id)
+    {
+        $game = Game::find($id);
+
+        if (!$game) {
+            return response()->json(['message' => 'Hra nebola nájdená.'], 404);
+        }
+
+        $game->increment('views');
+
+        return response()->json(['views' => $game->views], 200);
+    }
+
+    // 🔹 Ohodnotenie hry používateľom (iba raz)
+    public function rate(Request $request, $id)
+    {
+        $game = Game::find($id);
+        if (!$game) {
+            return response()->json(['message' => 'Hra nebola nájdená.'], 404);
+        }
+
+        $request->validate([
+            'rating' => 'required|integer|min:1|max:5'
+        ]);
+
+        $user = $request->user();
+
+        $alreadyRated = GameRating::where('game_id', $game->id)
+            ->where('user_id', $user->id)
+            ->exists();
+
+        if ($alreadyRated) {
+            return response()->json(['message' => 'Túto hru už nemôžeš znovu hodnotiť.'], 422);
+        }
+
+        GameRating::create([
+            'game_id' => $game->id,
+            'user_id' => $user->id,
+            'rating' => (int) $request->rating
+        ]);
+
+        // Recalculate average and update cached columns
+        $avg = GameRating::where('game_id', $game->id)->avg('rating');
+        $count = GameRating::where('game_id', $game->id)->count();
+        $game->rating = round($avg, 1);
+        $game->rating_count = $count;
+        $game->save();
+
+        return response()->json([
+            'message' => 'Hodnotenie uložené.',
+            'rating' => $game->rating,
+            'rating_count' => $game->rating_count
+        ], 201);
+    }
+
+    // 🔹 Zistenie či používateľ už hodnotil hru
+    public function userRating(Request $request, $id)
+    {
+        $game = Game::find($id);
+        if (!$game) {
+            return response()->json(['message' => 'Hra nebola nájdená.'], 404);
+        }
+        $user = $request->user();
+        $rating = GameRating::where('game_id', $game->id)
+            ->where('user_id', $user->id)
+            ->first();
+        return response()->json([
+            'hasRated' => (bool) $rating,
+            'rating' => $rating?->rating,
+            'average' => $game->rating,
+            'rating_count' => $game->rating_count
+        ]);
     }
 }

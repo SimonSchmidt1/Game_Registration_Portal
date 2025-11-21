@@ -70,12 +70,63 @@ async function login() {
     router.push('/')
 
   } catch (error) {
+    const data = error.response?.data || {}
+    const status = error.response?.status
+
+    // 5+ attempts - account blocked (verified OR unverified after resend period)
+    if (data.too_many_attempts) {
+      toast.add({
+        severity: 'info',
+        summary: 'Obnovte účet',
+        detail: data.message || 'Príliš veľa pokusov. Skontrolujte e‑mail a obnovte účet.',
+        life: 8000
+      })
+      setTimeout(() => router.push('/verify-email?resent=true'), 1600)
+      return
+    }
+
+    // 5th attempt for unverified user - resend + redirect
+    if (data.verification_resent) {
+      // Craft clearer message depending on whether account was previously verified
+      const wasVerified = data.account_verified === true
+      const detail = wasVerified
+        ? 'Z bezpečnostných dôvodov sme vám poslali overovací e‑mail. Ak ste neúspešné pokusy nevykonali vy, dokončite overenie.'
+        : 'Overovací e‑mail bol odoslaný. Skontrolujte schránku a dokončite overenie účtu.'
+      toast.add({
+        severity: 'info',
+        summary: 'Skontrolujte e‑mail',
+        detail: detail,
+        life: 7000
+      })
+      setTimeout(() => router.push('/verify-email?resent=true'), 1600)
+      return
+    }
+
+    // Attempts 1-4 wrong password
+    if (status === 401 && (data.remaining_attempts !== undefined || data.failed_attempts !== undefined || /Zostávajúce pokusy\s*:\s*\d+/.test(data.message || ''))) {
+      let remaining = data.remaining_attempts
+      if (remaining === undefined && data.failed_attempts !== undefined) {
+        const max = data.max_attempts || 5
+        remaining = max - data.failed_attempts
+      }
+      if (remaining === undefined) {
+        const match = (data.message || '').match(/Zostávajúce pokusy\s*:\s*(\d+)/)
+        remaining = match ? parseInt(match[1], 10) : undefined
+      }
+      toast.add({
+        severity: 'warn',
+        summary: 'Nesprávne heslo',
+        detail: data.message || (remaining !== undefined ? `Zostávajúce pokusy: ${remaining}` : 'Nesprávne heslo'),
+        life: 4000
+      })
+      return
+    }
+
+    // Generic fallback
     toast.add({
       severity: 'error',
       summary: 'Chyba',
-      detail: error.response?.status === 401
-        ? 'Nesprávny email alebo heslo ❌'
-        : 'Chyba pri prihlásení ❌',
+      detail: status === 401 ? 'Nesprávny email alebo heslo ❌' : 'Chyba pri prihlásení ❌',
       life: 3000
     })
   }

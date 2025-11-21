@@ -10,13 +10,13 @@ use App\Models\AcademicYear;
 // 🟢 Verejné routy – dostupné bez tokenu
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:register');
+Route::post('/verify-email', [AuthController::class, 'verifyEmail']); // Verifikácia e-mailu
 
 // 🟡 Chránené routy – vyžadujú autentifikáciu
 Route::middleware('auth:sanctum')->group(function () {
     
-    Route::get('/user', function (Request $request) {
-        return $request->user();
-    });
+    Route::get('/user', [AuthController::class, 'user']);
+    Route::post('/user/avatar', [AuthController::class, 'updateAvatar']);
 
     Route::post('/logout', [AuthController::class, 'logout']);
 
@@ -37,6 +37,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/games/my', [GameController::class, 'myGames']);  //Vratenie hier timu
     // Route::get('/user/team', [TeamController::class, 'getUserTeamStatus']);  //zobrazovanie 
     Route::get('/games', [GameController::class, 'index']);  // Získanie všetkých hier
+    Route::get('/games/{id}', [GameController::class, 'show']); // Jedna hra podľa ID
+    Route::post('/games/{id}/views', [GameController::class, 'incrementViews']);  // Zvýšenie počtu zobrazení
+    Route::post('/games/{id}/rate', [GameController::class, 'rate']); // Hodnotenie hry (iba raz)
+    Route::get('/games/{id}/user-rating', [GameController::class, 'userRating']); // Informácia či používateľ hodnotil
 
     // 🔹 Endpoint na získanie akademických rokov
     Route::get('/academic-years', function() {

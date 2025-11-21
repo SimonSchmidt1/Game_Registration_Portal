@@ -12,7 +12,7 @@ use Illuminate\Validation\Rule;
 class TeamController extends Controller
 {
     /**
-     * Vráti informácie o tíme, v ktorom je prihlásený používateľ.
+     * Vráti informácie o všetkých tímoch, v ktorých je prihlásený používateľ.
      * Využíva sa pre frontend endpoint /api/user/team.
      *
      * @param  \Illuminate\Http\Request  $request
@@ -20,21 +20,25 @@ class TeamController extends Controller
      */
     public function getTeamStatus(Request $request)
     {
-        // Kód zostáva rovnaký
         $user = $request->user();
-        $team = $user->teams()->first();
-        if ($team) {
-            // Načítame aj členov, aby bol frontend konzistentný
-            $team->load('members:id,name');
-            // Zistíme, či je používateľ Scrum Master (z pivot tabuľky)
+        $teams = $user->teams()->with(['members:id,name', 'academicYear'])->get();
+        
+        // Pre každý tím zistíme, či je používateľ Scrum Master
+        $teamsWithRole = $teams->map(function ($team) use ($user) {
             $pivot = $team->members()->where('user_id', $user->id)->first()?->pivot;
             $isScrumMaster = $pivot && $pivot->role_in_team === 'scrum_master';
-            return response()->json([
-                'team' => $team,
+            
+            return [
+                'id' => $team->id,
+                'name' => $team->name,
+                'invite_code' => $team->invite_code,
+                'academic_year' => $team->academicYear,
+                'members' => $team->members,
                 'is_scrum_master' => $isScrumMaster,
-            ]);
-        }
-        return response()->json(['team' => null, 'is_scrum_master' => false]);
+            ];
+        });
+        
+        return response()->json(['teams' => $teamsWithRole]);
     }
 
 
@@ -54,12 +58,7 @@ class TeamController extends Controller
 
         $user = $request->user();
 
-        // 1. Kontrola, či už je používateľ v nejakom tíme (v pivot tabuľke)
-        if ($user->teams()->exists()) {
-            return response()->json(['message' => 'Už ste členom tímu.'], 409);
-        }
-
-        // 2. Vytvorenie unikátneho pozývacieho kódu
+        // 1. Vytvorenie unikátneho pozývacieho kódu
         do {
             $inviteCode = \Illuminate\Support\Str::random(6);
         } while (Team::where('invite_code', $inviteCode)->exists());
@@ -100,9 +99,9 @@ class TeamController extends Controller
         $user = $request->user();
         $team = Team::where('invite_code', $request->invite_code)->first();
         
-        // 1. Kontrola, či už je používateľ v nejakom tíme
-        if ($user->teams()->exists()) {
-            return response()->json(['message' => 'Už ste členom tímu.'], 409);
+        // 1. Kontrola, či už je používateľ v tomto konkrétnom tíme
+        if ($user->teams()->where('team_id', $team->id)->exists()) {
+            return response()->json(['message' => 'Už ste členom tohto tímu.'], 409);
         }
 
         // 2. Kontrola limitu členov (MAX 4)

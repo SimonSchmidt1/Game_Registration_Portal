@@ -19,7 +19,16 @@ class Game extends Model
         'splash_screen_path',
         'source_code_path',
         'export_path',
-        'category'
+        'category',
+        'rating',
+        'views',
+        'rating_count'
+    ];
+
+    protected $casts = [
+        'rating' => 'float',
+        'views' => 'integer',
+        'rating_count' => 'integer'
     ];
 
     public function team()
@@ -30,5 +39,10 @@ class Game extends Model
     public function academicYear()
     {
         return $this->belongsTo(AcademicYear::class);
+    }
+
+    public function ratings()
+    {
+        return $this->hasMany(GameRating::class);
     }
 }

@@ -1,0 +1,41 @@
+async function loadUserTeamStatus() {
+    loadingTeam.value = true;
+    if (!token.value) {
+        toast.add({ severity: 'error', summary: 'Chyba', detail: 'Nie ste prihlásený, chýba token!', life: 5000 });
+        loadingTeam.value = false;
+        return;
+    }
+
+    try {
+        const res = await fetch(`${API_URL}/api/user/team`, { 
+            headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' }
+        });        if (res.ok) {
+            const data = await res.json();
+            console.log('📦 Team status response:', data);
+            allTeams.value = data.teams || [];
+            scrumMasterTeams.value = allTeams.value.filter(t => t.is_scrum_master);
+            
+            console.log('👥 All teams:', allTeams.value.map(t => `${t.name} (SM: ${t.is_scrum_master})`));
+            console.log('🔐 Scrum master teams:', scrumMasterTeams.value.map(t => t.name));
+            
+            // Auto-select first scrum master team if available
+            if (scrumMasterTeams.value.length > 0) {
+                selectedTeam.value = scrumMasterTeams.value[0];
+                teamId.value = selectedTeam.value.id;
+                isScrumMaster.value = true;
+                await checkIfTeamHasGame(teamId.value);
+            } else if (allTeams.value.length > 0) {
+                // User is in teams but not scrum master of any
+                teamId.value = null;
+                isScrumMaster.value = false;
+            }
+        } else {
+            const errorData = await res.json();
+            toast.add({ severity: 'warn', summary: 'Upozornenie', detail: errorData.message || 'Chyba pri načítavaní stavu tímu.', life: 5000 });
+        }
+    } catch (err) {
+        toast.add({ severity: 'error', summary: 'Chyba siete', detail: 'Problém s komunikáciou so serverom.', life: 8000 });
+    } finally {
+        loadingTeam.value = false;
+    }
+}

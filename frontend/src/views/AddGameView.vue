@@ -12,10 +12,6 @@
         <i class="pi pi-users text-4xl text-red-400"></i>
         <p class="mt-4 font-semibold text-red-200">Musíte byť členom tímu, aby ste mohli pridávať hry.</p>
     </div>
-    <div v-else-if="teamHasGame" class="text-center p-8 bg-yellow-900/30 rounded-lg border border-yellow-800">
-      <i class="pi pi-exclamation-triangle text-4xl text-yellow-400"></i>
-      <p class="mt-4 font-semibold text-yellow-200">Tím už má pridanú hru. Každý tím môže pridať len jednu hru.</p>
-    </div>
     <div v-else-if="!isScrumMaster" class="text-center p-8 bg-red-900/30 rounded-lg border border-red-800">
       <i class="pi pi-lock text-4xl text-red-400"></i>
       <p class="mt-4 font-semibold text-red-200">Iba Scrum Master (vedúci tímu) môže pridať hru.</p>
@@ -118,7 +114,8 @@
 
           <!-- Splash Screen -->
           <div>
-            <label class="block mb-1 font-medium text-gray-300">Splash Screen / Obal (max. 5MB)</label>
+            <label class="block mb-1 font-medium text-gray-300">Náhľadový obrázok / Video poster (max. 5MB)</label>
+            <p class="text-xs text-gray-400 mb-2">Tento obrázok sa zobrazí ako úvodná obrazovka videa pred prehratím.</p>
             <FileUpload
                 name="splash_screen"
                 mode="basic"
@@ -184,7 +181,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import InputText from 'primevue/inputtext'
 import Dropdown from 'primevue/dropdown'
 import Calendar from 'primevue/calendar'
@@ -195,6 +193,8 @@ import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
 
 const API_URL = import.meta.env.VITE_API_URL
+const router = useRouter()
+const route = useRoute()
 const toast = useToast()
 
 // -------------------------
@@ -227,9 +227,11 @@ const categories = ref([
 // -------------------------
 const token = ref(localStorage.getItem('access_token') || '')
 const teamId = ref(null)
+const allTeams = ref([])
+const scrumMasterTeams = ref([])
 const isScrumMaster = ref(false)
 const loadingTeam = ref(true)
-const teamHasGame = ref(false) // <-- Premenná pre stav, či tím má hru
+// Odstránené obmedzenie na jednu hru na tím – tím môže mať ľubovoľný počet hier.
 
 // -------------------------
 // File Upload Logic
@@ -247,24 +249,7 @@ function onFileClear(type) {
   files.value[type].name = ''
 }
 
-// <-- FUNKCIA PRESUNUTÁ Z TEMPLATU SEM
-async function checkIfTeamHasGame(currentTeamId) {
-    if (!currentTeamId) return; 
-
-    try {
-      const res = await fetch(`${API_URL}/api/games`, {
-        headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' }
-      });
-      if (res.ok) {
-        const games = await res.json();
-        // Nájde, či akákoľvek hra patrí tomuto tímu
-        teamHasGame.value = Array.isArray(games) && games.some(g => g.team && g.team.id == currentTeamId);
-      }
-    } catch (err) {
-      // fallback: povolí formulár
-      teamHasGame.value = false;
-    }
-}// -------------------------
+// -------------------------
 // Data Submission
 // -------------------------
 async function loadUserTeamStatus() {
@@ -280,14 +265,23 @@ async function loadUserTeamStatus() {
             headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' }
         });        if (res.ok) {
             const data = await res.json();
-            if (data.team) {
-                teamId.value = data.team.id;
-                isScrumMaster.value = data.is_scrum_master;
-
-                // <-- TERAZ SA VOLÁ KONTROLA HRY
-                await checkIfTeamHasGame(teamId.value); 
-
-            }
+            console.log('📦 Raw data from API:', data);
+            
+            // Backend returns { teams: [...] } array
+            if (data.teams && data.teams.length > 0) {
+              allTeams.value = data.teams;
+              scrumMasterTeams.value = data.teams.filter(t => t.is_scrum_master);
+              console.log('👥 All teams:', allTeams.value.map(t => t.name));
+              console.log('🔐 Scrum master teams:', scrumMasterTeams.value.map(t => t.name));
+              // Determine active team (persisted from HomeView) or fallback to first team
+              const activeTeamId = localStorage.getItem('active_team_id');
+              let activeTeam = activeTeamId ? allTeams.value.find(t => String(t.id) === activeTeamId) : null;
+              if (!activeTeam) activeTeam = allTeams.value[0];
+              teamId.value = activeTeam.id;
+              isScrumMaster.value = !!activeTeam.is_scrum_master;
+              console.log('🎯 Active team:', activeTeam.name, 'SM:', isScrumMaster.value);
+              // Scrum master môže pridať ľubovoľný počet hier.
+            }
         } else {
             const errorData = await res.json();
             toast.add({ severity: 'warn', summary: 'Upozornenie', detail: errorData.message || 'Chyba pri načítavaní stavu tímu.', life: 5000 });
@@ -301,97 +295,86 @@ async function loadUserTeamStatus() {
 
 
 async function submitForm() {
-    console.log('🚀 Submit form started');
-    console.log('📊 teamId:', teamId.value);
-    console.log('📊 isScrumMaster:', isScrumMaster.value);
-    console.log('📊 teamHasGame:', teamHasGame.value);
-    
-    // Pridaná kontrola aj na teamHasGame
-    if (!teamId.value || !isScrumMaster.value || teamHasGame.value) {
-        console.error('❌ Authorization check failed');
-        toast.add({ severity: 'error', summary: 'Chyba oprávnenia', detail: 'Nemáte povolenie pridať hru alebo tím už hru pridal.', life: 5000 });
-        return;
+  console.log('🚀 Submit form started');
+  console.log('📊 teamId:', teamId.value);
+  console.log('📊 isScrumMaster:', isScrumMaster.value);
+  if (!teamId.value || !isScrumMaster.value) {
+    console.error('❌ Authorization check failed');
+    toast.add({ severity: 'error', summary: 'Chyba oprávnenia', detail: 'Nemáte povolenie pridať hru.', life: 5000 });
+    return;
+  }
+
+  loadingSubmit.value = true;
+  try {
+    const formData = new FormData();
+    formData.append('team_id', teamId.value);
+    formData.append('title', name.value);
+    formData.append('category', selectedCategory.value?.name || selectedCategory.value || '');
+    formData.append('description', description.value);
+
+    if (releaseDate.value) {
+      const date = new Date(releaseDate.value);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const formattedReleaseDate = `${year}-${month}-${day}`;
+      formData.append('release_date', formattedReleaseDate);
     }
 
-    console.log('✅ Authorization checks passed, proceeding with submission');
-    loadingSubmit.value = true;    let formattedReleaseDate = null;
-    if (releaseDate.value) {
-        const date = new Date(releaseDate.value);
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        formattedReleaseDate = `${year}-${month}-${day}`;
-    }
-    
-    const formData = new FormData();
-    formData.append('title', name.value);
-    formData.append('description', description.value);
-    formData.append('release_date', formattedReleaseDate);
-    formData.append('team_id', teamId.value); 
-    formData.append('category', selectedCategory.value);
-
-    if (videoType.value === 'upload' && files.value.trailer.file) {
-      formData.append('trailer', files.value.trailer.file);
-    } else if (videoType.value === 'url' && videoUrl.value) {
-      formData.append('trailer_url', videoUrl.value);
-    }
-
-    if (files.value.splash_screen.file) {
-        formData.append('splash_screen', files.value.splash_screen.file);
-    }
-    if (files.value.source_code.file) {
-        formData.append('source_code', files.value.source_code.file);
-    }
-    if (files.value.export.file) {
-        formData.append('export', files.value.export.file);
+    if (videoType.value === 'upload' && files.value.trailer.file) {
+      formData.append('trailer', files.value.trailer.file);
+    } else if (videoType.value === 'url' && videoUrl.value) {
+      formData.append('trailer_url', videoUrl.value);
     }
 
-    try {
-        const res = await fetch(`${API_URL}/api/games`, {
-            method: 'POST',
-            headers: { 
-                'Authorization': `Bearer ${token.value}`,
-                'Accept': 'application/json' 
-            },
-            body: formData,
-        });        const data = await res.json();
-        
-        if (res.ok) {
-            toast.add({ severity: 'success', summary: 'Úspech', detail: `Hra "${data.game.title}" bola úspešne zverejnená!`, life: 5000 });
-            
-            // Po úspešnom pridaní hry musíme nastaviť teamHasGame na true
-            teamHasGame.value = true;
+    if (files.value.splash_screen.file) formData.append('splash_screen', files.value.splash_screen.file);
+    if (files.value.source_code.file) formData.append('source_code', files.value.source_code.file);
+    if (files.value.export.file) formData.append('export', files.value.export.file);
 
-            // Reset formulára
-            name.value = '';
-            selectedCategory.value = null;
-            releaseDate.value = null;
-            description.value = '';
-            videoUrl.value = '';
-            videoType.value = 'upload';
-            files.value.trailer = { file: null, name: '' };
-            files.value.splash_screen = { file: null, name: '' };
-            files.value.source_code = { file: null, name: '' };
-            files.value.export = { file: null, name: '' };
-            
-        } else {
-            let errorMessage = data.message || 'Chyba pri nahrávaní hry.';
-            if (data.errors) {
-                const errorMessages = Object.values(data.errors).flat().join('; ');
-                errorMessage += `: ${errorMessages}`;
-            }
-            console.error('❌ Game submission failed:', errorMessage);
-            console.error('❌ Full error data:', data);
-            toast.add({ severity: 'error', summary: 'Chyba nahrávania', detail: errorMessage, life: 8000 });
-        }
-    } catch (error) {
-        console.error('❌ Network error during game submission:', error);
-        toast.add({ severity: 'fatal', summary: 'Chyba siete', detail: 'Problém s komunikáciou so serverom.', life: 8000 });
-    } finally {
-        loadingSubmit.value = false;
+    const res = await fetch(`${API_URL}/api/games`, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' },
+      body: formData,
+    });
+    const data = await res.json();
+
+    if (res.ok && data.game) {
+      toast.add({ severity: 'success', summary: 'Úspech', detail: `Hra "${data.game.title}" bola úspešne zverejnená!`, life: 5000 });
+      // Reset formulára
+      name.value = '';
+      selectedCategory.value = null;
+      releaseDate.value = null;
+      description.value = '';
+      videoUrl.value = '';
+      videoType.value = 'upload';
+      files.value.trailer = { file: null, name: '' };
+      files.value.splash_screen = { file: null, name: '' };
+      files.value.source_code = { file: null, name: '' };
+      files.value.export = { file: null, name: '' };
+    } else {
+      let errorMessage = data.message || 'Chyba pri nahrávaní hry.';
+      if (data.errors) {
+        const errorMessages = Object.values(data.errors).flat().join('; ');
+        errorMessage += `: ${errorMessages}`;
+      }
+      console.error('❌ Game submission failed:', errorMessage);
+      console.error('❌ Full error data:', data);
+      toast.add({ severity: 'error', summary: 'Chyba nahrávania', detail: errorMessage, life: 8000 });
     }
+  } catch (error) {
+    console.error('❌ Network error during game submission:', error);
+    toast.add({ severity: 'fatal', summary: 'Chyba siete', detail: 'Problém s komunikáciou so serverom.', life: 8000 });
+  } finally {
+    loadingSubmit.value = false;
+  }
 }
 onMounted(() => {
-    loadUserTeamStatus();
+    loadUserTeamStatus();
+})
+
+// Watch for route changes (when user switches teams in HomeView and navigates back)
+watch(() => route.path, () => {
+    console.log('🔄 Route changed, reloading team status');
+    loadUserTeamStatus();
 })
 </script>

@@ -37,23 +37,23 @@
         <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
           <div class="flex items-center gap-3 flex-1">
             <div class="flex-1">
-              <label class="text-sm font-semibold text-gray-300 mb-1 block">Aktívny Tím:</label>
+              <label class="text-sm font-semibold text-white mb-1 block">Aktívny Tím:</label>
               <Dropdown
                 v-model="selectedTeam"
                 :options="teams"
                 optionLabel="name"
                 placeholder="Vyberte tím"
-                class="w-full sm:w-80"
+                class="w-full sm:w-80 text-white"
               >
                 <template #value="slotProps">
                   <div v-if="slotProps.value" class="flex items-center">
-                    <span class="font-semibold text-gray-800">{{ slotProps.value.name }}</span>
+                    <span class="font-semibold text-white">{{ slotProps.value.name }}</span>
                   </div>
                 </template>
                 <template #option="slotProps">
                   <div class="flex flex-col">
-                    <div class="font-semibold text-gray-800">{{ slotProps.option.name }}</div>
-                    <div class="text-xs text-gray-500" v-if="slotProps.option.academic_year">
+                    <div class="font-semibold text-white">{{ slotProps.option.name }}</div>
+                    <div class="text-xs text-gray-300" v-if="slotProps.option.academic_year">
                       {{ slotProps.option.academic_year.name }}
                     </div>
                   </div>
@@ -110,9 +110,13 @@
         class="bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700 rounded-2xl p-5 shadow-xl hover:shadow-2xl hover:border-gray-600 transition-all duration-200"
       >
         <div class="aspect-video bg-gray-950 rounded-xl mb-4 overflow-hidden flex items-center justify-center text-xs text-gray-500">
-          <!-- Placeholder only (no decorative icon) -->
           <span v-if="!game.splash_screen_path">Bez náhľadu</span>
-          <img v-else :src="game.splash_screen_path" alt="Splash" class="object-cover w-full h-full" />
+          <img 
+            v-else 
+            :src="getSplashUrl(game.splash_screen_path)" 
+            :alt="game.title" 
+            class="object-cover w-full h-full" 
+          />
         </div>
 
         <h3 class="text-lg font-semibold text-gray-100 mb-3 line-clamp-2">{{ game.title }}</h3>
@@ -301,7 +305,10 @@
             <p class="text-xs text-gray-400 mb-2">Členovia ({{ team.members?.length || 0 }}/4):</p>
             <div class="grid grid-cols-2 gap-2">
               <div v-for="member in team.members" :key="member.id" class="flex items-center justify-between gap-2 text-gray-200 text-sm bg-gray-900 rounded px-2 py-1">
-                <span class="truncate">{{ member.name }}</span>
+                <div class="flex flex-col truncate">
+                  <span class="truncate">{{ member.name }}</span>
+                  <span :class="getRoleClass(team, member)" class="text-xs font-semibold">{{ getRoleLabel(team, member) }}</span>
+                </div>
                 <Button
                   v-if="team.is_scrum_master && member.id !== currentUserId"
                   label="Odstrániť"
@@ -327,7 +334,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
@@ -350,9 +357,32 @@ const token = ref(localStorage.getItem('access_token') || '')
 const hasTeam = ref(false) 
 const teams = ref([]) // All teams user is part of
 const selectedTeam = ref(null) // Currently selected team
+// Persist active team selection for cross-view authorization (AddGameView, Navbar)
+function setActiveTeam(team) {
+  if (!team) {
+    localStorage.removeItem('active_team_id')
+    localStorage.removeItem('active_team_is_scrum_master')
+  } else {
+    localStorage.setItem('active_team_id', String(team.id))
+    localStorage.setItem('active_team_is_scrum_master', team.is_scrum_master ? '1' : '0')
+    // Broadcast change so Navbar / other views can react without reload
+    window.dispatchEvent(new CustomEvent('team-changed', { detail: { id: team.id, isScrumMaster: team.is_scrum_master } }))
+  }
+}
 const showTeamStatusDialog = ref(false) 
 const currentUserId = ref(null)
 const removingMember = ref(false)
+
+// Helper: derive role label and class even if pivot missing
+function getRoleLabel(team, member) {
+  const pivotRole = member.pivot?.role_in_team
+  if (pivotRole === 'scrum_master' || team.scrum_master_id === member.id) return 'Scrum Master'
+  return 'Člen'
+}
+function getRoleClass(team, member) {
+  const isScrum = (member.pivot?.role_in_team === 'scrum_master') || (team.scrum_master_id === member.id)
+  return isScrum ? 'text-teal-400' : 'text-gray-500'
+}
 
 // -------------------------
 // Logika Pripojenia k Tímu
@@ -578,7 +608,11 @@ async function loadTeamStatus() {
             if (data.teams && data.teams.length > 0) {
                 hasTeam.value = true
                 teams.value = data.teams
-                selectedTeam.value = teams.value[0] // Select first team by default
+                // Try restore previously selected team
+                const storedId = localStorage.getItem('active_team_id')
+                const found = storedId ? teams.value.find(t => String(t.id) === storedId) : null
+                selectedTeam.value = found || teams.value[0] // Select restored or first team
+                setActiveTeam(selectedTeam.value)
                 console.log('✅ Používateľ je v tímoch:', data.teams.map(t => t.name).join(', '));
             } else {
                 hasTeam.value = false;
@@ -663,4 +697,16 @@ onMounted(() => {
   loadAllGames() 
   loadCurrentUser()
 })
+
+// React to user changing selected team via dropdown
+watch(selectedTeam, (val) => {
+  setActiveTeam(val)
+})
+
+// Helper to resolve splash image path (local storage or absolute URL)
+function getSplashUrl(path) {
+  if (!path) return ''
+  if (path.startsWith('http')) return path
+  return `${API_URL}/storage/${path}`
+}
 </script>

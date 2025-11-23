@@ -78,23 +78,31 @@
         </div>
       </div>
 
-      <!-- Splash Screen / Cover Image -->
-      <div v-if="game.splash_screen_path" class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl shadow-xl overflow-hidden border border-gray-700">
-        <img 
-          :src="getImageUrl(game.splash_screen_path)" 
-          :alt="game.title"
-          class="w-full h-auto object-cover max-h-96"
-        />
-      </div>
-
-      <!-- Trailer Section -->
-      <div v-if="game.trailer_path" class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl shadow-xl p-6 border border-gray-700">
-        <h2 class="text-2xl font-bold text-gray-100 mb-4">Trailer</h2>
+      <!-- Trailer Section with Splash Screen Poster -->
+      <div v-if="game.trailer_path || game.splash_screen_path" class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl shadow-xl p-6 border border-gray-700">
+        <h2 class="text-2xl font-bold text-gray-100 mb-4">{{ game.trailer_path ? 'Trailer' : 'Ukážka' }}</h2>
         
-        <!-- YouTube Video -->
-        <div v-if="isYouTubeUrl(game.trailer_path)" class="aspect-video w-full">
+        <!-- YouTube Video with Custom Thumbnail -->
+        <div v-if="isYouTubeUrl(game.trailer_path)" class="aspect-video w-full relative rounded-lg overflow-hidden">
+          <div v-if="!youtubePlayerStarted" 
+               class="absolute inset-0 cursor-pointer group"
+               @click="startYouTubePlayer">
+            <img 
+              v-if="game.splash_screen_path"
+              :src="getImageUrl(game.splash_screen_path)" 
+              :alt="game.title"
+              class="w-full h-full object-cover"
+            />
+            <div class="absolute inset-0 bg-black bg-opacity-30 group-hover:bg-opacity-40 transition-all duration-300"></div>
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="w-20 h-20 rounded-full bg-white bg-opacity-50 group-hover:bg-opacity-70 transition-all duration-300 flex items-center justify-center">
+                <i class="pi pi-play text-gray-900 text-3xl ml-1"></i>
+              </div>
+            </div>
+          </div>
           <iframe 
-            :src="getYouTubeEmbedUrl(game.trailer_path)"
+            v-else
+            :src="getYouTubeEmbedUrl(game.trailer_path) + '?autoplay=1'"
             class="w-full h-full rounded-lg"
             frameborder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -102,15 +110,109 @@
           ></iframe>
         </div>
         
-        <!-- Video File -->
-        <div v-else class="aspect-video w-full bg-gray-100 rounded-lg flex items-center justify-center">
+        <!-- Local Video File with Splash Poster and Improved Controls -->
+        <div v-else-if="game.trailer_path" class="aspect-video w-full relative rounded-lg overflow-hidden bg-black group" ref="videoContainer" tabindex="0">
           <video 
-            controls 
-            class="w-full h-full rounded-lg"
+            ref="videoPlayer"
+            class="w-full h-full rounded-lg cursor-pointer"
             :src="getVideoUrl(game.trailer_path)"
+            :poster="game.splash_screen_path ? getImageUrl(game.splash_screen_path) : ''"
+            playsinline
+            preload="metadata"
+            @loadedmetadata="onLoadedMetadata"
+            @loadeddata="onLoadedData"
+            @canplay="onCanPlay"
+            @timeupdate="onTimeUpdate"
+            @seeking="onSeeking"
+            @seeked="onSeeked"
+            @play="videoPlaying = true"
+            @pause="videoPlaying = false"
+            @ended="videoPlaying = false"
+            @click="togglePlay"
           >
             Váš prehliadač nepodporuje prehrávanie videa.
           </video>
+
+          <!-- Center Play Indicator (when paused) -->
+          <div v-if="!videoPlaying" class="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div class="w-20 h-20 rounded-full bg-black/50 flex items-center justify-center backdrop-blur-sm">
+              <i class="pi pi-play text-white text-3xl ml-1"></i>
+            </div>
+          </div>
+
+          <!-- Control Panel -->
+          <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent px-4 pt-4 pb-3 flex flex-col gap-2 text-xs transition-opacity duration-300"
+               :class="videoPlaying ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'">
+            <!-- Progress -->
+            <div class="flex items-center gap-3 w-full">
+              <span class="text-gray-300 font-mono">{{ formatTime(currentTime) }}</span>
+              <div class="flex-1 relative h-1.5 bg-gray-600 rounded-lg cursor-pointer group/progress">
+                <!-- Buffered/Loaded portion (optional visual enhancement) -->
+                <div class="absolute left-0 top-0 h-full bg-gray-500 rounded-lg" :style="{ width: '100%' }"></div>
+                <!-- Progress bar (played portion) -->
+                <div class="absolute left-0 top-0 h-full bg-teal-400 rounded-lg transition-all duration-150" :style="{ width: (duration > 0 ? (currentTime / duration * 100) : 0) + '%' }"></div>
+                <!-- Input slider (invisible but interactive) -->
+                <input
+                  type="range"
+                  min="0"
+                  :max="duration"
+                  :value="currentTime"
+                  @input="onSeekInput"
+                  @change="onSeekChange"
+                  class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                />
+                <!-- Thumb indicator -->
+                <div class="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-teal-400 rounded-full transition-all group-hover/progress:scale-125 shadow-lg"
+                     :style="{ left: (duration > 0 ? (currentTime / duration * 100) : 0) + '%', transform: 'translateX(-50%) translateY(-50%)' }"></div>
+              </div>
+              <span class="text-gray-300 font-mono">{{ formatTime(duration) }}</span>
+            </div>
+            <!-- Buttons Row -->
+            <div class="flex items-center justify-between w-full mt-1">
+              <div class="flex items-center gap-4">
+                <button @click.stop="togglePlay" class="text-white hover:text-teal-400 transition p-1" :title="videoPlaying ? 'Pause' : 'Play'">
+                  <i :class="videoPlaying ? 'pi pi-pause' : 'pi pi-play'" class="text-xl"></i>
+                </button>
+                <div class="flex items-center gap-2">
+                  <button @click.stop="skip(-10)" class="text-gray-300 hover:text-white transition p-1" title="Dozadu 10s">
+                    <i class="pi pi-replay text-lg"></i> <span class="text-[10px]">-10s</span>
+                  </button>
+                  <button @click.stop="skip(10)" class="text-gray-300 hover:text-white transition p-1" title="Dopredu 10s">
+                    <span class="text-[10px]">+10s</span> <i class="pi pi-refresh text-lg"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2 group/vol">
+                  <button @click.stop="toggleMute" class="text-white hover:text-teal-400 transition" :title="isMuted || volume===0 ? 'Zapnúť zvuk' : 'Stlmiť zvuk'">
+                    <i :class="(isMuted || volume===0) ? 'pi pi-volume-off' : 'pi pi-volume-up'" class="text-lg"></i>
+                  </button>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    :value="isMuted ? 0 : volume"
+                    @input="changeVolume"
+                    class="w-20 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full"
+                  />
+                </div>
+                <div class="w-px h-4 bg-gray-600 mx-1"></div>
+                <button @click.stop="toggleFullscreen" class="text-white hover:text-teal-400 transition" :title="isFullscreen ? 'Ukončiť celú obrazovku' : 'Celá obrazovka'">
+                  <i :class="isFullscreen ? 'pi pi-window-minimize' : 'pi pi-window-maximize'" class="text-lg"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Only Splash Screen (no video) -->
+        <div v-else-if="game.splash_screen_path" class="aspect-video w-full rounded-lg overflow-hidden">
+          <img 
+            :src="getImageUrl(game.splash_screen_path)" 
+            :alt="game.title"
+            class="w-full h-full object-cover"
+          />
         </div>
       </div>
 
@@ -129,9 +231,13 @@
           <div 
             v-for="member in game.team.members" 
             :key="member.id"
-            class="flex items-center gap-3 p-3 bg-gray-700 rounded-lg border border-gray-600 transition hover:border-gray-500 shadow-lg"
+            class="flex items-center justify-between gap-3 p-3 bg-gray-700 rounded-lg border border-gray-600 transition hover:border-gray-500 shadow-lg"
           >
-            <span class="text-gray-200 font-medium">{{ member.name }}</span>
+            <div class="flex flex-col">
+              <span class="text-gray-200 font-medium">{{ member.name }}</span>
+              <span v-if="member.pivot?.role_in_team === 'scrum_master'" class="text-xs text-teal-400">Scrum Master</span>
+              <span v-else class="text-xs text-gray-500">Člen</span>
+            </div>
           </div>
         </div>
       </div>
@@ -164,7 +270,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
@@ -181,6 +287,17 @@ const loadingGame = ref(true)
 const error = ref('')
 const userHasRated = ref(false)
 const userRatingValue = ref(null)
+const videoContainer = ref(null)
+const videoPlayer = ref(null)
+const videoPlaying = ref(false)
+const youtubePlayerStarted = ref(false)
+// Custom video control state
+const currentTime = ref(0)
+const duration = ref(0)
+const isMuted = ref(false)
+const isFullscreen = ref(false)
+const volume = ref(1) // 0 - 1
+const seeking = ref(false)
 
 // Load single game detail via /api/games/{id}
 async function loadGameDetail() {
@@ -347,11 +464,11 @@ function getImageUrl(path) {
   return `${API_URL}/storage/${path}`
 }
 
-// Get video URL from storage
+// Get video URL from storage with byte-range support
 function getVideoUrl(path) {
   if (!path) return ''
   if (path.startsWith('http')) return path
-  return `${API_URL}/storage/${path}`
+  return `${API_URL}/video/${path}`
 }
 
 // Download file
@@ -375,15 +492,187 @@ function downloadFile(path, type) {
   })
 }
 
+// Video controls
+function playVideo() {
+  if (videoPlayer.value) {
+    videoPlayer.value.play()
+    videoPlaying.value = true
+  }
+}
+
+function togglePlay() {
+  if (!videoPlayer.value) return
+  console.log('[VideoControl] togglePlay - current paused:', videoPlayer.value.paused)
+  if (videoPlayer.value.paused) {
+    videoPlayer.value.play().catch(e => console.error('Play failed', e))
+  } else {
+    videoPlayer.value.pause()
+  }
+}
+
+function skip(seconds) {
+  const video = videoPlayer.value
+  if (!video) return
+
+  const current = video.currentTime
+  const vidDuration = (video.duration && !isNaN(video.duration)) ? video.duration : Infinity
+  const target = Math.min(Math.max(0, current + seconds), vidDuration)
+
+  console.log('[VideoControl] BEFORE skip - currentTime:', current, 'target:', target, 'duration:', vidDuration)
+  console.log('[VideoControl] Video paused:', video.paused, 'readyState:', video.readyState)
+  console.log('[VideoControl] Seekable:', video.seekable.length, video.seekable.length > 0 ? `start: ${video.seekable.start(0)}, end: ${video.seekable.end(0)}` : 'none')
+  
+  video.currentTime = target
+  currentTime.value = target
+  
+  console.log('[VideoControl] AFTER setting currentTime to', target, '=> actual value is now:', video.currentTime)
+}
+
+function onSeekInput(evt) {
+  if (!videoPlayer.value) return
+  seeking.value = true
+  const val = parseFloat(evt.target.value)
+  console.log('[VideoControl] onSeekInput:', val)
+  currentTime.value = val
+}
+
+function onSeekChange(evt) {
+  const video = videoPlayer.value
+  if (!video) return
+  
+  const val = parseFloat(evt.target.value)
+  const vidDuration = (video.duration && !isNaN(video.duration)) ? video.duration : Infinity
+  const target = Math.min(Math.max(0, val), vidDuration)
+  
+  console.log('[VideoControl] onSeekChange - seeking to:', target)
+  
+  video.currentTime = target
+  currentTime.value = target
+  seeking.value = false
+}
+
+function toggleMute() {
+  if (!videoPlayer.value) return
+  videoPlayer.value.muted = !videoPlayer.value.muted
+  isMuted.value = videoPlayer.value.muted
+}
+
+function changeVolume(evt) {
+  if (!videoPlayer.value) return
+  const val = Number(evt.target.value)
+  volume.value = Math.min(Math.max(val, 0), 1)
+  videoPlayer.value.volume = volume.value
+  if (volume.value === 0) {
+    videoPlayer.value.muted = true
+    isMuted.value = true
+  } else if (isMuted.value) {
+    videoPlayer.value.muted = false
+    isMuted.value = false
+  }
+}
+
+function onLoadedMetadata() {
+  if (!videoPlayer.value) return
+  const video = videoPlayer.value
+  duration.value = video.duration || 0
+  video.volume = volume.value
+  
+  console.log('[VideoControl] onLoadedMetadata - duration:', duration.value, 'readyState:', video.readyState)
+  console.log('[VideoControl] Video src:', video.currentSrc)
+  console.log('[VideoControl] Seekable ranges:', video.seekable.length, video.seekable.length > 0 ? `[${video.seekable.start(0)} - ${video.seekable.end(0)}]` : 'none')
+}
+
+function onLoadedData() {
+  console.log('[VideoControl] onLoadedData - video data loaded, readyState:', videoPlayer.value?.readyState)
+}
+
+function onCanPlay() {
+  console.log('[VideoControl] onCanPlay - video ready to play, readyState:', videoPlayer.value?.readyState)
+}
+
+function onSeeking() {
+  console.log('[VideoControl] onSeeking - video is seeking to:', videoPlayer.value?.currentTime)
+}
+
+function onSeeked() {
+  console.log('[VideoControl] onSeeked - video finished seeking at:', videoPlayer.value?.currentTime)
+  if (videoPlayer.value) {
+    currentTime.value = videoPlayer.value.currentTime
+  }
+}
+
+function onTimeUpdate() {
+  if (!videoPlayer.value) return
+  if (!seeking.value) {
+    currentTime.value = videoPlayer.value.currentTime
+  }
+}
+
+function toggleFullscreen() {
+  const el = videoContainer.value
+  if (!el) return
+  if (!document.fullscreenElement) {
+    el.requestFullscreen?.().then(() => isFullscreen.value = true)
+  } else {
+    document.exitFullscreen?.().then(() => isFullscreen.value = false)
+  }
+}
+
+function formatTime(t) {
+  const sec = Math.floor(t)
+  const m = Math.floor(sec / 60)
+  const s = sec % 60
+  return `${m}:${String(s).padStart(2,'0')}`
+}
+
+function handleKeydown(e) {
+  // Avoid interfering with text inputs
+  const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : ''
+  if (['input','textarea','select','button'].includes(tag)) return
+  if (!videoPlayer.value) return
+  switch (e.code) {
+    case 'Space':
+      e.preventDefault()
+      togglePlay()
+      break
+    case 'ArrowLeft':
+      e.preventDefault()
+      skip(-5)
+      break
+    case 'ArrowRight':
+      e.preventDefault()
+      skip(5)
+      break
+  }
+}
+
+let fsChangeHandler
+onMounted(() => {
+  loadGameDetail()
+  loadUserRating(route.params.id)
+  if (videoPlayer.value) {
+    videoPlayer.value.volume = volume.value
+  }
+  fsChangeHandler = () => { isFullscreen.value = !!document.fullscreenElement }
+  document.addEventListener('fullscreenchange', fsChangeHandler)
+  document.addEventListener('keydown', handleKeydown)
+})
+
+onUnmounted(() => {
+  if (fsChangeHandler) document.removeEventListener('fullscreenchange', fsChangeHandler)
+  document.removeEventListener('keydown', handleKeydown)
+})
+
+function startYouTubePlayer() {
+  youtubePlayerStarted.value = true
+}
+
 // Go back to home
 function goBack() {
   router.push('/')
 }
 
-onMounted(() => {
-  loadGameDetail()
-  loadUserRating(route.params.id)
-})
+// (Second onMounted removed; logic consolidated above)
 </script>
 
 <style scoped>

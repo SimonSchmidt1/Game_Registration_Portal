@@ -3,7 +3,8 @@
     <div class="w-full max-w-6xl flex justify-between items-center px-4 sm:px-6 lg:px-8">
       <div class="flex items-center gap-6">
         <RouterLink to="/" class="text-lg font-semibold hover:underline">Domov</RouterLink>
-        <RouterLink to="/add" class="text-lg font-semibold hover:underline">Pridať hru</RouterLink>
+        <RouterLink v-if="canAddGame" to="/add" class="text-lg font-semibold hover:underline">Pridať hru</RouterLink>
+        <span v-else class="text-lg font-semibold text-gray-500 cursor-not-allowed" title="Len Scrum Master aktívneho tímu môže pridať hru">Pridať hru</span>
       </div>
 
       <div class="flex items-center gap-3">
@@ -145,6 +146,7 @@ import { useToast } from 'primevue/usetoast'
 const API_URL = import.meta.env.VITE_API_URL
 const router = useRouter()
 const isLoggedIn = ref(!!localStorage.getItem('access_token'))
+const canAddGame = ref(false) // Derived from active team scrum master status
 const userName = ref('')
 const currentUser = ref(null)
 const showUserProfileDialog = ref(false)
@@ -262,7 +264,26 @@ onMounted(async () => {
     userName.value = user.name || ''
     await loadCurrentUser()
   })
+
+  // Initialize scrum master flag from persisted active team
+  refreshActiveTeamStatus()
+  // Listen for team changes broadcast from HomeView
+  window.addEventListener('team-changed', (e) => {
+    refreshActiveTeamStatus(e.detail)
+  })
 })
+
+function refreshActiveTeamStatus(detail) {
+  const stored = localStorage.getItem('active_team_is_scrum_master')
+  // Prefer event detail if available
+  if (detail && typeof detail.isScrumMaster === 'boolean') {
+    canAddGame.value = detail.isScrumMaster
+  } else if (stored !== null) {
+    canAddGame.value = stored === '1'
+  } else {
+    canAddGame.value = false
+  }
+}
 </script>
 
 

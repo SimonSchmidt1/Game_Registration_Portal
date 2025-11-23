@@ -5,12 +5,14 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Team;
 use App\Models\User;
+use App\Services\TeamService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule; 
 
 class TeamController extends Controller
 {
+    public function __construct(private TeamService $teamService) {}
     /**
      * Vráti informácie o všetkých tímoch, v ktorých je prihlásený používateľ.
      * Využíva sa pre frontend endpoint /api/user/team.
@@ -21,23 +23,7 @@ class TeamController extends Controller
     public function getTeamStatus(Request $request)
     {
         $user = $request->user();
-        $teams = $user->teams()->with(['members:id,name', 'academicYear'])->get();
-        
-        // Pre každý tím zistíme, či je používateľ Scrum Master
-        $teamsWithRole = $teams->map(function ($team) use ($user) {
-            $pivot = $team->members()->where('user_id', $user->id)->first()?->pivot;
-            $isScrumMaster = $pivot && $pivot->role_in_team === 'scrum_master';
-            
-            return [
-                'id' => $team->id,
-                'name' => $team->name,
-                'invite_code' => $team->invite_code,
-                'academic_year' => $team->academicYear,
-                'members' => $team->members,
-                'is_scrum_master' => $isScrumMaster,
-            ];
-        });
-        
+        $teamsWithRole = $this->teamService->getTeamsStatusForUser($user);
         return response()->json(['teams' => $teamsWithRole]);
     }
 
@@ -57,26 +43,7 @@ class TeamController extends Controller
         ]);
 
         $user = $request->user();
-
-        // 1. Vytvorenie unikátneho pozývacieho kódu
-        do {
-            $inviteCode = \Illuminate\Support\Str::random(6);
-        } while (Team::where('invite_code', $inviteCode)->exists());
-
-        // 3. Vytvorenie tímu
-        $team = Team::create([
-            'name' => $request->name,
-            'academic_year_id' => $request->academic_year_id,
-            'invite_code' => strtoupper($inviteCode),
-            'scrum_master_id' => $user->id, // Zakladateľ je Scrum Master
-        ]);
-
-        // 4. Správne priradenie používateľa k tímu pomocou PIVOT TABUĽKY
-        $user->teams()->attach($team->id, ['role_in_team' => 'scrum_master']);
-
-        // Eager loading členov pre konzistenciu s metódou join
-        $team->load('members:id,name');
-
+        $team = $this->teamService->createTeam($user, $request->only('name','academic_year_id'));
         return response()->json([
             'message' => 'Tím bol úspešne vytvorený.',
             'team' => $team
@@ -97,30 +64,19 @@ class TeamController extends Controller
         ]);
 
         $user = $request->user();
-        $team = Team::where('invite_code', $request->invite_code)->first();
-        
-        // 1. Kontrola, či už je používateľ v tomto konkrétnom tíme
-        if ($user->teams()->where('team_id', $team->id)->exists()) {
-            return response()->json(['message' => 'Už ste členom tohto tímu.'], 409);
+        $result = $this->teamService->joinTeam($user, $request->invite_code);
+        if (isset($result['error'])) {
+            return match($result['error']) {
+                'already_member' => response()->json(['message' => 'Už ste členom tohto tímu.'], 409),
+                'full' => response()->json(['message' => 'Tím je plný. Maximálny počet členov je ' . $result['max'] . '.'], 403),
+                'not_found' => response()->json(['message' => 'Tím nebol nájdený.'], 404),
+                default => response()->json(['message' => 'Chyba pri pripájaní k tímu.'], 400),
+            };
         }
-
-        // 2. Kontrola limitu členov (MAX 4)
-        $maxMembers = 4;
-        // Táto kontrola teraz spoľahlivo funguje vďaka oprave v Team.php
-        if ($team->members()->count() >= $maxMembers) { 
-            return response()->json(['message' => 'Tím je plný. Maximálny počet členov je ' . $maxMembers . '.'], 403);
-        }
-
-        // 3. Správne priradenie používateľa k tímu pomocou PIVOT TABUĽKY
-        $user->teams()->attach($team->id, ['role_in_team' => 'member']);
-
-        // ✅ KRITICKÁ OPRAVA: Načítame členov tímu (iba ID a meno) pre frontend
-        // To zaručí, že Vue komponent bude mať objekt members a nehavaruje.
-        $team->load('members:id,name'); 
-
+        $team = $result['team'];
         return response()->json([
             'message' => 'Úspešne ste sa pripojili k tímu ' . $team->name . '.',
-            'team' => $team, // Objekt $team teraz obsahuje zoznam členov
+            'team' => $team,
         ]);
     }
 
@@ -130,39 +86,16 @@ class TeamController extends Controller
     public function removeMember(Request $request, Team $team, User $user)
     {
         $authUser = $request->user();
-
-        // Overenie, či prihlásený používateľ je Scrum Master tohto tímu
-        $isScrumMasterByOwner = $team->scrum_master_id && ((int)$team->scrum_master_id === (int)$authUser->id);
-        $isScrumMasterByPivot = $team->members()
-            ->where('users.id', $authUser->id)
-            ->where('team_user.role_in_team', 'scrum_master')
-            ->exists();
-
-        if (!($isScrumMasterByOwner || $isScrumMasterByPivot)) {
-            return response()->json(['message' => 'Nemáte oprávnenie spravovať členov tohto tímu.'], 403);
+        $result = $this->teamService->removeMember($authUser, $team, $user);
+        if (isset($result['error'])) {
+            return match($result['error']) {
+                'forbidden' => response()->json(['message' => 'Nemáte oprávnenie spravovať členov tohto tímu.'], 403),
+                'not_member' => response()->json(['message' => 'Používateľ nie je členom tímu.'], 404),
+                'cannot_remove_scrum' => response()->json(['message' => 'Scrum Mastera nie je možné odstrániť.'], 422),
+                default => response()->json(['message' => 'Chyba pri odstraňovaní člena.'], 400),
+            };
         }
-
-        // Overenie, že cieľový používateľ je členom tímu
-        $targetPivot = $team->members()->where('users.id', $user->id)->first();
-        if (!$targetPivot) {
-            return response()->json(['message' => 'Používateľ nie je členom tímu.'], 404);
-        }
-
-        // Zamedziť odstráneniu Scrum Mastera
-        $isTargetScrumMaster = $team->members()
-            ->where('users.id', $user->id)
-            ->where('team_user.role_in_team', 'scrum_master')
-            ->exists();
-        if ($isTargetScrumMaster || ((int)$team->scrum_master_id === (int)$user->id)) {
-            return response()->json(['message' => 'Scrum Mastera nie je možné odstrániť.'], 422);
-        }
-
-        // Odstránenie z pivot tabuľky
-        $team->members()->detach($user->id);
-
-        // Vraciame aktualizovaný zoznam členov (id, name) pre jednoduchú obnovu UI
-        $team->load('members:id,name');
-
+        $team = $result['team'];
         return response()->json([
             'message' => 'Člen bol odstránený z tímu.',
             'team' => $team,

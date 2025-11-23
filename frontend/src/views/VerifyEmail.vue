@@ -82,14 +82,32 @@ onMounted(async () => {
   }
 
   if (!token) {
-    error.value = true
+    // Show "check your email" message instead of error
+    isResentMode.value = true
     loading.value = false
-    errorMessage.value = 'Neplatný overovací odkaz. Token chýba.'
     return
   }
 
   try {
-    await axios.post(`${API_URL}/api/verify-email`, { token })
+    console.log('🔄 Verifying email with token:', token)
+    
+    const response = await fetch('http://127.0.0.1:8000/api/verify-email', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ token })
+    })
+    
+    const data = await response.json()
+    console.log('Response status:', response.status, 'Data:', data)
+    
+    if (!response.ok) {
+      throw new Error(data.message || 'Verification failed')
+    }
+    
+    console.log('✅ Verification successful:', data)
     
     loading.value = false
     success.value = true
@@ -107,13 +125,12 @@ onMounted(async () => {
     }, 3000)
 
   } catch (err) {
+    console.error('❌ Verification error:', err)
     loading.value = false
     error.value = true
     
-    if (err.response?.status === 400) {
-      errorMessage.value = 'Neplatný alebo expirovaný overovací token.'
-    } else if (err.response?.status === 404) {
-      errorMessage.value = 'Používateľ nebol nájdený.'
+    if (err.message) {
+      errorMessage.value = err.message
     } else {
       errorMessage.value = 'Nastala chyba pri overovaní emailu. Skúste to neskôr.'
     }

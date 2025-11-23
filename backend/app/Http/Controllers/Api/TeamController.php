@@ -123,4 +123,49 @@ class TeamController extends Controller
             'team' => $team, // Objekt $team teraz obsahuje zoznam členov
         ]);
     }
+
+    /**
+     * Odstráni člena z tímu (len pre Scrum Mastera daného tímu).
+     */
+    public function removeMember(Request $request, Team $team, User $user)
+    {
+        $authUser = $request->user();
+
+        // Overenie, či prihlásený používateľ je Scrum Master tohto tímu
+        $isScrumMasterByOwner = $team->scrum_master_id && ((int)$team->scrum_master_id === (int)$authUser->id);
+        $isScrumMasterByPivot = $team->members()
+            ->where('users.id', $authUser->id)
+            ->where('team_user.role_in_team', 'scrum_master')
+            ->exists();
+
+        if (!($isScrumMasterByOwner || $isScrumMasterByPivot)) {
+            return response()->json(['message' => 'Nemáte oprávnenie spravovať členov tohto tímu.'], 403);
+        }
+
+        // Overenie, že cieľový používateľ je členom tímu
+        $targetPivot = $team->members()->where('users.id', $user->id)->first();
+        if (!$targetPivot) {
+            return response()->json(['message' => 'Používateľ nie je členom tímu.'], 404);
+        }
+
+        // Zamedziť odstráneniu Scrum Mastera
+        $isTargetScrumMaster = $team->members()
+            ->where('users.id', $user->id)
+            ->where('team_user.role_in_team', 'scrum_master')
+            ->exists();
+        if ($isTargetScrumMaster || ((int)$team->scrum_master_id === (int)$user->id)) {
+            return response()->json(['message' => 'Scrum Mastera nie je možné odstrániť.'], 422);
+        }
+
+        // Odstránenie z pivot tabuľky
+        $team->members()->detach($user->id);
+
+        // Vraciame aktualizovaný zoznam členov (id, name) pre jednoduchú obnovu UI
+        $team->load('members:id,name');
+
+        return response()->json([
+            'message' => 'Člen bol odstránený z tímu.',
+            'team' => $team,
+        ]);
+    }
 }

@@ -40,16 +40,10 @@ class AuthController extends Controller
         // ℹ️ UNCOMMENT the line below to enable email sending (requires Mailhog running on localhost:1025)
         $user->notify(new VerifyEmailNotification($verificationToken));
 
-        // 4. Vytvorenie tokenu pre Sanctum
-        $token = $user->createToken('auth_token', [], now()->addHours(2))->plainTextToken;
-
-        // 5. Vrátenie JSON odpovede
+        // 4. Vrátenie JSON odpovede bez tokenu (používateľ musí najprv overiť email)
         return response()->json([
-            'access_token' => $token,
-            'token_type' => 'Bearer',
-            'user' => $user,
-            'role' => $user->role, // posielame rolu
-            'message' => 'Registrácia úspešná. Skontrolujte svoj e-mail pre verifikovaný odkaz.'
+            'message' => 'Registrácia úspešná. Skontrolujte svoj e-mail a dokončite overenie účtu.',
+            'requires_verification' => true
         ], 201);
     }
 
@@ -111,6 +105,22 @@ class AuthController extends Controller
             }
             
             return response()->json(['message' => 'Nesprávny email alebo heslo'], 401);
+        }
+
+        // Check if email is verified before allowing login
+        if (!$user->email_verified_at) {
+            // Ensure verification token exists
+            if (!$user->verification_token) {
+                $verificationToken = Str::random(64);
+                $user->verification_token = $verificationToken;
+                $user->save();
+                $user->notify(new VerifyEmailNotification($verificationToken));
+            }
+
+            return response()->json([
+                'message' => 'Účet nie je overený. Skontrolujte e-mail a dokončite overenie.',
+                'requires_verification' => true
+            ], 403);
         }
 
         // Reset failed login attempts on successful login

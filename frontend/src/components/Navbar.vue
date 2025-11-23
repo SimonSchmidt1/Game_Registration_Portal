@@ -25,6 +25,7 @@
             <div class="relative">
               <img 
                 v-if="currentUser?.avatar_path" 
+                :key="currentUser.avatar_path"
                 :src="getAvatarUrl(currentUser.avatar_path)" 
                 alt="Avatar"
                 class="w-8 h-8 rounded-full object-cover border-2 border-white shadow"
@@ -75,6 +76,7 @@
         <div class="relative group">
           <img 
             v-if="currentUser.avatar_path" 
+            :key="currentUser.avatar_path"
             :src="getAvatarUrl(currentUser.avatar_path)" 
             alt="Avatar"
             class="w-32 h-32 rounded-full object-cover border-4 border-blue-500 shadow-lg"
@@ -101,24 +103,21 @@
       <!-- User Info -->
       <div class="flex flex-col gap-3">
         <div class="flex justify-between items-center p-3 bg-gray-800 rounded-lg">
-          <span class="text-gray-400 font-medium flex items-center gap-2">
-            <i class="pi pi-user text-blue-400"></i>
+          <span class="text-gray-400 font-medium">
             Meno:
           </span>
           <span class="text-white font-semibold">{{ currentUser.name }}</span>
         </div>
         
         <div class="flex justify-between items-center p-3 bg-gray-800 rounded-lg">
-          <span class="text-gray-400 font-medium flex items-center gap-2">
-            <i class="pi pi-envelope text-purple-400"></i>
+          <span class="text-gray-400 font-medium">
             Email:
           </span>
           <span class="text-white font-semibold text-sm">{{ currentUser.email }}</span>
         </div>
         
         <div class="flex justify-between items-center p-3 bg-gray-800 rounded-lg">
-          <span class="text-gray-400 font-medium flex items-center gap-2">
-            <i class="pi pi-shield text-green-400"></i>
+          <span class="text-gray-400 font-medium">
             Rola:
           </span>
           <span class="text-white font-semibold">{{ currentUser.role }}</span>

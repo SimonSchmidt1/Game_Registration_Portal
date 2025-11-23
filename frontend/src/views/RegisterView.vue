@@ -67,22 +67,16 @@ async function register() {
       password_confirmation: password_confirmation.value
     })
 
-    localStorage.setItem('access_token', response.data.access_token)
-    localStorage.setItem('user', JSON.stringify(response.data.user))
-
-    // Poslanie eventu pre Navbar
-    window.dispatchEvent(new Event('login'))
-
     // Toast upozornenie
     toast.add({ 
       severity: 'success', 
-      summary: 'Registrácia', 
-      detail: 'Registrácia úspešná', 
-      life: 3000 
+      summary: 'Registrácia úspešná', 
+      detail: response.data.message || 'Skontrolujte e-mail a dokončite overenie.', 
+      life: 5000 
     })
 
-    // Redirect immediately after successful registration
-    router.push('/')
+    // Redirect to verify-email page (not home, since user has no token yet)
+    setTimeout(() => router.push('/verify-email'), 2000)
 
   } catch (error) {
     const errorMessage = error.response?.data?.errors 

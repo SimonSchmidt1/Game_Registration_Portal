@@ -1,21 +1,21 @@
 <template>
-  <div class="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
+  <div class="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 bg-gray-900 min-h-screen">
     <Toast />
 
     <!-- Loading State -->
     <div v-if="loadingGame" class="text-center p-8">
-      <i class="pi pi-spin pi-spinner text-4xl text-blue-500"></i>
-      <p class="mt-4 text-gray-600">Načítavam detail hry...</p>
+      <i class="pi pi-spin pi-spinner text-4xl text-blue-400"></i>
+      <p class="mt-4 text-gray-300">Načítavam detail hry...</p>
     </div>
 
     <!-- Error State -->
-    <div v-else-if="error" class="text-center p-8 bg-red-50 rounded-lg border border-red-200">
-      <i class="pi pi-exclamation-triangle text-4xl text-red-500"></i>
-      <p class="mt-4 text-red-700 font-semibold">{{ error }}</p>
+    <div v-else-if="error" class="text-center p-8 bg-gray-800 rounded-xl border border-gray-700 shadow-lg">
+      <i class="pi pi-exclamation-triangle text-4xl text-red-400"></i>
+      <p class="mt-4 text-gray-200 font-semibold">{{ error }}</p>
       <Button 
         label="Späť na zoznam hier" 
-        icon="pi pi-arrow-left" 
-        class="mt-4 p-button-secondary"
+        icon="pi pi-arrow-left"
+        class="mt-4 p-button-outlined"
         @click="goBack"
       />
     </div>
@@ -26,23 +26,23 @@
       <div class="flex items-center justify-between mb-6">
         <Button 
           label="Späť" 
-          icon="pi pi-arrow-left" 
+          icon="pi pi-arrow-left"
           class="p-button-text p-button-secondary"
           @click="goBack"
         />
       </div>
 
       <!-- Game Title and Category -->
-      <div class="bg-white rounded-xl shadow-md p-6 border border-gray-200">
+      <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl shadow-xl p-6 border border-gray-700">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-          <h1 class="text-4xl font-bold text-gray-900">{{ game.title }}</h1>
-          <span class="px-4 py-2 rounded-lg border-2 border-blue-500 bg-blue-50 text-blue-700 font-semibold text-lg shadow-sm">
-            <i class="pi pi-tag mr-1.5"></i>{{ game.category }}
+          <h1 class="text-4xl font-bold text-gray-100">{{ game.title }}</h1>
+          <span class="px-4 py-2 rounded-lg border border-gray-600 bg-gray-700 text-gray-200 font-medium text-lg shadow-lg">
+            {{ game.category }}
           </span>
         </div>
         
         <!-- Rating and Views (Large) -->
-        <div class="flex items-center gap-6 mb-4 pb-4 border-b border-gray-200">
+        <div class="flex items-center gap-6 mb-4 pb-4 border-b border-gray-700">
           <!-- Star Rating -->
           <div class="flex flex-col">
             <div class="flex items-center gap-2">
@@ -54,33 +54,32 @@
                 class="cursor-pointer transition-transform"
                 :title="'Hodnotiť ' + star + ' / 5'"
               ></i>
-              <span class="ml-2 text-gray-700 font-bold text-xl">{{ formatRating(game.rating) }} / 5</span>
+              <span class="ml-2 text-gray-200 font-bold text-xl">{{ formatRating(game.rating) }} / 5</span>
             </div>
-            <small class="text-gray-500 mt-1" v-if="userHasRated">Ďakujeme za hodnotenie (hlasov: {{ game.rating_count || 0 }}).</small>
-            <small class="text-gray-500 mt-1" v-else> Kliknite na hviezdu pre hodnotenie (iba raz). (hlasov: {{ game.rating_count || 0 }})</small>
+            <small class="text-gray-400 mt-1" v-if="userHasRated">Ďakujeme za hodnotenie (hlasov: {{ game.rating_count || 0 }}).</small>
+            <small class="text-gray-400 mt-1" v-else> Kliknite na hviezdu pre hodnotenie (iba raz). (hlasov: {{ game.rating_count || 0 }})</small>
           </div>
           <!-- Views Counter -->
-          <div class="flex items-center gap-2 text-gray-600">
-            <i class="pi pi-eye text-2xl"></i>
+          <div class="flex items-center gap-2 text-gray-300">
             <span class="font-bold text-xl">{{ game.views || 0 }} zobrazení</span>
           </div>
         </div>
         
-        <div class="flex flex-wrap gap-3 text-sm">
-          <span class="px-3 py-2 rounded-lg border-2 border-teal-400 bg-teal-50 text-teal-700 font-semibold shadow-sm">
-            <i class="pi pi-shield mr-1.5"></i>{{ game.team?.name || 'Neznámy' }}
+        <div class="flex flex-wrap gap-2.5 text-sm">
+          <span class="px-3.5 py-1.5 rounded-md border border-gray-600 bg-gray-700 text-gray-200 font-medium shadow-lg">
+            {{ game.team?.name || 'Neznámy' }}
           </span>
-          <span v-if="game.academic_year" class="px-3 py-2 rounded-lg border-2 border-purple-400 bg-purple-50 text-purple-700 font-semibold shadow-sm">
-            <i class="pi pi-graduation-cap mr-1.5"></i>{{ game.academic_year.name }}
+          <span v-if="game.academic_year" class="px-3.5 py-1.5 rounded-md border border-gray-600 bg-gray-700 text-gray-200 font-medium shadow-lg">
+            {{ game.academic_year.name }}
           </span>
-          <span v-if="game.release_date" class="px-3 py-2 rounded-lg border-2 border-green-400 bg-green-50 text-green-700 font-semibold shadow-sm">
-            <i class="pi pi-calendar mr-1.5"></i>{{ formatDate(game.release_date) }}
+          <span v-if="game.release_date" class="px-3.5 py-1.5 rounded-md border border-gray-600 bg-gray-700 text-gray-200 font-medium shadow-lg">
+            {{ formatDate(game.release_date) }}
           </span>
         </div>
       </div>
 
       <!-- Splash Screen / Cover Image -->
-      <div v-if="game.splash_screen_path" class="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200">
+      <div v-if="game.splash_screen_path" class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl shadow-xl overflow-hidden border border-gray-700">
         <img 
           :src="getImageUrl(game.splash_screen_path)" 
           :alt="game.title"
@@ -89,11 +88,8 @@
       </div>
 
       <!-- Trailer Section -->
-      <div v-if="game.trailer_path" class="bg-white rounded-xl shadow-md p-6 border border-gray-200">
-        <h2 class="text-2xl font-bold text-gray-900 mb-4 flex items-center">
-          <i class="pi pi-video mr-2 text-blue-500"></i>
-          Trailer
-        </h2>
+      <div v-if="game.trailer_path" class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl shadow-xl p-6 border border-gray-700">
+        <h2 class="text-2xl font-bold text-gray-100 mb-4">Trailer</h2>
         
         <!-- YouTube Video -->
         <div v-if="isYouTubeUrl(game.trailer_path)" class="aspect-video w-full">
@@ -119,58 +115,46 @@
       </div>
 
       <!-- Description -->
-      <div class="bg-white rounded-xl shadow-md p-6 border border-gray-200">
-        <h2 class="text-2xl font-bold text-gray-900 mb-4 flex items-center">
-          <i class="pi pi-align-left mr-2 text-green-500"></i>
-          Popis hry
-        </h2>
-        <p class="text-gray-700 text-lg leading-relaxed whitespace-pre-wrap">
+      <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl shadow-xl p-6 border border-gray-700">
+        <h2 class="text-2xl font-bold text-gray-100 mb-4">Popis hry</h2>
+        <p class="text-gray-300 text-base leading-relaxed whitespace-pre-wrap">
           {{ game.description || 'Popis nebol poskytnutý.' }}
         </p>
       </div>
 
       <!-- Team Members -->
-      <div v-if="game.team?.members && game.team.members.length > 0" class="bg-white rounded-xl shadow-md p-6 border border-gray-200">
-        <h2 class="text-2xl font-bold text-gray-900 mb-4 flex items-center">
-          <i class="pi pi-users mr-2 text-purple-600"></i>
-          Členovia tímu
-        </h2>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div v-if="game.team?.members && game.team.members.length > 0" class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl shadow-xl p-6 border border-gray-700">
+        <h2 class="text-2xl font-bold text-gray-100 mb-4">Členovia tímu</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           <div 
             v-for="member in game.team.members" 
             :key="member.id"
-            class="flex items-center gap-3 p-3 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border-2 border-purple-200 hover:border-purple-400 transition shadow-sm"
+            class="flex items-center gap-3 p-3 bg-gray-700 rounded-lg border border-gray-600 transition hover:border-gray-500 shadow-lg"
           >
-            <div class="bg-purple-500 text-white rounded-full p-2">
-              <i class="pi pi-user text-sm"></i>
-            </div>
-            <span class="text-gray-800 font-semibold">{{ member.name }}</span>
+            <span class="text-gray-200 font-medium">{{ member.name }}</span>
           </div>
         </div>
       </div>
 
       <!-- Download Links -->
-      <div class="bg-white rounded-xl shadow-md p-6 border border-gray-200">
-        <h2 class="text-2xl font-bold text-gray-900 mb-4 flex items-center">
-          <i class="pi pi-download mr-2 text-orange-500"></i>
-          Na stiahnutie
-        </h2>
+      <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl shadow-xl p-6 border border-gray-700">
+        <h2 class="text-2xl font-bold text-gray-100 mb-4">Na stiahnutie</h2>
         <div class="flex flex-col gap-3">
           <Button 
             v-if="game.export_path"
             label="Stiahnuť hru" 
-            icon="pi pi-download" 
-            class="p-button-success p-button-lg"
+            icon="pi pi-download"
+            class="p-button-outlined p-button-lg"
             @click="downloadFile(game.export_path, 'export')"
           />
           <Button 
             v-if="game.source_code_path"
             label="Stiahnuť zdrojový kód" 
-            icon="pi pi-code" 
-            class="p-button-info p-button-lg"
+            icon="pi pi-file-code"
+            class="p-button-outlined p-button-lg"
             @click="downloadFile(game.source_code_path, 'source_code')"
           />
-          <p v-if="!game.export_path && !game.source_code_path" class="text-gray-500 text-center py-4">
+          <p v-if="!game.export_path && !game.source_code_path" class="text-gray-400 text-center py-4">
             Žiadne súbory na stiahnutie.
           </p>
         </div>

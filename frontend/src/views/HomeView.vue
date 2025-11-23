@@ -1,12 +1,12 @@
 <template>
-  <div class="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
+  <div class="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 bg-gray-900 min-h-screen">
 
     <Toast />
 
     <div class="flex flex-col gap-4 mb-8">
       <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h2 class="text-3xl font-bold">
-          Zoznam Registrovaných Hier
+        <h2 class="text-3xl font-bold text-gray-100">
+          Zoznam Registrovaných Projektov 
         </h2>
         
         <div class="flex gap-3 flex-wrap items-center">
@@ -14,36 +14,30 @@
           <Button 
             v-if="hasTeam"
             label="Moje Tímy" 
-            icon="pi pi-users" 
-            class="p-button-info p-button-lg"
+            class="p-button-outlined p-button-lg"
             @click="showTeamStatusDialog = true" 
           />
           <!-- Tlačidlá -->
           <Button 
             label="Pripojiť sa k tímu" 
-            icon="pi pi-user-plus" 
-            class="p-button-secondary p-button-lg"
+            class="p-button-outlined p-button-lg"
             @click="showJoinTeam = true" 
           />
 
           <Button 
             label="Vytvoriť Tím" 
-            icon="pi pi-plus-circle" 
-            class="p-button-primary p-button-lg"
+            class="p-button-outlined p-button-lg"
             @click="showCreateTeam = true" 
           />
         </div>
       </div>
 
-      <!-- Team Selector -->
-      <div v-if="hasTeam && teams.length > 0" class="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-4 shadow-sm">
+      <!-- Team Selector (minimalistic) -->
+      <div v-if="hasTeam && teams.length > 0" class="bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700 rounded-2xl p-5 shadow-xl">
         <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
           <div class="flex items-center gap-3 flex-1">
-            <div class="bg-blue-500 text-white rounded-full p-3 shadow-md">
-              <i class="pi pi-briefcase text-xl"></i>
-            </div>
             <div class="flex-1">
-              <label class="text-sm font-semibold text-gray-700 mb-1 block">Aktívny Tím:</label>
+              <label class="text-sm font-semibold text-gray-300 mb-1 block">Aktívny Tím:</label>
               <Dropdown
                 v-model="selectedTeam"
                 :options="teams"
@@ -52,37 +46,30 @@
                 class="w-full sm:w-80"
               >
                 <template #value="slotProps">
-                  <div v-if="slotProps.value" class="flex items-center gap-2">
-                    <i class="pi pi-shield text-blue-600"></i>
-                    <span class="font-semibold">{{ slotProps.value.name }}</span>
+                  <div v-if="slotProps.value" class="flex items-center">
+                    <span class="font-semibold text-gray-800">{{ slotProps.value.name }}</span>
                   </div>
                 </template>
                 <template #option="slotProps">
-                  <div class="flex items-center gap-2">
-                    <i class="pi pi-shield text-blue-600"></i>
-                    <div>
-                      <div class="font-semibold">{{ slotProps.option.name }}</div>
-                      <div class="text-xs text-gray-500" v-if="slotProps.option.academic_year">
-                        <i class="pi pi-calendar text-purple-600"></i> {{ slotProps.option.academic_year.name }}
-                      </div>
+                  <div class="flex flex-col">
+                    <div class="font-semibold text-gray-800">{{ slotProps.option.name }}</div>
+                    <div class="text-xs text-gray-500" v-if="slotProps.option.academic_year">
+                      {{ slotProps.option.academic_year.name }}
                     </div>
                   </div>
                 </template>
               </Dropdown>
             </div>
           </div>
-          <div v-if="selectedTeam" class="flex items-center gap-3 text-sm">
-            <div class="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border border-purple-200 shadow-sm">
-              <i class="pi pi-graduation-cap text-purple-600"></i>
-              <span class="font-medium text-gray-700">{{ selectedTeam.academic_year?.name || 'N/A' }}</span>
+          <div v-if="selectedTeam" class="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
+            <div class="px-3.5 py-1.5 bg-gray-700 rounded-md border border-gray-600 shadow-lg">
+              <span class="font-medium text-gray-200">{{ selectedTeam.academic_year?.name || 'N/A' }}</span>
             </div>
-            <div class="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border border-green-200 shadow-sm">
-              <i class="pi pi-users text-green-600"></i>
-              <span class="font-medium text-gray-700">{{ selectedTeam.members?.length || 0 }} členov</span>
+            <div class="px-3.5 py-1.5 bg-gray-700 rounded-md border border-gray-600 shadow-lg">
+              <span class="font-medium text-gray-200">{{ selectedTeam.members?.length || 0 }} členov</span>
             </div>
-            <div v-if="selectedTeam.is_scrum_master" class="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-lg border border-yellow-300 shadow-sm">
-              <i class="pi pi-star-fill text-yellow-600"></i>
-              <span class="font-semibold text-yellow-700">Scrum Master</span>
+            <div v-if="selectedTeam.is_scrum_master" class="px-3.5 py-1.5 bg-gray-700 rounded-md border border-blue-500 shadow-lg">
+              <span class="font-semibold text-blue-300">Scrum Master</span>
             </div>
           </div>
         </div>
@@ -90,7 +77,7 @@
     </div>
 
 
-    <div class="flex flex-col sm:flex-row gap-4 mb-8 p-4 border rounded-lg">
+    <div class="flex flex-col sm:flex-row gap-4 mb-8 p-5 border border-gray-700 rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 shadow-xl">
       <div class="flex-grow">
         <span class="p-float-label w-full">
           <InputText id="search" v-model="search" class="w-full" />
@@ -110,67 +97,51 @@
     </div>
 
     <!-- 🛑 SEKCIA: Dynamické Zobrazenie Hier z DB (s loadingom a prázdnym stavom) -->
-    <div v-if="loadingGames" class="text-center p-8 text-xl text-gray-500">
-        <i class="pi pi-spin pi-spinner text-3xl mr-2"></i> Načítavam hry...
+    <div v-if="loadingGames" class="text-center p-12 text-lg text-gray-300">
+        <i class="pi pi-spin pi-spinner text-4xl mr-2 text-blue-400"></i> Načítavam hry...
     </div>
-    <div v-else-if="filteredGames.length === 0" class="text-center p-8 text-xl text-gray-500">
+    <div v-else-if="filteredGames.length === 0" class="text-center p-12 text-lg text-gray-300 bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl border border-gray-700 shadow-xl">
         Zatiaľ nebola pridaná žiadna hra.
     </div>
-    <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+    <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
       <div
         v-for="game in filteredGames"
         :key="game.id"
-        class="border rounded-xl p-5 shadow-md hover:shadow-xl transition duration-300"
+        class="bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700 rounded-2xl p-5 shadow-xl hover:shadow-2xl hover:border-gray-600 transition-all duration-200"
       >
-        <div class="aspect-video bg-gray-100 rounded-lg flex items-center justify-center text-gray-500 mb-4 overflow-hidden">
-          <!-- TODO: Ak existuje splash screen, zobraziť ho namiesto ikony -->
-          <i class="pi pi-video text-5xl"></i>
+        <div class="aspect-video bg-gray-950 rounded-xl mb-4 overflow-hidden flex items-center justify-center text-xs text-gray-500">
+          <!-- Placeholder only (no decorative icon) -->
+          <span v-if="!game.splash_screen_path">Bez náhľadu</span>
+          <img v-else :src="game.splash_screen_path" alt="Splash" class="object-cover w-full h-full" />
         </div>
 
-        <!-- Používame game.title -->
-        <h3 class="text-xl font-bold text-white mb-1 line-clamp-2">{{ game.title }}</h3>
+        <h3 class="text-lg font-semibold text-gray-100 mb-3 line-clamp-2">{{ game.title }}</h3>
         
-        <div class="flex flex-wrap gap-2 text-sm mb-3">
-          <!-- Kategória -->
-          <span class="px-3 py-1.5 rounded-lg border-2 border-blue-400 bg-blue-50 text-blue-700 font-semibold shadow-sm">
-            <i class="pi pi-tag mr-1"></i>{{ game.category }}
-          </span>
-          <!-- Tím -->
-          <span class="px-3 py-1.5 rounded-lg border-2 border-teal-400 bg-teal-50 text-teal-700 font-semibold shadow-sm">
-            <i class="pi pi-shield mr-1"></i>{{ game.team?.name || 'Neznámy' }}
-          </span>
-          <!-- Rok -->
-          <span v-if="game.academic_year" class="px-3 py-1.5 rounded-lg border-2 border-purple-400 bg-purple-50 text-purple-700 font-semibold shadow-sm">
-            <i class="pi pi-graduation-cap mr-1"></i>{{ game.academic_year.name }}
-          </span>
+        <div class="flex flex-wrap gap-2 text-xs mb-3">
+          <span class="px-3 py-1 rounded-md border border-gray-600 bg-gray-700 text-gray-200 font-medium shadow-lg">{{ game.category }}</span>
+          <span class="px-3 py-1 rounded-md border border-gray-600 bg-gray-700 text-gray-200 font-medium shadow-lg">{{ game.team?.name || 'Neznámy' }}</span>
+          <span v-if="game.academic_year" class="px-3 py-1 rounded-md border border-gray-600 bg-gray-700 text-gray-200 font-medium shadow-lg">{{ game.academic_year.name }}</span>
         </div>
         
-        <!-- Používame game.description -->
-        <p class="text-white text-base line-clamp-3 mb-3">{{ game.description || 'Popis nebol poskytnutý.' }}</p>
+        <p class="text-gray-400 text-sm leading-relaxed line-clamp-3 mb-4">{{ game.description || 'Popis nebol poskytnutý.' }}</p>
 
-        <!-- Rating and Views -->
-        <div class="flex items-center gap-4 mb-4 text-sm">
-          <!-- Star Rating -->
+        <div class="flex items-center justify-between mb-4 text-xs text-gray-400 pb-3 border-b border-gray-700">
           <div class="flex items-center gap-1">
             <i 
               v-for="star in 5" 
               :key="star" 
-              :class="star <= Math.round(game.rating || 0) ? 'pi pi-star-fill text-yellow-400' : 'pi pi-star text-gray-400'"
+              :class="star <= Math.round(Number(game.rating || 0)) ? 'pi pi-star-fill text-yellow-400' : 'pi pi-star text-gray-600'"
+              class="text-sm"
             ></i>
-            <span class="ml-1 text-gray-300 font-semibold">{{ Number(game.rating || 0).toFixed(1) }}</span>
+            <span class="font-semibold text-gray-300 ml-1">{{ Number(game.rating || 0).toFixed(1) }}</span>
           </div>
-          <!-- Views Counter -->
-          <div class="flex items-center gap-1 text-gray-300">
-            <i class="pi pi-eye"></i>
-            <span class="font-semibold">{{ game.views || 0 }}</span>
-          </div>
+          <div class="flex items-center gap-1">Zobrazenia: <span class="font-semibold text-gray-300">{{ game.views || 0 }}</span></div>
         </div>
 
         <Button 
-            label="Zobraziť Detail" 
-            icon="pi pi-arrow-right" 
-            iconPos="right"
-            class="p-button-secondary p-button-outlined p-button-sm w-full"
+            label="Detail" 
+            icon="pi pi-arrow-right"
+            class="p-button-sm p-button-outlined w-full"
             @click="viewGameDetail(game)" 
         />
       </div>
@@ -293,58 +264,53 @@
     </template>
     <div v-if="teams.length > 0" class="flex flex-col gap-4 max-h-[70vh] overflow-y-auto">
         <!-- Zobrazenie všetkých tímov -->
-        <div v-for="team in teams" :key="team.id" class="bg-gray-800 rounded-lg p-4 border-2 border-gray-700 hover:border-blue-500 transition">
-            <!-- Hlavička tímu -->
-            <div class="flex justify-between items-start mb-3 pb-3 border-b border-gray-700">
-                <div class="flex items-center gap-3">
-                    <div class="bg-blue-600 text-white rounded-full p-2">
-                        <i class="pi pi-shield text-lg"></i>
-                    </div>
-                    <div>
-                        <h3 class="text-xl font-bold text-white">{{ team.name }}</h3>
-                        <div class="flex items-center gap-2 mt-1">
-                            <span v-if="team.academic_year" class="text-sm text-gray-400 flex items-center gap-1">
-                                <i class="pi pi-graduation-cap text-purple-400"></i>
-                                {{ team.academic_year.name }}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-                <div v-if="team.is_scrum_master" class="flex items-center gap-1 px-2 py-1 bg-yellow-900 text-yellow-300 rounded-lg text-xs font-semibold">
-                    <i class="pi pi-star-fill"></i>
-                    <span>Scrum Master</span>
-                </div>
-            </div>
-
-            <!-- Kód pre pripojenie -->
-            <div class="flex flex-col items-center p-3 bg-gray-900 rounded-lg mb-3">
-                <p class="text-xs text-gray-400 mb-1">Kód pre pripojenie:</p>
-                <div class="flex items-center gap-2">
-                    <span class="text-2xl font-extrabold tracking-widest text-teal-400 select-all">
-                        {{ team.invite_code }}
-                    </span>
-                    <Button 
-                        icon="pi pi-copy" 
-                        class="p-button-sm p-button-text p-button-secondary"
-                        @click="copyTeamCode(team.invite_code)" 
-                        v-tooltip.top="'Kopírovať kód'"
-                    />
-                </div>
-            </div>
-
-            <!-- Zoznam členov -->
+        <div v-for="team in teams" :key="team.id" class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+          <!-- Hlavička tímu -->
+          <div class="flex justify-between items-start mb-3 pb-3 border-b border-gray-700">
             <div>
-                <p class="text-xs text-gray-400 mb-2 flex items-center gap-2">
-                    <i class="pi pi-users text-green-400"></i>
-                    Členovia ({{ team.members?.length || 0 }}/4):
-                </p>
-                <div class="grid grid-cols-2 gap-2">
-                    <div v-for="member in team.members" :key="member.id" class="flex items-center gap-2 text-gray-200 text-sm bg-gray-900 rounded px-2 py-1">
-                        <i class="pi pi-user text-xs text-teal-400"></i>
-                        <span class="truncate">{{ member.name }}</span>
-                    </div>
-                </div>
+              <h3 class="text-lg font-semibold text-white">{{ team.name }}</h3>
+              <div class="mt-1">
+                <span v-if="team.academic_year" class="text-xs text-gray-400">
+                  {{ team.academic_year.name }}
+                </span>
+              </div>
             </div>
+            <div v-if="team.is_scrum_master" class="px-2 py-1 bg-gray-700 text-gray-200 rounded text-xs font-medium">
+              Scrum Master
+            </div>
+          </div>
+
+          <!-- Kód pre pripojenie -->
+          <div class="flex flex-col items-center p-3 bg-gray-900 rounded-lg mb-3">
+            <p class="text-xs text-gray-400 mb-1">Kód pre pripojenie:</p>
+            <div class="flex items-center gap-2">
+              <span class="text-xl font-mono tracking-widest text-gray-200 select-all">
+                {{ team.invite_code }}
+              </span>
+              <Button 
+                class="p-button-sm p-button-text"
+                @click="copyTeamCode(team.invite_code)" 
+                v-tooltip.top="'Kopírovať kód'"
+                label="Kopírovať"
+              />
+            </div>
+          </div>
+
+          <!-- Zoznam členov -->
+          <div>
+            <p class="text-xs text-gray-400 mb-2">Členovia ({{ team.members?.length || 0 }}/4):</p>
+            <div class="grid grid-cols-2 gap-2">
+              <div v-for="member in team.members" :key="member.id" class="flex items-center justify-between gap-2 text-gray-200 text-sm bg-gray-900 rounded px-2 py-1">
+                <span class="truncate">{{ member.name }}</span>
+                <Button
+                  v-if="team.is_scrum_master && member.id !== currentUserId"
+                  label="Odstrániť"
+                  class="p-button-text p-button-sm text-red-300 hover:text-red-200"
+                  @click="confirmRemoveMember(team, member)"
+                />
+              </div>
+            </div>
+          </div>
         </div>
 
         <Button 
@@ -354,8 +320,7 @@
         />
     </div>
     <div v-else class="text-center text-gray-400 py-8">
-        <i class="pi pi-inbox text-4xl mb-3 block"></i>
-        <p>Nie ste členom žiadneho tímu</p>
+        <p class="text-sm">Nie ste členom žiadneho tímu</p>
     </div>
 </Dialog>
 
@@ -386,6 +351,8 @@ const hasTeam = ref(false)
 const teams = ref([]) // All teams user is part of
 const selectedTeam = ref(null) // Currently selected team
 const showTeamStatusDialog = ref(false) 
+const currentUserId = ref(null)
+const removingMember = ref(false)
 
 // -------------------------
 // Logika Pripojenia k Tímu
@@ -567,6 +534,7 @@ const viewGameDetail = (game) => {
 // Načítanie dát
 // -------------------------
 async function loadAcademicYears() {
+    if (!token.value) return
     try {
         const res = await fetch(`${API_URL}/api/academic-years`, {
         headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' }
@@ -576,6 +544,20 @@ async function loadAcademicYears() {
     } catch (err) {
         // Silent fail - academic years are optional for display
     }
+}
+
+// Načítanie aktuálneho používateľa (pre skrytie tlačidla odstránenia pri sebe)
+async function loadCurrentUser() {
+  if (!token.value) return
+  try {
+    const res = await fetch(`${API_URL}/api/user`, {
+      headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' }
+    })
+    if (res.ok) {
+      const data = await res.json()
+      currentUserId.value = data.id
+    }
+  } catch (_) {}
 }
 
 // 🛑 NOVÁ FUNKCIA pre /api/user/team
@@ -620,6 +602,10 @@ async function loadTeamStatus() {
 
 // Načítanie všetkých hier z DB
 async function loadAllGames() {
+    if (!token.value) {
+        loadingGames.value = false
+        return
+    }
     loadingGames.value = true
     try {
         const res = await fetch(`${API_URL}/api/games`, {
@@ -643,10 +629,38 @@ async function loadAllGames() {
     }
 }
 
+function confirmRemoveMember(team, member) {
+  if (removingMember.value) return
+  const ok = window.confirm(`Odstrániť člena "${member.name}" z tímu "${team.name}"?`)
+  if (ok) removeMember(team, member)
+}
+
+async function removeMember(team, member) {
+  removingMember.value = true
+  try {
+    const res = await fetch(`${API_URL}/api/teams/${team.id}/members/${member.id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' }
+    })
+    let msg = 'Nepodarilo sa odstrániť člena.'
+    try { const data = await res.clone().json(); if (data?.message) msg = data.message; if (data?.team?.members) team.members = data.team.members } catch (_) {}
+    if (res.ok) {
+      toast.add({ severity: 'success', summary: 'Člen odstránený', detail: `${member.name} bol odstránený.`, life: 4000 })
+    } else {
+      toast.add({ severity: 'warn', summary: 'Operácia zlyhala', detail: msg, life: 6000 })
+    }
+  } catch (e) {
+    toast.add({ severity: 'error', summary: 'Chyba siete', detail: 'Server je nedostupný.', life: 6000 })
+  } finally {
+    removingMember.value = false
+  }
+}
+
 
 onMounted(() => {
   loadAcademicYears()
   loadTeamStatus() 
   loadAllGames() 
+  loadCurrentUser()
 })
 </script>

@@ -15,4 +15,8 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
+  server: {
+    host: '127.0.0.1', // Force IPv4 instead of IPv6
+    port: 5173,
+  },
 })

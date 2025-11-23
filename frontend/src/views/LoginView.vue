@@ -73,6 +73,18 @@ async function login() {
     const data = error.response?.data || {}
     const status = error.response?.status
 
+    // Email not verified - block login
+    if (status === 403 && data.requires_verification) {
+      toast.add({
+        severity: 'warn',
+        summary: 'Overenie požadované',
+        detail: data.message || 'Účet nie je overený. Skontrolujte e-mail a dokončite overenie.',
+        life: 8000
+      })
+      setTimeout(() => router.push('/verify-email'), 1600)
+      return
+    }
+
     // 5+ attempts - account blocked (verified OR unverified after resend period)
     if (data.too_many_attempts) {
       toast.add({

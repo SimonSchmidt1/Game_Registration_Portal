@@ -46,4 +46,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/academic-years', function() {
         return AcademicYear::all();
     });
+
+    // 🔹 Správa členov tímu (iba Scrum Master)
+    Route::delete('/teams/{team}/members/{user}', [TeamController::class, 'removeMember']);
 });

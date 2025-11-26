@@ -1,3 +1,4 @@
+<!-- DEPRECATED VIEW: AddGameView (use AddProjectView). Retained for rollback; do not modify. -->
 <template>
   <Toast />
   <div class="max-w-2xl mx-auto mt-10 border rounded-xl p-6 shadow-sm bg-gray-900 text-gray-100 border-gray-700">

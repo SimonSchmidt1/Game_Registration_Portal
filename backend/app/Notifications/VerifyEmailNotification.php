@@ -3,10 +3,11 @@
 namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class VerifyEmailNotification extends Notification
+class VerifyEmailNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
@@ -35,16 +36,19 @@ class VerifyEmailNotification extends Notification
      */
     public function toMail(object $notifiable): MailMessage
     {
-        $verificationUrl = env('FRONTEND_URL') . '/verify-email?token=' . $this->verificationToken;
+        $base = config('app.frontend_url', config('app.url'));
+        $verificationUrl = rtrim($base, '/') . '/verify-email?token=' . $this->verificationToken;
 
         return (new MailMessage)
             ->subject('Overte svoju e-mailovú adresu')
-            ->greeting('Ahoj ' . $notifiable->name . '!')
-            ->line('Ďakujeme za registráciu v Game Registration Portal.')
-            ->line('Prosím, overte svoju e-mailovú adresu kliknutím na tlačidlo nižšie:')
-            ->action('Overiť e-mail', $verificationUrl)
-            ->line('Ak ste nevytvárali účet, ignorujte tento e-mail.')
-            ->salutation('S pozdravom, tím Game Portal');
+            ->view('emails.verify-email', [
+                'verificationUrl' => $verificationUrl,
+                'user' => $notifiable,
+            ])
+            ->text('emails.verify-email-text', [
+                'verificationUrl' => $verificationUrl,
+                'user' => $notifiable,
+            ]);
     }
 
     /**

@@ -1,8 +1,21 @@
 <template>
   <div class="max-w-sm mx-auto p-6 border rounded-lg mt-12">
-    <h2 class="text-2xl font-semibold mb-6 text-center">Prihlásenie</h2>
+    <h2 class="text-2xl font-semibold mb-6 text-center">
+      {{ showTemporaryLogin ? 'Prihlásenie s dočasným heslom' : 'Prihlásenie' }}
+    </h2>
 
-    <form @submit.prevent="login">
+    <!-- Temporary Password Info Message -->
+    <div v-if="showTemporaryLogin" class="mb-4 p-4 bg-orange-100 border border-orange-300 rounded-lg">
+      <div class="flex items-start gap-2">
+        <i class="pi pi-info-circle text-orange-600 text-xl mt-0.5"></i>
+        <div>
+          <p class="text-sm text-orange-800 font-medium">Príliš veľa neúspešných pokusov</p>
+          <p class="text-sm text-orange-700 mt-1">Skontroluj svoj e-mail a použi dočasné heslo, ktoré sme ti poslali.</p>
+        </div>
+      </div>
+    </div>
+
+    <form @submit.prevent="showTemporaryLogin ? loginWithTemporaryPassword() : login()">
       <div class="mb-4">
         <label class="block mb-1 font-medium">Email</label>
         <InputText 
@@ -18,10 +31,37 @@
 
       <div class="mb-6">
         <label class="block mb-1 font-medium">Heslo</label>
-        <InputText v-model="password" type="password" class="w-full" required />
+        <InputText 
+          v-if="!showTemporaryLogin"
+          v-model="password" 
+          type="password" 
+          class="w-full" 
+          required 
+        />
+        <InputText 
+          v-else
+          v-model="temporaryPassword" 
+          type="text" 
+          class="w-full" 
+          placeholder="XXXX-XXXX-XXXX"
+          required 
+        />
+        <small v-if="showTemporaryLogin" class="text-gray-500">Formát: XXXX-XXXX-XXXX (z e-mailu)</small>
       </div>
 
-      <Button type="submit" label="Prihlásiť sa" icon="pi pi-sign-in" class="w-full" />
+      <Button type="submit" label="Prihlásiť sa" icon="pi pi-sign-in" class="w-full mb-4" />
+
+      <div v-if="!showTemporaryLogin" class="text-center space-y-2">
+        <router-link to="/forgot-password" class="block text-blue-500 hover:underline text-sm">
+          Zabudnuté heslo?
+        </router-link>
+        <div class="text-gray-500 text-sm mt-4">
+          Nemáš účet? 
+          <router-link to="/register" class="text-blue-500 hover:underline">
+            Zaregistruj sa
+          </router-link>
+        </div>
+      </div>
     </form>
 
     <!-- Toast komponent -->
@@ -44,6 +84,8 @@ const toast = useToast()
 
 const email = ref('')
 const password = ref('')
+const temporaryPassword = ref('')
+const showTemporaryLogin = ref(false)
 
 async function login() {
   try {
@@ -97,20 +139,21 @@ async function login() {
       return
     }
 
-    // 5th attempt for unverified user - resend + redirect
+    // 5th attempt - temporary password sent
     if (data.verification_resent) {
-      // Craft clearer message depending on whether account was previously verified
-      const wasVerified = data.account_verified === true
-      const detail = wasVerified
-        ? 'Z bezpečnostných dôvodov sme vám poslali overovací e‑mail. Ak ste neúspešné pokusy nevykonali vy, dokončite overenie.'
-        : 'Overovací e‑mail bol odoslaný. Skontrolujte schránku a dokončite overenie účtu.'
       toast.add({
         severity: 'info',
-        summary: 'Skontrolujte e‑mail',
-        detail: detail,
+        summary: 'Dočasné heslo odoslané',
+        detail: 'Poslali sme ti e-mail s dočasným heslom. Skontroluj si schránku.',
         life: 7000
       })
-      setTimeout(() => router.push('/verify-email?resent=true'), 1600)
+      showTemporaryLogin.value = true
+      toast.add({
+        severity: 'info',
+        summary: 'Použi dočasné heslo',
+        detail: 'Zadaj dočasné heslo z e-mailu v poli nižšie.',
+        life: 5000
+      })
       return
     }
 
@@ -140,6 +183,47 @@ async function login() {
       summary: 'Chyba',
       detail: status === 401 ? 'Nesprávny email alebo heslo ❌' : 'Chyba pri prihlásení ❌',
       life: 3000
+    })
+  }
+}
+
+async function loginWithTemporaryPassword() {
+  try {
+    const response = await axios.post(`${API_URL}/api/login-temporary`, {
+      email: email.value,
+      temporary_password: temporaryPassword.value,
+    })
+
+    localStorage.setItem('access_token', response.data.access_token)
+    localStorage.setItem('user', JSON.stringify(response.data.user))
+
+    window.dispatchEvent(new Event('login'))
+
+    toast.add({
+      severity: 'success',
+      summary: 'Prihlásenie úspešné',
+      detail: response.data.message || 'Vitaj späť!',
+      life: 4000,
+    })
+
+    if (response.data.should_change_password) {
+      toast.add({
+        severity: 'warn',
+        summary: 'Odporúčame',
+        detail: 'Zmeň si heslo v nastaveniach profilu',
+        life: 6000,
+      })
+    }
+
+    router.push('/')
+  } catch (error) {
+    const data = error.response?.data || {}
+    
+    toast.add({
+      severity: 'error',
+      summary: 'Chyba',
+      detail: data.message || 'Neplatné dočasné heslo alebo email',
+      life: 4000,
     })
   }
 }

@@ -39,5 +39,15 @@ class AppServiceProvider extends ServiceProvider
         $email = (string) $request->email;
         return Limit::perMinute(3)->by($email.$request->ip());
     });
+
+    // ✅ Rate limiting pre vytváranie projektov
+    RateLimiter::for('projects', function (Request $request) {
+        return Limit::perMinute(10)->by($request->user()?->id ?: $request->ip());
+    });
+
+    // ✅ Rate limiting pre hodnotenie projektov
+    RateLimiter::for('ratings', function (Request $request) {
+        return Limit::perMinute(30)->by($request->user()?->id ?: $request->ip());
+    });
 }
 }

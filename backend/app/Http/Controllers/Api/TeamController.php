@@ -60,7 +60,7 @@ class TeamController extends Controller
     public function join(Request $request)
     {
         $request->validate([
-            'invite_code' => 'required|string|size:6|exists:teams,invite_code',
+            'invite_code' => 'required|string|size:6',
         ]);
 
         $user = $request->user();
@@ -68,16 +68,30 @@ class TeamController extends Controller
         if (isset($result['error'])) {
             return match($result['error']) {
                 'already_member' => response()->json(['message' => 'Už ste členom tohto tímu.'], 409),
-                'full' => response()->json(['message' => 'Tím je plný. Maximálny počet členov je ' . $result['max'] . '.'], 403),
-                'not_found' => response()->json(['message' => 'Tím nebol nájdený.'], 404),
-                default => response()->json(['message' => 'Chyba pri pripájaní k tímu.'], 400),
+                'full' => response()->json(['message' => 'Tím je plný. Maximálny počet členov je ' . ($result['max'] ?? 4) . '.'], 403),
+                'not_found' => response()->json(['message' => 'Tím s týmto kódom nebol nájdený. Skontrolujte správnosť kódu.'], 404),
+                'invalid_code' => response()->json(['message' => 'Neplatný kód tímu.'], 400),
+                'invalid_user' => response()->json(['message' => 'Neplatný používateľ.'], 400),
+                default => response()->json(['message' => 'Chyba pri pripájaní k tímu. Skúste to znova.'], 500),
             };
         }
-        $team = $result['team'];
+        $team = $result['team'] ?? null;
+        if (!$team) {
+            return response()->json(['message' => 'Nepodarilo sa načítať informácie o tíme.'], 500);
+        }
         return response()->json([
             'message' => 'Úspešne ste sa pripojili k tímu ' . $team->name . '.',
             'team' => $team,
         ]);
+    }
+
+    /**
+     * Zobrazí detail tímu (vrátane členov a akademického roka).
+     */
+    public function show(Team $team)
+    {
+        $team->load(['members', 'academicYear']);
+        return response()->json($team);
     }
 
     /**
@@ -86,19 +100,49 @@ class TeamController extends Controller
     public function removeMember(Request $request, Team $team, User $user)
     {
         $authUser = $request->user();
-        $result = $this->teamService->removeMember($authUser, $team, $user);
-        if (isset($result['error'])) {
-            return match($result['error']) {
-                'forbidden' => response()->json(['message' => 'Nemáte oprávnenie spravovať členov tohto tímu.'], 403),
-                'not_member' => response()->json(['message' => 'Používateľ nie je členom tímu.'], 404),
-                'cannot_remove_scrum' => response()->json(['message' => 'Scrum Mastera nie je možné odstrániť.'], 422),
-                default => response()->json(['message' => 'Chyba pri odstraňovaní člena.'], 400),
-            };
-        }
-        $team = $result['team'];
-        return response()->json([
-            'message' => 'Člen bol odstránený z tímu.',
-            'team' => $team,
-        ]);
+        
+        return \DB::transaction(function () use ($authUser, $team, $user) {
+            $result = $this->teamService->removeMember($authUser, $team, $user);
+            if (isset($result['error'])) {
+                return match($result['error']) {
+                    'forbidden' => response()->json(['message' => 'Nemáte oprávnenie spravovať členov tohto tímu. Musíte byť Scrum Master.'], 403),
+                    'not_member' => response()->json(['message' => 'Používateľ nie je členom tímu.'], 404),
+                    'cannot_remove_scrum' => response()->json(['message' => 'Scrum Mastera nie je možné odstrániť. Najprv musí byť prenesená rola.'], 422),
+                    'invalid_input' => response()->json(['message' => 'Neplatné vstupné údaje.'], 400),
+                    default => response()->json(['message' => 'Chyba pri odstraňovaní člena. Skúste to znova.'], 500),
+                };
+            }
+            $team = $result['team'] ?? null;
+            if (!$team) {
+                return response()->json(['message' => 'Nepodarilo sa načítať informácie o tíme.'], 500);
+            }
+            return response()->json([
+                'message' => 'Člen bol odstránený z tímu.',
+                'team' => $team,
+            ]);
+        });
+    }
+
+    /**
+     * Používateľ opustí tím (len ak nie je Scrum Master).
+     */
+    public function leave(Request $request, Team $team)
+    {
+        $user = $request->user();
+        
+        return \DB::transaction(function () use ($user, $team) {
+            $result = $this->teamService->leaveTeam($user, $team);
+            if (isset($result['error'])) {
+                return match($result['error']) {
+                    'not_member' => response()->json(['message' => 'Nie ste členom tohto tímu.'], 404),
+                    'cannot_leave_as_scrum' => response()->json(['message' => 'Scrum Master nemôže opustiť tím. Najprv musíte preniesť rolu alebo zrušiť tím.'], 422),
+                    'invalid_input' => response()->json(['message' => 'Neplatné vstupné údaje.'], 400),
+                    default => response()->json(['message' => 'Chyba pri opúšťaní tímu. Skúste to znova.'], 500),
+                };
+            }
+            return response()->json([
+                'message' => 'Úspešne ste opustili tím.',
+            ]);
+        });
     }
 }

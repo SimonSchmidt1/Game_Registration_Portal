@@ -9,7 +9,7 @@
           Zoznam Registrovaných Projektov 
         </h2>
         
-        <div class="flex gap-3 flex-wrap items-center">
+        <div v-if="token" class="flex gap-3 flex-wrap items-center">
           <!-- TLAČIDLO: Info o tíme (viditeľné len ak je používateľ v tíme) -->
           <Button 
             v-if="hasTeam"
@@ -77,11 +77,11 @@
     </div>
 
 
-    <div class="flex flex-col sm:flex-row gap-4 mb-8 p-5 border border-gray-700 rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 shadow-xl">
+    <div v-if="token" class="flex flex-col sm:flex-row gap-4 mb-8 p-5 border border-gray-700 rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 shadow-xl">
       <div class="flex-grow">
         <span class="p-float-label w-full">
           <InputText id="search" v-model="search" class="w-full" />
-          <label for="search">Vyhľadať podľa názvu hry</label>
+          <label for="search">Vyhľadať podľa názvu projektu</label>
         </span>
       </div>
 
@@ -94,20 +94,57 @@
           class="w-full"
         />
       </div>
+      <div class="w-full sm:w-56">
+        <Dropdown
+          v-model="selectedType"
+          :options="types"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Typ projektu"
+          class="w-full"
+        />
+      </div>
+      <div class="w-full sm:w-48 flex items-center gap-2">
+        <Button v-if="hasTeam && selectedTeam && !showingMyProjects" label="Moje Projekty" class="p-button-outlined w-full" icon="pi pi-filter" @click="loadMyProjects" />
+        <Button v-if="showingMyProjects" label="Všetky Projekty" class="p-button-outlined w-full" icon="pi pi-arrow-left" @click="loadAllGames" />
+      </div>
     </div>
 
     <!-- 🛑 SEKCIA: Dynamické Zobrazenie Hier z DB (s loadingom a prázdnym stavom) -->
-    <div v-if="loadingGames" class="text-center p-12 text-lg text-gray-300">
-        <i class="pi pi-spin pi-spinner text-4xl mr-2 text-blue-400"></i> Načítavam hry...
+    <!-- Not logged in message -->
+    <div v-if="!token" class="text-center p-20 bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl border border-gray-700 shadow-xl">
+      <i class="pi pi-lock text-6xl text-gray-500 mb-6"></i>
+      <h3 class="text-2xl font-bold text-gray-100 mb-4">Prihláste sa aby ste videli projekty v systéme</h3>
+      <p class="text-gray-400 mb-6">Pre zobrazenie projektov a funkcionalitu systému sa musíte prihlásiť.</p>
+      <div class="flex gap-3 justify-center">
+        <Button 
+          label="Prihlásiť sa" 
+          icon="pi pi-sign-in"
+          class="p-button-lg"
+          @click="$router.push('/login')"
+        />
+        <Button 
+          label="Registrovať sa" 
+          icon="pi pi-user-plus"
+          class="p-button-outlined p-button-lg"
+          @click="$router.push('/register')"
+        />
+      </div>
     </div>
-    <div v-else-if="filteredGames.length === 0" class="text-center p-12 text-lg text-gray-300 bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl border border-gray-700 shadow-xl">
-        Zatiaľ nebola pridaná žiadna hra.
-    </div>
-    <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+
+    <!-- Logged in - show projects -->
+    <div v-else>
+      <div v-if="loadingGames" class="flex items-center justify-center p-20 text-xl text-blue-400">
+        <i class="pi pi-spin pi-spinner text-4xl mr-2 text-blue-400"></i> Načítavam projekty...
+      </div>
+      <div v-else-if="filteredGames.length === 0" class="text-center p-12 text-lg text-gray-300 bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl border border-gray-700 shadow-xl">
+        Zatiaľ nebol pridaný žiadny projekt.
+      </div>
+      <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
       <div
         v-for="game in filteredGames"
         :key="game.id"
-        class="bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700 rounded-2xl p-5 shadow-xl hover:shadow-2xl hover:border-gray-600 transition-all duration-200"
+        class="bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700 rounded-2xl p-5 shadow-xl hover:shadow-2xl hover:border-gray-600 transition-all duration-200 flex flex-col"
       >
         <div class="aspect-video bg-gray-950 rounded-xl mb-4 overflow-hidden flex items-center justify-center text-xs text-gray-500">
           <span v-if="!game.splash_screen_path">Bez náhľadu</span>
@@ -122,32 +159,41 @@
         <h3 class="text-lg font-semibold text-gray-100 mb-3 line-clamp-2">{{ game.title }}</h3>
         
         <div class="flex flex-wrap gap-2 text-xs mb-3">
+          <span class="px-3 py-1 rounded-md border border-teal-600 bg-teal-700 text-teal-100 font-medium shadow-lg uppercase">{{ game.type.replace('_', ' ') }}</span>
           <span class="px-3 py-1 rounded-md border border-gray-600 bg-gray-700 text-gray-200 font-medium shadow-lg">{{ game.category }}</span>
-          <span class="px-3 py-1 rounded-md border border-gray-600 bg-gray-700 text-gray-200 font-medium shadow-lg">{{ game.team?.name || 'Neznámy' }}</span>
+          <span 
+            class="px-3 py-1 rounded-md border border-gray-600 bg-gray-700 text-gray-200 font-medium shadow-lg cursor-pointer hover:bg-gray-600 transition"
+            @click.stop="goToTeam(game.team?.id)"
+          >
+            {{ game.team?.name || 'Neznámy' }}
+          </span>
           <span v-if="game.academic_year" class="px-3 py-1 rounded-md border border-gray-600 bg-gray-700 text-gray-200 font-medium shadow-lg">{{ game.academic_year.name }}</span>
         </div>
         
         <p class="text-gray-400 text-sm leading-relaxed line-clamp-3 mb-4">{{ game.description || 'Popis nebol poskytnutý.' }}</p>
 
-        <div class="flex items-center justify-between mb-4 text-xs text-gray-400 pb-3 border-b border-gray-700">
-          <div class="flex items-center gap-1">
-            <i 
-              v-for="star in 5" 
-              :key="star" 
-              :class="star <= Math.round(Number(game.rating || 0)) ? 'pi pi-star-fill text-yellow-400' : 'pi pi-star text-gray-600'"
-              class="text-sm"
-            ></i>
-            <span class="font-semibold text-gray-300 ml-1">{{ Number(game.rating || 0).toFixed(1) }}</span>
+        <div class="mt-auto">
+          <div class="flex items-center justify-between mb-3 text-xs text-gray-400 pb-3 border-b border-gray-700">
+            <div class="flex items-center gap-1">
+              <i 
+                v-for="star in 5" 
+                :key="star" 
+                :class="star <= Math.round(Number(game.rating || 0)) ? 'pi pi-star-fill text-yellow-400' : 'pi pi-star text-gray-600'"
+                class="text-sm"
+              ></i>
+              <span class="font-semibold text-gray-300 ml-1">{{ Number(game.rating || 0).toFixed(1) }}</span>
+            </div>
+            <div class="flex items-center gap-1">Zobrazenia: <span class="font-semibold text-gray-300">{{ game.views || 0 }}</span></div>
           </div>
-          <div class="flex items-center gap-1">Zobrazenia: <span class="font-semibold text-gray-300">{{ game.views || 0 }}</span></div>
-        </div>
 
-        <Button 
-            label="Detail" 
+          <Button 
+            label="Zobraziť detail" 
             icon="pi pi-arrow-right"
             class="p-button-sm p-button-outlined w-full"
-            @click="viewGameDetail(game)" 
-        />
+            @click="viewProjectDetail(game)" 
+          />
+        </div>
+      </div>
       </div>
     </div>
   </div>
@@ -314,6 +360,12 @@
                   label="Odstrániť"
                   class="p-button-text p-button-sm text-red-300 hover:text-red-200"
                   @click="confirmRemoveMember(team, member)"
+                />
+                <Button
+                  v-if="!team.is_scrum_master && member.id === currentUserId"
+                  label="Opustiť"
+                  class="p-button-text p-button-sm text-yellow-300 hover:text-yellow-200"
+                  @click="confirmLeaveTeam(team)"
                 />
               </div>
             </div>
@@ -545,19 +597,35 @@ const closeCreateTeamDialog = () => {
 const search = ref('')
 const selectedCategory = ref(null)
 const categories = ref([
+  { name: 'Všetky', value: null },
   { name: 'Akčná' }, { name: 'Strategická' }, { name: 'RPG' }, { name: 'Simulátor' },
-  { name: 'Horor' }, { name: 'Dobrodružná' }, { name: 'Logická' }, 
+  { name: 'Horor' }, { name: 'Dobrodužná' }, { name: 'Logická' }, { name: 'Adventura' },
+  { name: 'Puzzle' }, { name: 'Šport' }, { name: 'Preteky' }, { name: 'Vždelávacie' }
 ])
+const types = ref([
+  { label: 'Všetky', value: 'all' },
+  { label: 'Hra', value: 'game' },
+  { label: 'Web App', value: 'web_app' },
+  { label: 'Mobile App', value: 'mobile_app' },
+  { label: 'Knižnica', value: 'library' },
+  { label: 'Iné', value: 'other' }
+])
+const selectedType = ref('all')
 const games = ref([]) 
-const loadingGames = ref(true) 
+const loadingGames = ref(true)
+const showingMyProjects = ref(false) 
 
 const filteredGames = computed(() => {
   return games.value.filter(
-    (g) => g.title.toLowerCase().includes(search.value.toLowerCase()) && (!selectedCategory.value || g.category === selectedCategory.value.name)
+    (g) => {
+      const matchesSearch = g.title.toLowerCase().includes(search.value.toLowerCase())
+      const matchesCategory = !selectedCategory.value || selectedCategory.value.value === null || g.category === selectedCategory.value.name
+      return matchesSearch && matchesCategory
+    }
   )
 })
-const viewGameDetail = (game) => {
-    router.push({ name: 'GameDetail', params: { id: game.id } })
+const viewProjectDetail = (project) => {
+  router.push({ name: 'ProjectDetail', params: { id: project.id } })
 }
 
 // -------------------------
@@ -618,6 +686,7 @@ async function loadTeamStatus() {
                 hasTeam.value = false;
                 teams.value = [];
                 selectedTeam.value = null;
+                setActiveTeam(null); // Clear localStorage and notify Navbar
             }
         } else if (res.status === 404) {
             console.warn(`⚠️ Chyba 404: Endpoint /api/user/team nebol nájdený. Skontrolujte routes/api.php.`)
@@ -636,28 +705,30 @@ async function loadTeamStatus() {
 
 // Načítanie všetkých hier z DB
 async function loadAllGames() {
+    showingMyProjects.value = false
     if (!token.value) {
         loadingGames.value = false
         return
     }
     loadingGames.value = true
     try {
-        const res = await fetch(`${API_URL}/api/games`, {
+        const query = selectedType.value && selectedType.value !== 'all' ? `?type=${encodeURIComponent(selectedType.value)}` : ''
+        const res = await fetch(`${API_URL}/api/projects${query}`, {
             headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' }
         })
-
+        
         if (res.ok) {
             const data = await res.json()
             games.value = data
         } else if (res.status === 404) {
-            toast.add({ severity: 'error', summary: 'Chyba Načítania Hier (404)', detail: 'Chýba routa GET /api/games. Pridajte ju, prosím, do routes/api.php.', life: 10000 })
+            toast.add({ severity: 'error', summary: 'Chyba Načítania Projektov (404)', detail: 'Chýba routa GET /api/projects. Pridajte ju, prosím, do routes/api.php.', life: 10000 })
         }
          else {
-            toast.add({ severity: 'error', summary: 'Chyba Načítania Hier', detail: `Nepodarilo sa načítať zoznam hier zo servera. Status: ${res.status}`, life: 5000 })
+            toast.add({ severity: 'error', summary: 'Chyba Načítania Projektov', detail: `Nepodarilo sa načítať zoznam projektov zo servera. Status: ${res.status}`, life: 5000 })
         }
     } catch (err) {
-        console.error('❌ FATÁLNA CHYBA SIETE pri načítaní všetkých hier. Server pravdepodobne nie je spustený alebo je nedostupný.', err)
-        toast.add({ severity: 'fatal', summary: 'Chyba Pripojenia', detail: 'Server je nedostupný (Connection refused). Problém s komunikáciou pri načítaní hier.', life: 10000 })
+        console.error('❌ FATÁLNA CHYBA SIETE pri načítaní všetkých projektov. Server pravdepodobne nie je spustený alebo je nedostupný.', err)
+        toast.add({ severity: 'fatal', summary: 'Chyba Pripojenia', detail: 'Server je nedostupný (Connection refused). Problém s komunikáciou pri načítaní projektov.', life: 10000 })
     } finally {
         loadingGames.value = false
     }
@@ -667,6 +738,39 @@ function confirmRemoveMember(team, member) {
   if (removingMember.value) return
   const ok = window.confirm(`Odstrániť člena "${member.name}" z tímu "${team.name}"?`)
   if (ok) removeMember(team, member)
+}
+
+function confirmLeaveTeam(team) {
+  if (removingMember.value) return
+  const ok = window.confirm(`Naozaj chcete opustiť tím "${team.name}"?`)
+  if (ok) leaveTeam(team)
+}
+
+// Load only projects for active team
+async function loadMyProjects(){
+  if(!token.value || !selectedTeam.value) return
+  showingMyProjects.value = true
+  loadingGames.value = true
+  try {
+    const res = await fetch(`${API_URL}/api/projects/my?team_id=${selectedTeam.value.id}`, { headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' } })
+    if(res.ok){
+      const data = await res.json()
+      games.value = data.projects || []
+      const count = data.count || games.value.length
+      if(count === 0){
+        toast.add({ severity: 'info', summary: 'Žiadne projekty', detail: 'Váš tím zatiaľ nemá žiadne projekty.', life: 3000 })
+      } else {
+        toast.add({ severity: 'success', summary: 'Filtrované', detail: `Zobrazených ${count} projektov vášho tímu.`, life: 3000 })
+      }
+    } else {
+      const errorData = await res.json().catch(() => ({}))
+      toast.add({ severity: 'warn', summary: 'Chyba', detail: errorData.message || 'Nepodarilo sa načítať projekty tímu.', life: 4000 })
+    }
+  } catch(_) {
+    toast.add({ severity: 'error', summary: 'Chyba siete', detail: 'Server je nedostupný.', life: 5000 })
+  } finally {
+    loadingGames.value = false
+  }
 }
 
 async function removeMember(team, member) {
@@ -690,6 +794,30 @@ async function removeMember(team, member) {
   }
 }
 
+async function leaveTeam(team) {
+  removingMember.value = true
+  try {
+    const res = await fetch(`${API_URL}/api/teams/${team.id}/leave`, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' }
+    })
+    let msg = 'Nepodarilo sa opustiť tím.'
+    try { const data = await res.clone().json(); if (data?.message) msg = data.message } catch (_) {}
+    if (res.ok) {
+      toast.add({ severity: 'success', summary: 'Tím opustený', detail: `Úspešne ste opustili tím ${team.name}.`, life: 4000 })
+      await loadTeamStatus()
+      setActiveTeam(teams.value[0] || null)
+      showTeamStatusDialog.value = false
+    } else {
+      toast.add({ severity: 'warn', summary: 'Operácia zlyhala', detail: msg, life: 6000 })
+    }
+  } catch (e) {
+    toast.add({ severity: 'error', summary: 'Chyba siete', detail: 'Server je nedostupný.', life: 6000 })
+  } finally {
+    removingMember.value = false
+  }
+}
+
 
 onMounted(() => {
   loadAcademicYears()
@@ -702,11 +830,29 @@ onMounted(() => {
 watch(selectedTeam, (val) => {
   setActiveTeam(val)
 })
+watch(selectedType, () => { loadAllGames() })
 
 // Helper to resolve splash image path (local storage or absolute URL)
 function getSplashUrl(path) {
   if (!path) return ''
   if (path.startsWith('http')) return path
   return `${API_URL}/storage/${path}`
+}
+
+function formatProjectType(type) {
+  const typeMap = {
+    game: 'Hra',
+    web_app: 'Web App',
+    mobile_app: 'Mobile App',
+    library: 'Knižnica',
+    other: 'Iné'
+  }
+  return typeMap[type] || type
+}
+
+function goToTeam(teamId) {
+  if (teamId) {
+    router.push(`/team/${teamId}`)
+  }
 }
 </script>

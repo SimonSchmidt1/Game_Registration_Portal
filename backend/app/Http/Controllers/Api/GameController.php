@@ -49,18 +49,26 @@ class GameController extends Controller
         $result = $this->gameService->createGame($user, $team, $request->all(), $files);
 
         if (isset($result['error'])) {
-            if ($result['error'] === 'not_scrum') {
-                return response()->json([
+            return match($result['error']) {
+                'not_scrum' => response()->json([
                     'message' => 'Hru môže pridať iba Scrum Master tímu.',
-                    'debug' => $result['debug'] ?? []
-                ], 403);
-            }
-            if ($result['error'] === 'already_has_game') {
-                return response()->json(['message' => 'Tím už má pridelenú hru. Na zmenu použite úpravu (edit).'], 422);
-            }
+                    'debug' => config('app.debug') ? ($result['debug'] ?? []) : null
+                ], 403),
+                'already_has_game' => response()->json(['message' => 'Tím už má pridelenú hru. Na zmenu použite úpravu (edit).'], 422),
+                'invalid_user' => response()->json(['message' => 'Neplatný používateľ.'], 400),
+                'invalid_team' => response()->json(['message' => 'Neplatný tím.'], 400),
+                'invalid_title' => response()->json(['message' => 'Názov hry je povinný.'], 400),
+                'creation_failed' => response()->json(['message' => $result['message'] ?? 'Nepodarilo sa vytvoriť hru. Skúste to znova.'], 500),
+                default => response()->json(['message' => 'Chyba pri vytváraní hry.'], 500),
+            };
+        }
+        
+        $game = $result['game'] ?? null;
+        if (!$game) {
+            return response()->json(['message' => 'Nepodarilo sa načítať informácie o hre.'], 500);
         }
 
-        return response()->json(['game' => $result['game']], 201);
+        return response()->json(['game' => $game], 201);
     }
 
     public function index(Request $request)
@@ -94,8 +102,14 @@ class GameController extends Controller
         if (!$game) {
             return response()->json(['message' => 'Hra nebola nájdená.'], 404);
         }
-        $views = $this->gameService->incrementViews($game);
-        return response()->json(['views' => $views], 200);
+        try {
+            $views = $this->gameService->incrementViews($game);
+            return response()->json(['views' => $views ?? 0], 200);
+        } catch (\Exception $e) {
+            \Log::error('Failed to increment views', ['game_id' => $id, 'error' => $e->getMessage()]);
+            // Don't fail the request if view increment fails - it's non-critical
+            return response()->json(['views' => $game->views ?? 0], 200);
+        }
     }
 
     // 🔹 Ohodnotenie hry používateľom (iba raz)
@@ -110,13 +124,19 @@ class GameController extends Controller
         ]);
         $user = $request->user();
         $result = $this->gameService->rateGame($user, $game, (int)$request->rating);
-        if (isset($result['error']) && $result['error'] === 'already_rated') {
-            return response()->json(['message' => 'Túto hru už nemôžeš znovu hodnotiť.'], 422);
+        if (isset($result['error'])) {
+            return match($result['error']) {
+                'already_rated' => response()->json(['message' => 'Túto hru už nemôžeš znovu hodnotiť.'], 422),
+                'invalid_input' => response()->json(['message' => 'Neplatné vstupné údaje.'], 400),
+                'invalid_rating' => response()->json(['message' => 'Hodnotenie musí byť medzi 1 a 5.'], 400),
+                'rating_failed' => response()->json(['message' => 'Nepodarilo sa uložiť hodnotenie. Skúste to znova.'], 500),
+                default => response()->json(['message' => 'Chyba pri hodnotmení.'], 500),
+            };
         }
         return response()->json([
             'message' => 'Hodnotenie uložené.',
-            'rating' => $result['rating'],
-            'rating_count' => $result['rating_count']
+            'rating' => $result['rating'] ?? 0,
+            'rating_count' => $result['rating_count'] ?? 0
         ], 201);
     }
 

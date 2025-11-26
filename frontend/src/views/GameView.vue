@@ -1,3 +1,4 @@
+<!-- DEPRECATED VIEW: GameView (replaced by ProjectView). Retained for rollback; do not extend. -->
 <template>
   <div class="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 bg-gray-900 min-h-screen">
     <Toast />
@@ -66,7 +67,10 @@
         </div>
         
         <div class="flex flex-wrap gap-2.5 text-sm">
-          <span class="px-3.5 py-1.5 rounded-md border border-gray-600 bg-gray-700 text-gray-200 font-medium shadow-lg">
+          <span 
+            class="px-3.5 py-1.5 rounded-md border border-gray-600 bg-gray-700 text-gray-200 font-medium shadow-lg cursor-pointer hover:bg-gray-600 transition"
+            @click="goToTeam(game.team?.id)"
+          >
             {{ game.team?.name || 'Neznámy' }}
           </span>
           <span v-if="game.academic_year" class="px-3.5 py-1.5 rounded-md border border-gray-600 bg-gray-700 text-gray-200 font-medium shadow-lg">
@@ -665,6 +669,13 @@ onUnmounted(() => {
 
 function startYouTubePlayer() {
   youtubePlayerStarted.value = true
+}
+
+// Navigate to team detail
+function goToTeam(teamId) {
+  if (teamId) {
+    router.push(`/team/${teamId}`)
+  }
 }
 
 // Go back to home

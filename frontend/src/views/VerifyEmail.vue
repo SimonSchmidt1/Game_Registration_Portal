@@ -26,9 +26,9 @@
     <div v-else-if="success" class="text-center">
       <i class="pi pi-check-circle text-6xl text-green-500 mb-4"></i>
       <h2 class="text-2xl font-semibold mb-4 text-green-600">Email overený!</h2>
-      <p class="mb-6 text-gray-600">Váš účet bol úspešne overený. Teraz sa môžete prihlásiť.</p>
+      <p class="mb-6 text-gray-600">Váš účet bol úspešne overený. Presmerovávame vás na prihlásenie...</p>
       <Button 
-        label="Prihlásiť sa" 
+        label="Prihlásiť sa teraz" 
         icon="pi pi-sign-in" 
         class="w-full" 
         @click="goToLogin"

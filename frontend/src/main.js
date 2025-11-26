@@ -31,6 +31,24 @@ if (token) {
 
 const app = createApp(App)
 
+// Global error handler (Vue error boundary)
+app.config.errorHandler = (err, instance, info) => {
+  console.error('Vue Error:', err)
+  console.error('Component:', instance)
+  console.error('Error Info:', info)
+  
+  // Show user-friendly error toast if available
+  const toast = instance?.$root?.$toast || instance?.appContext?.config?.globalProperties?.$toast
+  if (toast) {
+    toast.add({
+      severity: 'error',
+      summary: 'Chyba aplikácie',
+      detail: 'Vyskytla sa nečakaná chyba. Skúste obnoviť stránku.',
+      life: 8000
+    })
+  }
+}
+
 app.use(PrimeVue, { theme: { preset: Aura } })
 app.use(ToastService) 
 
@@ -48,5 +66,25 @@ app.component('FileUpload', FileUpload)
 app.component('Tabs', Tabs) 
 app.component('TabPanel', TabPanel) 
 app.component('Toast', Toast) // len raz!
+
+// Axios interceptor for auth errors
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error.response?.status
+    if (status === 401) {
+      // Clear auth and redirect only if user was logged in
+      if (localStorage.getItem('access_token')) {
+        localStorage.removeItem('access_token')
+        localStorage.removeItem('user')
+        window.dispatchEvent(new Event('logout'))
+        if (router.currentRoute.value.path !== '/login') {
+          router.push('/login')
+        }
+      }
+    }
+    return Promise.reject(error)
+  }
+)
 
 app.mount('#app')

@@ -3,8 +3,7 @@
     <div class="w-full max-w-6xl flex justify-between items-center px-4 sm:px-6 lg:px-8">
       <div class="flex items-center gap-6">
         <RouterLink to="/" class="text-lg font-semibold hover:underline">Domov</RouterLink>
-        <RouterLink v-if="canAddGame" to="/add" class="text-lg font-semibold hover:underline">Pridať hru</RouterLink>
-        <span v-else class="text-lg font-semibold text-gray-500 cursor-not-allowed" title="Len Scrum Master aktívneho tímu môže pridať hru">Pridať hru</span>
+        <RouterLink v-if="canAddGame" to="/add-project" class="text-lg font-semibold hover:underline">Pridať projekt</RouterLink>
       </div>
 
       <div class="flex items-center gap-3">
@@ -107,7 +106,13 @@
           <span class="text-gray-400 font-medium">
             Meno:
           </span>
-          <span class="text-white font-semibold">{{ currentUser.name }}</span>
+          <span v-if="!editMode" class="text-white font-semibold">{{ currentUser.name }}</span>
+          <input 
+            v-else 
+            v-model="editName" 
+            type="text" 
+            class="bg-gray-700 text-white px-2 py-1 rounded border border-gray-600 focus:border-blue-500 focus:outline-none"
+          />
         </div>
         
         <div class="flex justify-between items-center p-3 bg-gray-800 rounded-lg">
@@ -125,11 +130,85 @@
         </div>
       </div>
 
-      <Button 
-        label="Zavrieť" 
-        class="p-button-text w-full"
-        @click="showUserProfileDialog = false" 
-      />
+      <div v-if="!editMode" class="flex gap-2">
+        <Button 
+          label="Upraviť profil" 
+          class="p-button-outlined flex-1"
+          @click="startEdit" 
+        />
+        <Button 
+          label="Zmeniť heslo" 
+          class="p-button-outlined flex-1"
+          severity="secondary"
+          @click="openPasswordDialog" 
+        />
+      </div>
+      <div v-else class="flex gap-2">
+        <Button 
+          label="Uložiť" 
+          class="p-button-outlined w-full"
+          @click="saveProfile" 
+        />
+        <Button 
+          label="Zrušiť" 
+          class="p-button-text w-full"
+          @click="cancelEdit" 
+        />
+      </div>
+    </div>
+  </Dialog>
+
+  <!-- Password Change Dialog -->
+  <Dialog 
+    v-model:visible="showPasswordDialog" 
+    header="Zmena hesla" 
+    modal
+    :style="{ width: '450px' }"
+    class="p-fluid"
+  >
+    <div class="flex flex-col gap-4 p-4">
+      <div>
+        <label class="block mb-2 font-medium text-gray-300">Aktuálne heslo</label>
+        <input 
+          v-model="currentPassword" 
+          type="password" 
+          class="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600 focus:border-blue-500 focus:outline-none" 
+          placeholder="Zadaj aktuálne heslo"
+        />
+      </div>
+      <div>
+        <label class="block mb-2 font-medium text-gray-300">Nové heslo</label>
+        <input 
+          v-model="newPassword" 
+          type="password" 
+          class="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600 focus:border-blue-500 focus:outline-none" 
+          placeholder="Aspoň 8 znakov"
+        />
+      </div>
+      <div>
+        <label class="block mb-2 font-medium text-gray-300">Potvrdiť nové heslo</label>
+        <input 
+          v-model="newPasswordConfirm" 
+          type="password" 
+          class="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600 focus:border-blue-500 focus:outline-none" 
+          placeholder="Zadaj heslo znova"
+        />
+      </div>
+      <div class="flex gap-2 mt-2">
+        <Button 
+          label="Zrušiť" 
+          icon="pi pi-times" 
+          @click="showPasswordDialog = false" 
+          text 
+          class="flex-1"
+        />
+        <Button 
+          label="Uložiť" 
+          icon="pi pi-check" 
+          @click="savePassword" 
+          class="flex-1"
+        />
+      </div>
     </div>
   </Dialog>
 </template>
@@ -146,12 +225,19 @@ import { useToast } from 'primevue/usetoast'
 const API_URL = import.meta.env.VITE_API_URL
 const router = useRouter()
 const isLoggedIn = ref(!!localStorage.getItem('access_token'))
-const canAddGame = ref(false) // Derived from active team scrum master status
+const canAddGame = ref(false) // Derived from active team scrum master status (now for projects)
 const userName = ref('')
 const currentUser = ref(null)
 const showUserProfileDialog = ref(false)
+const showPasswordDialog = ref(false)
 const toast = ref(null)
 const toastService = useToast()
+const editMode = ref(false)
+const editName = ref('')
+const editEmail = ref('')
+const currentPassword = ref('')
+const newPassword = ref('')
+const newPasswordConfirm = ref('')
 
 async function loadCurrentUser() {
   const token = localStorage.getItem('access_token')
@@ -209,6 +295,78 @@ async function handleAvatarUpload(event) {
   } catch (err) {
     console.error('Error uploading avatar:', err)
     toastService.add({ severity: 'error', summary: 'Chyba', detail: 'Chyba pri nahrávaní avatara.', life: 3000 })
+  }
+}
+
+function openPasswordDialog() {
+  currentPassword.value = ''
+  newPassword.value = ''
+  newPasswordConfirm.value = ''
+  showPasswordDialog.value = true
+  showUserProfileDialog.value = false
+}
+
+async function savePassword() {
+  if (newPassword.value !== newPasswordConfirm.value) {
+    toastService.add({ 
+      severity: 'error', 
+      summary: 'Chyba', 
+      detail: 'Heslá sa nezhodujú', 
+      life: 3000 
+    })
+    return
+  }
+
+  if (newPassword.value.length < 8) {
+    toastService.add({ 
+      severity: 'error', 
+      summary: 'Chyba', 
+      detail: 'Heslo musí mať aspoň 8 znakov', 
+      life: 3000 
+    })
+    return
+  }
+
+  const token = localStorage.getItem('access_token')
+  try {
+    const res = await fetch(`${API_URL}/api/user/password`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        current_password: currentPassword.value,
+        new_password: newPassword.value,
+        new_password_confirmation: newPasswordConfirm.value,
+      }),
+    })
+
+    const data = await res.json()
+
+    if (res.ok) {
+      toastService.add({ 
+        severity: 'success', 
+        summary: 'Úspech', 
+        detail: data.message || 'Heslo bolo zmenené', 
+        life: 4000 
+      })
+      showPasswordDialog.value = false
+    } else {
+      toastService.add({ 
+        severity: 'error', 
+        summary: 'Chyba', 
+        detail: data.message || 'Nepodarilo sa zmeniť heslo', 
+        life: 4000 
+      })
+    }
+  } catch (err) {
+    toastService.add({ 
+      severity: 'error', 
+      summary: 'Chyba siete', 
+      detail: 'Nepodarilo sa spojiť so serverom', 
+      life: 4000 
+    })
   }
 }
 
@@ -274,7 +432,15 @@ onMounted(async () => {
 })
 
 function refreshActiveTeamStatus(detail) {
+  const token = localStorage.getItem('access_token')
   const stored = localStorage.getItem('active_team_is_scrum_master')
+  
+  // Must be logged in to add games
+  if (!token) {
+    canAddGame.value = false
+    return
+  }
+  
   // Prefer event detail if available
   if (detail && typeof detail.isScrumMaster === 'boolean') {
     canAddGame.value = detail.isScrumMaster
@@ -282,6 +448,49 @@ function refreshActiveTeamStatus(detail) {
     canAddGame.value = stored === '1'
   } else {
     canAddGame.value = false
+  }
+}
+
+function startEdit() {
+  editName.value = currentUser.value.name
+  editMode.value = true
+}
+
+function cancelEdit() {
+  editMode.value = false
+  editName.value = ''
+}
+
+async function saveProfile() {
+  const token = localStorage.getItem('access_token')
+  if (!token) return
+
+  try {
+    const res = await fetch(`${API_URL}/api/user`, {
+      method: 'PUT',
+      headers: { 
+        'Authorization': 'Bearer ' + token,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        name: editName.value
+      })
+    })
+
+    const data = await res.json()
+
+    if (res.ok) {
+      currentUser.value = data.user
+      userName.value = data.user.name
+      editMode.value = false
+      toastService.add({ severity: 'success', summary: 'Profil aktualizovaný', detail: 'Vaše údaje boli úspešne zmenené.', life: 3000 })
+    } else {
+      toastService.add({ severity: 'error', summary: 'Chyba', detail: data.message || 'Nepodarilo sa aktualizovať profil.', life: 3000 })
+    }
+  } catch (err) {
+    console.error('Error updating profile:', err)
+    toastService.add({ severity: 'error', summary: 'Chyba', detail: 'Chyba pri aktualizácii profilu.', life: 3000 })
   }
 }
 </script>

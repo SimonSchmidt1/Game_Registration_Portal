@@ -1,58 +1,214 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Game Registration Portal - Backend
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Laravel 11 backend API for the Game Registration Portal project. Provides authentication, team management, and game registration functionality.
 
-## About Laravel
+## Architecture
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+See [ARCHITECTURE.md](../ARCHITECTURE.md) in the root directory for comprehensive system architecture documentation.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Quick Start
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### Requirements
 
-## Learning Laravel
+- PHP 8.2+
+- Composer
+- MySQL/PostgreSQL
+- Node.js (for asset compilation, optional)
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+### Installation
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+```bash
+# Install dependencies
+composer install
 
-## Laravel Sponsors
+# Copy environment file
+cp .env.example .env
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+# Generate application key
+php artisan key:generate
 
-### Premium Partners
+# Configure database in .env file
+# DB_CONNECTION=mysql
+# DB_HOST=127.0.0.1
+# DB_PORT=3306
+# DB_DATABASE=game_portal
+# DB_USERNAME=root
+# DB_PASSWORD=
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+# Run migrations
+php artisan migrate
 
-## Contributing
+# (Optional) Seed database
+php artisan db:seed
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+# Start development server
+php artisan serve
+```
 
-## Code of Conduct
+The API will be available at `http://localhost:8000`.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## Configuration
 
-## Security Vulnerabilities
+### Sanctum Authentication
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Token expiration is set to 2 hours in `config/sanctum.php`:
+
+```php
+'expiration' => 120,
+```
+
+### CORS Configuration
+
+Configure allowed origins in `.env`:
+
+```env
+CORS_ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+```
+
+### Email Configuration
+
+Set up email for password recovery:
+
+```env
+MAIL_MAILER=smtp
+MAIL_HOST=mailpit
+MAIL_PORT=1025
+MAIL_USERNAME=null
+MAIL_PASSWORD=null
+MAIL_ENCRYPTION=null
+MAIL_FROM_ADDRESS="hello@example.com"
+MAIL_FROM_NAME="${APP_NAME}"
+```
+
+## Key Features
+
+### Authentication System
+
+- User registration with email verification
+- Login with Sanctum token-based authentication
+- Password reset via email token
+- Temporary password system (triggered after 5 failed login attempts)
+- Automatic token expiration (2 hours)
+- Scheduled token pruning (runs hourly)
+
+### API Patterns
+
+- **FormRequest Validation**: Separate validation classes for clean controller logic
+- **API Resources**: Standardized JSON response formatting (GameResource, TeamResource)
+- **ApiResponse Trait**: Consistent response structure across endpoints
+- **Middleware**: Sanctum auth, CORS, throttling
+
+### Database Schema
+
+Core models:
+- `User` - User accounts with role-based access (učiteľ, žiak)
+- `Team` - Student teams with members
+- `Game` - Game projects with ratings
+- `AcademicYear` - Academic year tracking
+
+See [ARCHITECTURE.md](../ARCHITECTURE.md) for detailed schema documentation.
+
+## API Endpoints
+
+### Authentication
+
+```
+POST   /api/register                  - Register new user
+POST   /api/login                     - Login and get token
+POST   /api/logout                    - Logout and revoke token
+GET    /api/user                      - Get authenticated user
+POST   /api/forgot-password           - Request password reset
+POST   /api/reset-password            - Reset password with token
+POST   /api/login-temporary           - Login with temporary password
+```
+
+### User Management
+
+```
+POST   /api/user/update-avatar        - Upload avatar
+PUT    /api/user/update-profile       - Update profile
+PUT    /api/user/update-password      - Change password
+GET    /api/email/verify/{id}/{hash}  - Verify email
+```
+
+### Teams, Games, Academic Years
+
+See `routes/api.php` for complete endpoint listing.
+
+## Scheduled Tasks
+
+The application uses Laravel's task scheduler for maintenance:
+
+```php
+// app/Console/Kernel.php
+protected function schedule(Schedule $schedule): void
+{
+    $schedule->command('tokens:prune')->hourly();
+}
+```
+
+To enable the scheduler, add this cron entry:
+
+```cron
+* * * * * cd /path-to-your-project && php artisan schedule:run >> /dev/null 2>&1
+```
+
+## Testing
+
+```bash
+# Run PHPUnit tests
+php artisan test
+
+# Run specific test file
+php artisan test tests/Feature/AuthTest.php
+```
+
+## Artisan Commands
+
+```bash
+# Prune expired password reset tokens
+php artisan tokens:prune
+
+# Clear application cache
+php artisan cache:clear
+
+# Clear route cache
+php artisan route:clear
+
+# Clear config cache
+php artisan config:clear
+```
+
+## Development Notes
+
+### Code Quality Improvements
+
+Recent stability enhancements:
+- FormRequest classes for validation separation
+- API Resources for response standardization
+- ApiResponse helper trait for consistency
+- Automated token pruning
+- CORS environment configuration
+- Enhanced security with token expiration
+
+See [STABILITY.md](../STABILITY.md) for detailed improvement documentation.
+
+## Troubleshooting
+
+**Issue: Token not working**
+- Check `config/sanctum.php` expiration setting
+- Verify CORS configuration in `.env`
+- Clear config cache: `php artisan config:clear`
+
+**Issue: Email not sending**
+- Check MAIL_* configuration in `.env`
+- Use Mailpit for local development testing
+- Verify queue worker is running if using queued notifications
+
+**Issue: 401 Unauthorized**
+- Token may be expired (2-hour limit)
+- Check Authorization header format: `Bearer {token}`
+- Verify token exists in `personal_access_tokens` table
 
 ## License
 

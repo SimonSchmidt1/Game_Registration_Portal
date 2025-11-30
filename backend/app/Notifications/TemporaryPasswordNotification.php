@@ -3,11 +3,10 @@
 namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Messages\MailMessage;
 
-class TemporaryPasswordNotification extends Notification implements ShouldQueue
+class TemporaryPasswordNotification extends Notification
 {
     use Queueable;
 
@@ -24,12 +23,9 @@ class TemporaryPasswordNotification extends Notification implements ShouldQueue
     {
         return (new MailMessage)
             ->subject('Dočasné heslo - Game Registration Portal')
-            ->greeting('Ahoj ' . $notifiable->name . '!')
-            ->line('Zaznamenali sme viacero neúspešných pokusov o prihlásenie do tvojho účtu.')
-            ->line('Pre tvoje pohodlie sme vygenerovali **dočasné heslo**:')
-            ->line('## ' . $this->temporaryPassword)
-            ->line('Toto heslo je platné **15 minút**. Po prihlásení ti odporúčame okamžite zmeniť heslo v nastaveniach profilu.')
-            ->action('Prihlásiť sa', config('app.frontend_url') . '/login')
-            ->line('Ak si sa nepokúšal prihlásiť, kontaktuj administrátora.');
+            ->view('emails.temporary-password', [
+                'user' => $notifiable,
+                'temporaryPassword' => $this->temporaryPassword,
+            ]);
     }
 }

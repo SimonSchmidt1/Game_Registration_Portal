@@ -10,6 +10,7 @@ use App\Models\AcademicYear;
 
 // 🟢 Verejné routy – dostupné bez tokenu
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
+Route::post('/admin/login', [AuthController::class, 'adminLogin'])->middleware('throttle:login'); // Special admin login
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:register');
 Route::post('/verify-email', [AuthController::class, 'verifyEmail']); // Verifikácia e-mailu
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']); // Zabudnuté heslo
@@ -35,6 +36,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/projects', [ProjectController::class, 'store']) ->middleware('throttle:projects'); // Pridanie projektu
     Route::get('/projects/my', [ProjectController::class, 'my']); // Projekty aktivneho timu (MUST be before {id})
     Route::get('/projects/{id}', [ProjectController::class, 'show']); // Jeden projekt podľa ID
+    Route::match(['PUT', 'POST'], '/projects/{id}', [ProjectController::class, 'update'])->middleware('throttle:projects'); // Aktualizácia projektu (Scrum Master) - accepts both PUT and POST (with _method=PUT)
     Route::post('/projects/{id}/views', [ProjectController::class, 'incrementViews']);  // Zvýšenie počtu zobrazení
     Route::post('/projects/{id}/rate', [ProjectController::class, 'rate'])->middleware('throttle:ratings'); // Hodnotenie projektu
     Route::get('/projects/{id}/user-rating', [ProjectController::class, 'getUserRating']); // Hodnotenie používateľa

@@ -23,11 +23,15 @@ return new class extends Migration
             $table->index('academic_year_id'); // Filter by year
         });
 
-        Schema::table('games', function (Blueprint $table) {
-            $table->index('created_at'); // Sort by upload date
-            $table->index('academic_year_id'); // Filter by year
-            $table->index(['team_id', 'created_at']); // Team game history
-        });
+        // Games table indexes removed - games table is legacy, use projects table instead
+        // If games table still exists, add indexes for backward compatibility
+        if (Schema::hasTable('games')) {
+            Schema::table('games', function (Blueprint $table) {
+                $table->index('created_at'); // Sort by upload date
+                $table->index('academic_year_id'); // Filter by year
+                $table->index(['team_id', 'created_at']); // Team game history
+            });
+        }
     }
 
     /**
@@ -46,10 +50,13 @@ return new class extends Migration
             $table->dropIndex(['academic_year_id']);
         });
 
-        Schema::table('games', function (Blueprint $table) {
-            $table->dropIndex(['created_at']);
-            $table->dropIndex(['academic_year_id']);
-            $table->dropIndex(['team_id', 'created_at']);
-        });
+        // Only drop if games table exists
+        if (Schema::hasTable('games')) {
+            Schema::table('games', function (Blueprint $table) {
+                $table->dropIndex(['created_at']);
+                $table->dropIndex(['academic_year_id']);
+                $table->dropIndex(['team_id', 'created_at']);
+            });
+        }
     }
 };

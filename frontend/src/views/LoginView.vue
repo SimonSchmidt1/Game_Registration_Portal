@@ -1,7 +1,7 @@
 <template>
   <div class="max-w-sm mx-auto p-6 border rounded-lg mt-12">
     <h2 class="text-2xl font-semibold mb-6 text-center">
-      {{ showTemporaryLogin ? 'Prihlásenie s dočasným heslom' : 'Prihlásenie' }}
+      {{ showTemporaryLogin ? 'Prihlásenie s dočasným heslom' : (isAdminEmail(email) ? 'Admin Prihlásenie' : 'Prihlásenie') }}
     </h2>
 
     <!-- Temporary Password Info Message -->
@@ -15,18 +15,19 @@
       </div>
     </div>
 
-    <form @submit.prevent="showTemporaryLogin ? loginWithTemporaryPassword() : login()">
+    <form @submit.prevent="showTemporaryLogin ? loginWithTemporaryPassword() : (isAdminEmail(email) ? adminLogin() : login())">
       <div class="mb-4">
         <label class="block mb-1 font-medium">Email</label>
         <InputText 
           v-model="email" 
-          type="email" 
+          :type="isAdminEmail(email) ? 'text' : 'email'" 
           class="w-full" 
           placeholder="1234567@ucm.sk"
-          pattern="[0-9]{7}@ucm\.sk"
-          title="Email musí byť v tvare: 7 číslic@ucm.sk (napr. 1234567@ucm.sk)"
+          :pattern="isAdminEmail(email) ? undefined : '[0-9]{7}@ucm\\.sk'"
+          :title="isAdminEmail(email) ? 'Admin email - žiadne obmedzenia formátu' : 'Email musí byť v tvare: 7 číslic@ucm.sk (napr. 1234567@ucm.sk)'"
           required 
         />
+        <small v-if="isAdminEmail(email)" class="text-blue-600 text-xs mt-1 block">Admin prihlásenie detekované</small>
       </div>
 
       <div class="mb-6">
@@ -87,6 +88,15 @@ const password = ref('')
 const temporaryPassword = ref('')
 const showTemporaryLogin = ref(false)
 
+// Admin email from environment variable (no hardcoding secrets)
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || ''
+
+// Check if email matches admin email from config
+function isAdminEmail(emailValue) {
+  if (!emailValue || !ADMIN_EMAIL) return false
+  return emailValue.toLowerCase().trim() === ADMIN_EMAIL.toLowerCase().trim()
+}
+
 async function login() {
   try {
     const response = await axios.post(`${API_URL}/api/login`, {
@@ -114,6 +124,12 @@ async function login() {
   } catch (error) {
     const data = error.response?.data || {}
     const status = error.response?.status
+    
+    // Debug logging
+    console.log('Login error:', { status, data, fullError: error })
+    console.log('Response data keys:', Object.keys(data))
+    console.log('verification_resent:', data.verification_resent)
+    console.log('temporary_password_sent:', data.temporary_password_sent)
 
     // Email not verified - block login
     if (status === 403 && data.requires_verification) {
@@ -127,8 +143,8 @@ async function login() {
       return
     }
 
-    // 5+ attempts - account blocked (verified OR unverified after resend period)
-    if (data.too_many_attempts) {
+    // 5+ attempts - account blocked (but check if temporary password was sent)
+    if (data.too_many_attempts && !data.verification_resent && !data.temporary_password_sent) {
       toast.add({
         severity: 'info',
         summary: 'Obnovte účet',
@@ -139,19 +155,48 @@ async function login() {
       return
     }
 
-    // 5th attempt - temporary password sent
-    if (data.verification_resent) {
+    // 5th attempt - temporary password sent (status 429)
+    // Check for 429 status first, then check for the flags
+    if (status === 429) {
+      console.log('429 status received - checking for temporary password flags', data)
+      
+      // Check if this is the 5th attempt (temporary password sent)
+      if (data.verification_resent || data.temporary_password_sent) {
+        console.log('Temporary password sent - switching to temporary password form', data)
+        toast.add({
+          severity: 'info',
+          summary: 'Dočasné heslo odoslané',
+          detail: data.message || 'Poslali sme ti e-mail s dočasným heslom. Skontroluj si schránku (vrátane priečinka SPAM).',
+          life: 7000
+        })
+        showTemporaryLogin.value = true
+        toast.add({
+          severity: 'info',
+          summary: 'Použi dočasné heslo',
+          detail: 'Zadaj dočasné heslo z e-mailu v poli nižšie (formát: XXXX-XXXX-XXXX).',
+          life: 5000
+        })
+        return
+      }
+      
+      // If 429 but not temporary password, it might be too_many_attempts
+      if (data.too_many_attempts) {
+        toast.add({
+          severity: 'info',
+          summary: 'Obnovte účet',
+          detail: data.message || 'Príliš veľa pokusov. Skontrolujte e‑mail a obnovte účet.',
+          life: 8000
+        })
+        setTimeout(() => router.push('/verify-email?resent=true'), 1600)
+        return
+      }
+      
+      // Generic 429 handling
+      console.warn('429 status but no recognized flags', data)
       toast.add({
-        severity: 'info',
-        summary: 'Dočasné heslo odoslané',
-        detail: 'Poslali sme ti e-mail s dočasným heslom. Skontroluj si schránku.',
-        life: 7000
-      })
-      showTemporaryLogin.value = true
-      toast.add({
-        severity: 'info',
-        summary: 'Použi dočasné heslo',
-        detail: 'Zadaj dočasné heslo z e-mailu v poli nižšie.',
+        severity: 'warn',
+        summary: 'Príliš veľa pokusov',
+        detail: data.message || 'Príliš veľa neúspešných pokusov. Skúste to znova neskôr.',
         life: 5000
       })
       return
@@ -224,6 +269,54 @@ async function loginWithTemporaryPassword() {
       summary: 'Chyba',
       detail: data.message || 'Neplatné dočasné heslo alebo email',
       life: 4000,
+    })
+  }
+}
+
+async function adminLogin() {
+  try {
+    const response = await axios.post(`${API_URL}/api/admin/login`, {
+      email: email.value,
+      password: password.value
+    })
+
+    localStorage.setItem('access_token', response.data.access_token)
+    localStorage.setItem('user', JSON.stringify(response.data.user))
+
+    // Poslanie eventu pre Navbar
+    window.dispatchEvent(new Event('login'))
+
+    // Toast upozornenie
+    toast.add({ 
+      severity: 'success', 
+      summary: 'Admin Prihlásenie', 
+      detail: 'Admin prihlásenie úspešné', 
+      life: 3000 
+    })
+
+    // Redirect immediately after successful login
+    router.push('/')
+  } catch (error) {
+    const data = error.response?.data || {}
+    const status = error.response?.status
+    
+    // Handle rate limiting (429)
+    if (status === 429) {
+      const retryAfter = data.retry_after || 60
+      toast.add({
+        severity: 'warn',
+        summary: 'Príliš veľa pokusov',
+        detail: data.message || `Príliš veľa neúspešných pokusov. Skúste znova o ${retryAfter} sekúnd.`,
+        life: 6000
+      })
+      return
+    }
+    
+    toast.add({
+      severity: 'error',
+      summary: 'Chyba',
+      detail: data.message || 'Neplatné admin prihlasovacie údaje',
+      life: 4000
     })
   }
 }

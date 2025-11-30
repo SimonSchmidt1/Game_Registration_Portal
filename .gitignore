@@ -1,0 +1,56 @@
+# Environment files - NEVER commit these!
+.env
+.env.backup
+.env.production
+.env.local
+.env.*.local
+
+# Frontend
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+
+# Backend
+backend/.env
+backend/.env.backup
+
+# But DO commit .env.example files
+!.env.example
+!frontend/.env.example
+!backend/.env.example
+
+# Dependencies
+node_modules/
+vendor/
+frontend/node_modules/
+backend/vendor/
+
+# Build outputs
+frontend/dist/
+frontend/build/
+backend/storage/framework/cache/
+backend/storage/framework/sessions/
+backend/storage/framework/views/
+backend/bootstrap/cache/*.php
+!backend/bootstrap/cache/.gitignore
+
+# Logs
+*.log
+backend/storage/logs/*.log
+!backend/storage/logs/.gitignore
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Laravel
+backend/storage/*.key
+backend/.phpunit.result.cache
+

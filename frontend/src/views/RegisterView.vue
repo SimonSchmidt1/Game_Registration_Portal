@@ -23,6 +23,19 @@
       </div>
 
       <div class="mb-4">
+        <label class="block mb-1 font-medium">Typ študenta <span class="text-red-500">*</span></label>
+        <Dropdown 
+          v-model="studentType" 
+          :options="studentTypes" 
+          optionLabel="label" 
+          optionValue="value" 
+          placeholder="Vyberte typ študenta" 
+          class="w-full" 
+          required
+        />
+      </div>
+
+      <div class="mb-4">
         <label class="block mb-1 font-medium">Heslo</label>
         <InputText v-model="password" type="password" class="w-full" required />
       </div>
@@ -46,6 +59,7 @@ import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { useToast } from 'primevue/usetoast'
 import InputText from 'primevue/inputtext'
+import Dropdown from 'primevue/dropdown'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
 
@@ -57,14 +71,31 @@ const name = ref('')
 const email = ref('')
 const password = ref('')
 const password_confirmation = ref('')
+const studentType = ref(null)
+
+const studentTypes = [
+  { label: 'Denný študent', value: 'denny' },
+  { label: 'Externý študent', value: 'externy' }
+]
 
 async function register() {
+  if (!studentType.value) {
+    toast.add({
+      severity: 'warn',
+      summary: 'Chýba typ študenta',
+      detail: 'Vyberte typ študenta.',
+      life: 4000
+    })
+    return
+  }
+
   try {
     const response = await axios.post(`${API_URL}/api/register`, {
       name: name.value,
       email: email.value,
       password: password.value,
-      password_confirmation: password_confirmation.value
+      password_confirmation: password_confirmation.value,
+      student_type: studentType.value
     })
 
     // Toast upozornenie

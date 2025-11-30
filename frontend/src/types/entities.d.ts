@@ -19,7 +19,9 @@ export interface GameEntity {
   id: number
   title: string
   description?: string | null
-  category?: string | null
+  school_type?: 'zs' | 'ss' | 'vs' | null
+  year_of_study?: number | null
+  subject?: string | null
   rating?: number | string
   views?: number
   release_date?: string | null

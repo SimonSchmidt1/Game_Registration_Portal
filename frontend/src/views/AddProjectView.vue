@@ -1,7 +1,7 @@
 <template>
   <Toast />
   <div class="max-w-2xl mx-auto mt-10 border rounded-xl p-6 shadow-sm bg-gray-900 text-gray-100 border-gray-700">
-    <h2 class="text-2xl font-semibold mb-6 text-center text-teal-400">Pridať nový projekt</h2>
+    <h2 class="text-2xl font-semibold mb-6 text-center text-teal-400">{{ isEditMode ? 'Upraviť projekt' : 'Pridať nový projekt' }}</h2>
 
     <div v-if="loadingTeam" class="text-center p-8">
       <i class="pi pi-spin pi-spinner text-4xl text-teal-400"></i>
@@ -29,10 +29,51 @@
         <InputText v-model="name" placeholder="Zadajte názov" class="w-full bg-gray-800 text-white border-gray-700" required />
       </div>
 
-      <!-- Kategória -->
-      <div>
-        <label class="block mb-1 font-medium text-gray-300">Kategória</label>
-        <Dropdown v-model="selectedCategory" :options="categories" optionLabel="name" optionValue="name" placeholder="Vyberte kategóriu" class="w-full bg-gray-800 text-white border-gray-700" required />
+      <!-- Nový systém kategorizácie -->
+      <div class="border-t border-gray-700 pt-4">
+        <h3 class="text-lg font-semibold mb-4 text-teal-400">Kategorizácia projektu</h3>
+        
+        <!-- Typ školy -->
+        <div class="mb-4">
+          <label class="block mb-1 font-medium text-gray-300">Typ školy <span class="text-red-400">*</span></label>
+          <Dropdown 
+            v-model="schoolType" 
+            :options="schoolTypes" 
+            optionLabel="label" 
+            optionValue="value" 
+            placeholder="Vyberte typ školy" 
+            class="w-full bg-gray-800 text-white border-gray-700" 
+            required 
+            @change="onSchoolTypeChange"
+          />
+        </div>
+
+        <!-- Ročník -->
+        <div class="mb-4">
+          <label class="block mb-1 font-medium text-gray-300">Ročník</label>
+          <Dropdown 
+            v-model="yearOfStudy" 
+            :options="availableYears" 
+            optionLabel="label" 
+            optionValue="value" 
+            placeholder="Vyberte ročník (voliteľné)" 
+            class="w-full bg-gray-800 text-white border-gray-700"
+          />
+        </div>
+
+        <!-- Predmet -->
+        <div class="mb-4">
+          <label class="block mb-1 font-medium text-gray-300">Predmet <span class="text-red-400">*</span></label>
+          <Dropdown 
+            v-model="subject" 
+            :options="subjects" 
+            optionLabel="label" 
+            optionValue="value" 
+            placeholder="Vyberte predmet" 
+            class="w-full bg-gray-800 text-white border-gray-700" 
+            required
+          />
+        </div>
       </div>
 
       <!-- Dátum vydania -->
@@ -192,15 +233,15 @@
       </div>
 
       <div class="mt-4">
-        <Button type="submit" label="Zverejniť projekt" icon="pi pi-check" class="w-full p-button-success p-button-lg" :loading="loadingSubmit" :disabled="loadingSubmit" />
+        <Button type="submit" :label="isEditMode ? 'Uložiť zmeny' : 'Zverejniť projekt'" icon="pi pi-check" class="w-full p-button-success p-button-lg" :loading="loadingSubmit" :disabled="loadingSubmit" />
       </div>
     </form>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import InputText from 'primevue/inputtext'
 import Dropdown from 'primevue/dropdown'
 import Calendar from 'primevue/calendar'
@@ -211,7 +252,7 @@ import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
 
 const API_URL = import.meta.env.VITE_API_URL
-const route = useRoute()
+const router = useRouter()
 const toast = useToast()
 
 const projectTypes = [
@@ -224,7 +265,9 @@ const projectTypes = [
 
 const projectType = ref(null)
 const name = ref('')
-const selectedCategory = ref(null)
+const schoolType = ref(null)
+const yearOfStudy = ref(null)
+const subject = ref(null)
 const releaseDate = ref(null)
 const description = ref('')
 const videoType = ref('upload')
@@ -249,15 +292,52 @@ const files = ref({
   documentation: { file: null, name: '' }
 })
 
-const categories = ref([
-  { name: 'Akčná' }, { name: 'Strategická' }, { name: 'RPG' }, { name: 'Simulátor' },
-  { name: 'Horor' }, { name: 'Dobrodružná' }, { name: 'Logická' }
+// Nový systém kategorizácie
+const schoolTypes = ref([
+  { label: 'Základná Škola (ZŠ)', value: 'zs' },
+  { label: 'Stredná škola (SŠ)', value: 'ss' },
+  { label: 'Vysoká Škola (VŠ)', value: 'vs' }
 ])
+
+const subjects = ref([
+  { label: 'Slovenský jazyk', value: 'Slovenský jazyk' },
+  { label: 'Matematika', value: 'Matematika' },
+  { label: 'Dejepis', value: 'Dejepis' },
+  { label: 'Geografia', value: 'Geografia' },
+  { label: 'Informatika', value: 'Informatika' },
+  { label: 'Grafika', value: 'Grafika' },
+  { label: 'Chémia', value: 'Chémia' },
+  { label: 'Fyzika', value: 'Fyzika' }
+])
+
+const availableYears = ref([])
+
+// Dynamicky generovať ročníky podľa typu školy
+function onSchoolTypeChange() {
+  yearOfStudy.value = null // Reset ročníka pri zmene typu školy
+  if (schoolType.value === 'zs') {
+    availableYears.value = Array.from({ length: 9 }, (_, i) => ({
+      label: `${i + 1}. ročník`,
+      value: i + 1
+    }))
+  } else if (schoolType.value === 'ss' || schoolType.value === 'vs') {
+    availableYears.value = Array.from({ length: 5 }, (_, i) => ({
+      label: `${i + 1}. ročník`,
+      value: i + 1
+    }))
+  } else {
+    availableYears.value = []
+  }
+}
 
 const token = ref(localStorage.getItem('access_token') || '')
 const teamId = ref(null)
 const isScrumMaster = ref(false)
 const loadingTeam = ref(true)
+const route = useRoute()
+const isEditMode = ref(false)
+const projectId = ref(null)
+const existingProject = ref(null)
 
 function onFileSelect(event, type) {
   const file = event.files?.[0]
@@ -288,13 +368,72 @@ async function loadUserTeamStatus() {
   } catch (_) {} finally { loadingTeam.value = false }
 }
 
+async function loadProjectForEdit() {
+  if (!projectId.value || !token.value) return
+  loadingTeam.value = true
+  try {
+    const res = await fetch(`${API_URL}/api/projects/${projectId.value}`, {
+      headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' }
+    })
+    if (res.ok) {
+      const data = await res.json()
+      existingProject.value = data.project
+      
+      // Populate form with existing data
+      projectType.value = existingProject.value.type
+      name.value = existingProject.value.title
+      schoolType.value = existingProject.value.school_type
+      yearOfStudy.value = existingProject.value.year_of_study
+      subject.value = existingProject.value.subject
+      releaseDate.value = existingProject.value.release_date ? new Date(existingProject.value.release_date) : null
+      description.value = existingProject.value.description || ''
+      videoUrl.value = existingProject.value.video_url || ''
+      videoType.value = existingProject.value.video_url ? 'url' : 'upload'
+      
+      // Set team ID
+      teamId.value = existingProject.value.team_id
+      
+      // Load metadata
+      const meta = existingProject.value.metadata || {}
+      liveUrl.value = meta.live_url || ''
+      githubUrl.value = meta.github_url || ''
+      npmUrl.value = meta.npm_url || ''
+      packageName.value = meta.package_name || ''
+      platform.value = meta.platform || null
+      techStack.value = Array.isArray(meta.tech_stack) ? meta.tech_stack.join(', ') : (meta.tech_stack || '')
+      
+      // Set available years based on school type
+      onSchoolTypeChange()
+      
+      // Check if user is Scrum Master
+      await loadUserTeamStatus()
+    } else {
+      toast.add({ severity: 'error', summary: 'Chyba', detail: 'Nepodarilo sa načítať projekt.', life: 5000 })
+      router.push('/')
+    }
+  } catch (e) {
+    toast.add({ severity: 'error', summary: 'Chyba', detail: 'Chyba pri načítaní projektu.', life: 5000 })
+    router.push('/')
+  } finally {
+    loadingTeam.value = false
+  }
+}
+
 async function submitForm() {
   if (!teamId.value || !isScrumMaster.value) {
-    toast.add({ severity: 'error', summary: 'Chyba oprávnenia', detail: 'Nemáte povolenie pridať projekt.', life: 5000 })
+    toast.add({ severity: 'error', summary: 'Chyba oprávnenia', detail: isEditMode.value ? 'Nemáte povolenie upravovať projekt.' : 'Nemáte povolenie pridať projekt.', life: 5000 })
     return
   }
   if (!projectType.value) {
     toast.add({ severity: 'warn', summary: 'Chýba typ', detail: 'Vyberte typ projektu.', life: 4000 })
+    return
+  }
+  if (!schoolType.value) {
+    toast.add({ severity: 'warn', summary: 'Chýba typ školy', detail: 'Vyberte typ školy.', life: 4000 })
+    return
+  }
+  if (!subject.value) {
+    toast.add({ severity: 'warn', summary: 'Chýba predmet', detail: 'Vyberte predmet.', life: 4000 })
     return
   }
   loadingSubmit.value = true
@@ -302,15 +441,32 @@ async function submitForm() {
     const formData = new FormData()
     formData.append('title', name.value)
     formData.append('type', projectType.value)
-    formData.append('team_id', teamId.value)
-    formData.append('category', selectedCategory.value?.name || selectedCategory.value || '')
-    formData.append('description', description.value)
+    if (!isEditMode.value) {
+      formData.append('team_id', teamId.value)
+    }
+    formData.append('school_type', schoolType.value)
+    // Always send year_of_study when editing (even if null to clear it)
+    if (isEditMode.value) {
+      formData.append('year_of_study', yearOfStudy.value || '')
+    } else if (yearOfStudy.value) {
+      formData.append('year_of_study', yearOfStudy.value)
+    }
+    formData.append('subject', subject.value)
+    formData.append('description', description.value || '')
+    // Always send release_date when editing (even if null to clear it)
     if (releaseDate.value) {
       const d = new Date(releaseDate.value)
       formData.append('release_date', `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`)
+    } else if (isEditMode.value) {
+      // Send empty string to clear release_date when editing
+      formData.append('release_date', '')
     }
     if (videoType.value === 'upload' && files.value.video.file) formData.append('video', files.value.video.file)
     if (videoType.value === 'url' && videoUrl.value) formData.append('video_url', videoUrl.value)
+    else if (isEditMode.value && videoType.value === 'url' && !videoUrl.value) {
+      // Send empty string to clear video_url when editing
+      formData.append('video_url', '')
+    }
     if (files.value.splash_screen.file) formData.append('splash_screen', files.value.splash_screen.file)
 
     // Type-specific meta/files
@@ -349,13 +505,46 @@ async function submitForm() {
       if (techStack.value) formData.append('tech_stack', techStack.value)
     }
 
-    const res = await fetch(`${API_URL}/api/projects`, { method: 'POST', headers: { 'Authorization': 'Bearer ' + token.value }, body: formData })
+    const url = isEditMode.value ? `${API_URL}/api/projects/${projectId.value}` : `${API_URL}/api/projects`
+    
+    // For PUT requests with FormData, use POST with method spoofing to avoid CORS issues
+    if (isEditMode.value) {
+      formData.append('_method', 'PUT')
+    }
+    
+    // Debug logging
+    console.log('Submitting form:', { isEditMode: isEditMode.value, method: isEditMode.value ? 'POST (_method=PUT)' : 'POST', url, projectId: projectId.value })
+    console.log('Form data:', {
+      title: name.value,
+      type: projectType.value,
+      school_type: schoolType.value,
+      subject: subject.value,
+      description: description.value
+    })
+    
+    const res = await fetch(url, { 
+      method: 'POST', // Always use POST, Laravel will handle _method spoofing
+      headers: { 
+        'Authorization': 'Bearer ' + token.value,
+        'Accept': 'application/json'
+      }, 
+      body: formData 
+    })
     const data = await res.json()
     if (res.ok && data.project) {
-      toast.add({ severity: 'success', summary: 'Projekt vytvorený', detail: `Projekt "${data.project.title}" bol úspešne zverejnený!`, life: 6000 })
-      resetForm()
+      toast.add({ 
+        severity: 'success', 
+        summary: isEditMode.value ? 'Projekt aktualizovaný' : 'Projekt vytvorený', 
+        detail: `Projekt "${data.project.title}" bol úspešne ${isEditMode.value ? 'aktualizovaný' : 'zverejnený'}!`, 
+        life: 6000 
+      })
+      if (isEditMode.value) {
+        router.push(`/project/${projectId.value}`)
+      } else {
+        resetForm()
+      }
     } else {
-      toast.add({ severity: 'error', summary: 'Chyba', detail: data.message || 'Nepodarilo sa vytvoriť projekt.', life: 7000 })
+      toast.add({ severity: 'error', summary: 'Chyba', detail: data.message || (isEditMode.value ? 'Nepodarilo sa aktualizovať projekt.' : 'Nepodarilo sa vytvoriť projekt.'), life: 7000 })
     }
   } catch (e) {
     toast.add({ severity: 'fatal', summary: 'Chyba siete', detail: 'Problém s komunikáciou so serverom.', life: 8000 })
@@ -365,7 +554,9 @@ async function submitForm() {
 function resetForm() {
   projectType.value = null
   name.value = ''
-  selectedCategory.value = null
+  schoolType.value = null
+  yearOfStudy.value = null
+  subject.value = null
   releaseDate.value = null
   description.value = ''
   videoType.value = 'upload'
@@ -376,8 +567,19 @@ function resetForm() {
   platform.value = null
   packageName.value = ''
   npmUrl.value = ''
+  availableYears.value = []
   Object.keys(files.value).forEach(k => files.value[k] = { file: null, name: '' })
 }
 
-onMounted(() => { loadUserTeamStatus() })
+onMounted(() => {
+  // Check if we're in edit mode
+  const id = route.params.id
+  if (id) {
+    isEditMode.value = true
+    projectId.value = id
+    loadProjectForEdit()
+  } else {
+    loadUserTeamStatus()
+  }
+})
 </script>

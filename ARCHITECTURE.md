@@ -476,7 +476,19 @@ POST   /api/teams                   # Create team
 POST   /api/teams/join              # Join with code
 ```
 
-#### Games
+#### Projects
+```
+GET    /api/projects                # List all projects (with filters)
+POST   /api/projects                # Create project (Scrum Master only)
+PUT    /api/projects/{id}           # Update project (Scrum Master of project's team only)
+GET    /api/projects/{id}           # Get project detail
+POST   /api/projects/{id}/views    # Increment view count
+POST   /api/projects/{id}/rate      # Submit rating (once per user)
+GET    /api/projects/{id}/user-rating # Get user's rating
+GET    /api/projects/my?team_id={id} # Get team's projects
+```
+
+#### Games (LEGACY - Use Projects endpoints)
 ```
 POST   /api/games                   # Upload project (Scrum Master only)
 POST   /api/games/{id}/rate         # Submit rating

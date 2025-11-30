@@ -28,12 +28,15 @@ class AuthController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users', 'regex:/^[0-9]{7}@ucm\.sk$/'],
             'password' => ['required', 'confirmed', Rules\Password::min(8)->letters()->mixedCase()->numbers()->symbols()],
+            'student_type' => ['required', 'in:denny,externy'],
         ], [
-            'email.regex' => 'Email musí byť v tvare: 7 číslic@ucm.sk (napr. 1234567@ucm.sk)'
+            'email.regex' => 'Email musí byť v tvare: 7 číslic@ucm.sk (napr. 1234567@ucm.sk)',
+            'student_type.required' => 'Vyberte typ študenta.',
+            'student_type.in' => 'Typ študenta musí byť Denný študent alebo Externý študent.',
         ]);
 
         // 2. Delegácia do service vrstvy (funkcionalita nezmenená)
-        $this->authService->register($request->only('name','email','password'));
+        $this->authService->register($request->only('name','email','password','student_type'));
         // 3. Vrátenie JSON odpovede bez tokenu (používateľ musí najprv overiť email)
         return response()->json([
             'message' => 'Registrácia úspešná. Skontrolujte svoj e-mail a dokončite overenie účtu.',
@@ -44,10 +47,24 @@ class AuthController extends Controller
     // Login
     public function login(Request $request)
     {
+        // Basic validation - check for admin email FIRST before format validation
         $request->validate([
-            'email' => ['required', 'email', 'regex:/^[0-9]{7}@ucm\.sk$/'],
+            'email' => 'required|string', // Changed from 'email' to 'string' to allow any format
             'password' => 'required',
+        ]);
+
+        // Check if this is admin email - bypass UCM validation for admin
+        $adminEmail = config('admin.email');
+        if ($adminEmail && trim(strtolower($request->email)) === trim(strtolower($adminEmail))) {
+            // Route to admin login instead
+            return $this->adminLogin($request);
+        }
+
+        // Regular users must have UCM email format
+        $request->validate([
+            'email' => ['email', 'regex:/^[0-9]{7}@ucm\.sk$/'],
         ], [
+            'email.email' => 'Email musí mať platný formát.',
             'email.regex' => 'Email musí byť v tvare: 7 číslic@ucm.sk (napr. 1234567@ucm.sk)'
         ]);
 
@@ -66,8 +83,9 @@ class AuthController extends Controller
                 ], 401);
             case 'fifth_attempt':
                 return response()->json([
-                    'message' => 'Príliš veľa neúspešných pokusov. Overovací e-mail bol odoslaný znova. Skontrolujte si schránku.',
+                    'message' => 'Príliš veľa neúspešných pokusov. Dočasné heslo bolo odoslané na vašu e-mailovú adresu. Skontrolujte si schránku.',
                     'verification_resent' => true,
+                    'temporary_password_sent' => true,
                     'failed_attempts' => $result['failed_attempts'],
                     'account_verified' => $result['account_verified'],
                     'max_attempts' => $result['max_attempts']
@@ -94,6 +112,52 @@ class AuthController extends Controller
                 ]);
         }
         return response()->json(['message' => 'Neznámy stav prihlásenia'], 500);
+    }
+
+    /**
+     * Special admin login endpoint.
+     * Bypasses normal email validation and uses config-based credentials.
+     * No UCM email format requirement - admin can use any email format.
+     */
+    public function adminLogin(Request $request)
+    {
+        // No email format validation - admin is special
+        $request->validate([
+            'email' => 'required|string',
+            'password' => 'required|string',
+        ]);
+
+        try {
+            $result = $this->authService->attemptAdminLogin($request->email, $request->password);
+
+            if ($result['status'] === 'invalid_credentials') {
+                return response()->json([
+                    'message' => 'Neplatné admin prihlasovacie údaje.'
+                ], 401);
+            }
+
+            if ($result['status'] === 'rate_limited') {
+                return response()->json([
+                    'message' => 'Príliš veľa pokusov. Skúste znova o ' . $result['retry_after'] . ' sekúnd.',
+                    'retry_after' => $result['retry_after']
+                ], 429);
+            }
+
+            if ($result['status'] === 'ok') {
+                return response()->json([
+                    'access_token' => $result['token'],
+                    'token_type' => 'Bearer',
+                    'user' => $result['user'],
+                    'role' => $result['user']->role,
+                    'message' => 'Admin prihlásenie úspešné',
+                ]);
+            }
+
+            return response()->json(['message' => 'Chyba pri admin prihlásení'], 500);
+        } catch (\Exception $e) {
+            \Log::error('Admin login error', ['error' => $e->getMessage()]);
+            return response()->json(['message' => 'Chyba pri admin prihlásení'], 500);
+        }
     }
 
     // Logout
@@ -302,6 +366,10 @@ class AuthController extends Controller
         }
 
         $tempToken->markAsUsed();
+
+        // Reset failed login attempts on successful temporary password login
+        $user->failed_login_attempts = 0;
+        $user->save();
 
         // Clear rate limiter
         $throttleKey = Str::lower($user->email) . '|' . $request->ip();

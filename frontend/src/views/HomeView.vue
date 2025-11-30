@@ -69,7 +69,10 @@
               <span class="font-medium text-gray-200">{{ selectedTeam.members?.length || 0 }} členov</span>
             </div>
             <div v-if="selectedTeam.is_scrum_master" class="px-3.5 py-1.5 bg-gray-700 rounded-md border border-blue-500 shadow-lg">
-              <span class="font-semibold text-blue-300">Scrum Master</span>
+              <span class="font-semibold text-blue-300">S</span>
+            </div>
+            <div v-if="getCurrentUserOccupation(selectedTeam)" class="px-3.5 py-1.5 bg-indigo-700 rounded-md border border-indigo-600 shadow-lg">
+              <span class="font-medium text-indigo-200">{{ getCurrentUserOccupation(selectedTeam) }}</span>
             </div>
           </div>
         </div>
@@ -77,7 +80,8 @@
     </div>
 
 
-    <div v-if="token" class="flex flex-col sm:flex-row gap-4 mb-8 p-5 border border-gray-700 rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 shadow-xl">
+    <div v-if="token" class="flex flex-col gap-4 mb-8 p-5 border border-gray-700 rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 shadow-xl">
+      <!-- Vyhľadávanie -->
       <div class="flex-grow">
         <span class="p-float-label w-full">
           <InputText id="search" v-model="search" class="w-full" />
@@ -85,28 +89,88 @@
         </span>
       </div>
 
-      <div class="w-full sm:w-60">
-        <Dropdown
-          v-model="selectedCategory"
-          :options="categories"
-          optionLabel="name"
-          placeholder="Vyber kategóriu"
-          class="w-full"
-        />
+      <!-- Nový multi-purpose filter systém -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Typ školy -->
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-1">Typ školy</label>
+          <Dropdown
+            v-model="filterSchoolType"
+            :options="filterSchoolTypes"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Všetky typy"
+            class="w-full"
+            @change="applyFilters"
+          />
+        </div>
+
+        <!-- Ročník -->
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-1">Ročník</label>
+          <Dropdown
+            v-model="filterYearOfStudy"
+            :options="filterYears"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Všetky ročníky"
+            class="w-full"
+            @change="applyFilters"
+          />
+        </div>
+
+        <!-- Predmet -->
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-1">Predmet</label>
+          <Dropdown
+            v-model="filterSubject"
+            :options="filterSubjects"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Všetky predmety"
+            class="w-full"
+            @change="applyFilters"
+          />
+        </div>
+
+        <!-- Typ projektu -->
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-1">Typ projektu</label>
+          <Dropdown
+            v-model="selectedType"
+            :options="types"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Všetky typy"
+            class="w-full"
+            @change="applyFilters"
+          />
+        </div>
       </div>
-      <div class="w-full sm:w-56">
-        <Dropdown
-          v-model="selectedType"
-          :options="types"
-          optionLabel="label"
-          optionValue="value"
-          placeholder="Typ projektu"
-          class="w-full"
+
+      <!-- Tlačidlá a reset -->
+      <div class="flex flex-wrap items-center gap-2">
+        <Button 
+          v-if="hasTeam && selectedTeam && !showingMyProjects" 
+          label="Moje Projekty" 
+          class="p-button-outlined" 
+          icon="pi pi-filter" 
+          @click="loadMyProjects" 
         />
-      </div>
-      <div class="w-full sm:w-48 flex items-center gap-2">
-        <Button v-if="hasTeam && selectedTeam && !showingMyProjects" label="Moje Projekty" class="p-button-outlined w-full" icon="pi pi-filter" @click="loadMyProjects" />
-        <Button v-if="showingMyProjects" label="Všetky Projekty" class="p-button-outlined w-full" icon="pi pi-arrow-left" @click="loadAllGames" />
+        <Button 
+          v-if="showingMyProjects" 
+          label="Všetky Projekty" 
+          class="p-button-outlined" 
+          icon="pi pi-arrow-left" 
+          @click="loadAllGames" 
+        />
+        <Button 
+          v-if="hasActiveFilters"
+          label="Resetovať filtre" 
+          class="p-button-text p-button-secondary" 
+          icon="pi pi-times" 
+          @click="resetFilters" 
+        />
       </div>
     </div>
 
@@ -159,15 +223,51 @@
         <h3 class="text-lg font-semibold text-gray-100 mb-3 line-clamp-2">{{ game.title }}</h3>
         
         <div class="flex flex-wrap gap-2 text-xs mb-3">
-          <span class="px-3 py-1 rounded-md border border-teal-600 bg-teal-700 text-teal-100 font-medium shadow-lg uppercase">{{ game.type.replace('_', ' ') }}</span>
-          <span class="px-3 py-1 rounded-md border border-gray-600 bg-gray-700 text-gray-200 font-medium shadow-lg">{{ game.category }}</span>
+          <span 
+            class="px-3 py-1 rounded-md border border-teal-600 bg-teal-700 text-teal-100 font-medium shadow-lg uppercase cursor-pointer hover:bg-teal-600 transition"
+            @click.stop="filterByType(game.type)"
+            title="Kliknite pre filtrovanie podľa typu projektu"
+          >
+            {{ game.type.replace('_', ' ') }}
+          </span>
+          <span 
+            v-if="game.school_type" 
+            class="px-3 py-1 rounded-md border border-gray-600 bg-gray-700 text-gray-200 font-medium shadow-lg cursor-pointer hover:bg-gray-600 transition"
+            @click.stop="filterBySchoolType(game.school_type)"
+            title="Kliknite pre filtrovanie podľa typu školy"
+          >
+            {{ getSchoolTypeLabel(game.school_type) }}
+          </span>
+          <span 
+            v-if="game.year_of_study" 
+            class="px-3 py-1 rounded-md border border-gray-600 bg-gray-700 text-gray-200 font-medium shadow-lg"
+            title="Ročník nie je klikateľný"
+          >
+            {{ game.year_of_study }}. ročník
+          </span>
+          <span 
+            v-if="game.subject" 
+            class="px-3 py-1 rounded-md border border-gray-600 bg-gray-700 text-gray-200 font-medium shadow-lg cursor-pointer hover:bg-gray-600 transition"
+            @click.stop="filterBySubject(game.subject)"
+            title="Kliknite pre filtrovanie podľa predmetu"
+          >
+            {{ game.subject }}
+          </span>
           <span 
             class="px-3 py-1 rounded-md border border-gray-600 bg-gray-700 text-gray-200 font-medium shadow-lg cursor-pointer hover:bg-gray-600 transition"
             @click.stop="goToTeam(game.team?.id)"
+            title="Kliknite pre zobrazenie tímu"
           >
             {{ game.team?.name || 'Neznámy' }}
           </span>
-          <span v-if="game.academic_year" class="px-3 py-1 rounded-md border border-gray-600 bg-gray-700 text-gray-200 font-medium shadow-lg">{{ game.academic_year.name }}</span>
+          <span 
+            v-if="game.academic_year" 
+            class="px-3 py-1 rounded-md border border-gray-600 bg-gray-700 text-gray-200 font-medium shadow-lg cursor-pointer hover:bg-gray-600 transition"
+            @click.stop="filterByAcademicYear(game.academic_year.id)"
+            title="Kliknite pre filtrovanie podľa akademického roka"
+          >
+            {{ game.academic_year.name }}
+          </span>
         </div>
         
         <p class="text-gray-400 text-sm leading-relaxed line-clamp-3 mb-4">{{ game.description || 'Popis nebol poskytnutý.' }}</p>
@@ -215,6 +315,15 @@
               optionLabel="name"
               optionValue="id"
               placeholder="Vyber akademický rok"
+              class="p-dropdown-lg"
+          />
+          
+          <Dropdown
+              v-model="createTeamOccupation"
+              :options="occupations"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Vyber povolanie"
               class="p-dropdown-lg"
           />
           
@@ -282,6 +391,14 @@
               :class="{ 'p-invalid': joinTeamError }"
               class="p-inputtext-lg text-center font-mono tracking-widest"
           />
+          <Dropdown
+              v-model="joinTeamOccupation"
+              :options="occupations"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Vyber povolanie"
+              class="p-dropdown-lg"
+          />
           <Button
               type="submit"
               label="Pripojiť sa"
@@ -326,7 +443,7 @@
               </div>
             </div>
             <div v-if="team.is_scrum_master" class="px-2 py-1 bg-gray-700 text-gray-200 rounded text-xs font-medium">
-              Scrum Master
+              S
             </div>
           </div>
 
@@ -348,12 +465,20 @@
 
           <!-- Zoznam členov -->
           <div>
-            <p class="text-xs text-gray-400 mb-2">Členovia ({{ team.members?.length || 0 }}/4):</p>
+            <p class="text-xs text-gray-400 mb-2">Členovia ({{ team.members?.length || 0 }}/10):</p>
             <div class="grid grid-cols-2 gap-2">
               <div v-for="member in team.members" :key="member.id" class="flex items-center justify-between gap-2 text-gray-200 text-sm bg-gray-900 rounded px-2 py-1">
-                <div class="flex flex-col truncate">
-                  <span class="truncate">{{ member.name }}</span>
-                  <span :class="getRoleClass(team, member)" class="text-xs font-semibold">{{ getRoleLabel(team, member) }}</span>
+                <div class="flex flex-col truncate flex-1">
+                  <div class="flex items-center gap-2">
+                    <span class="truncate">{{ member.name }}</span>
+                    <span 
+                      v-if="getRoleLabel(team, member) === 'S'"
+                      class="px-2 py-0.5 bg-blue-900 border border-blue-700 text-blue-300 rounded text-xs font-semibold flex-shrink-0"
+                    >
+                      S
+                    </span>
+                  </div>
+                  <span v-if="member.pivot?.occupation" class="text-xs text-gray-500 truncate mt-1">{{ member.pivot.occupation }}</span>
                 </div>
                 <Button
                   v-if="team.is_scrum_master && member.id !== currentUserId"
@@ -428,7 +553,7 @@ const removingMember = ref(false)
 // Helper: derive role label and class even if pivot missing
 function getRoleLabel(team, member) {
   const pivotRole = member.pivot?.role_in_team
-  if (pivotRole === 'scrum_master' || team.scrum_master_id === member.id) return 'Scrum Master'
+  if (pivotRole === 'scrum_master' || team.scrum_master_id === member.id) return 'S'
   return 'Člen'
 }
 function getRoleClass(team, member) {
@@ -436,11 +561,18 @@ function getRoleClass(team, member) {
   return isScrum ? 'text-teal-400' : 'text-gray-500'
 }
 
+function getCurrentUserOccupation(team) {
+  if (!team || !team.members || !currentUserId.value) return null
+  const currentUser = team.members.find(m => m.id === currentUserId.value)
+  return currentUser?.pivot?.occupation || null
+}
+
 // -------------------------
 // Logika Pripojenia k Tímu
 // -------------------------
 const showJoinTeam = ref(false)
 const joinTeamCode = ref('')
+const joinTeamOccupation = ref(null)
 const joinTeamError = ref('')
 const loadingJoin = ref(false)
 
@@ -452,11 +584,19 @@ async function joinTeam() {
         return
     }
     
+    if (!joinTeamOccupation.value) {
+        joinTeamError.value = 'Povolanie je povinné.'
+        return
+    }
+    
     loadingJoin.value = true
     
     // Očistíme kód pre prípad, že ho používateľ skopíroval s bielymi znakmi
     const cleanCode = joinTeamCode.value.trim() 
-    const payload = JSON.stringify({ invite_code: cleanCode });
+    const payload = JSON.stringify({ 
+      invite_code: cleanCode,
+      occupation: joinTeamOccupation.value
+    });
 
     try {
         const res = await fetch(`${API_URL}/api/teams/join`, { 
@@ -476,6 +616,7 @@ async function joinTeam() {
             hasTeam.value = true
             showJoinTeam.value = false 
             joinTeamCode.value = ''
+            joinTeamOccupation.value = null
             await loadTeamStatus() // Reload all teams
             loadAllGames() 
         } else {
@@ -512,11 +653,20 @@ async function joinTeam() {
 const showCreateTeam = ref(false)
 const teamName = ref('')
 const academicYear = ref(null)
+const createTeamOccupation = ref(null)
 const academicYears = ref([]) 
 const teamMessage = ref('') 
 const team = ref(null) 
 const teamCreatedSuccess = ref(false) 
 const loadingCreate = ref(false)
+
+const occupations = ref([
+  { label: 'Programátor', value: 'Programátor' },
+  { label: 'Grafik 2D', value: 'Grafik 2D' },
+  { label: 'Grafik 3D', value: 'Grafik 3D' },
+  { label: 'Tester', value: 'Tester' },
+  { label: 'Animátor', value: 'Animátor' }
+])
 
 async function createTeam() {
   teamMessage.value = ''
@@ -536,11 +686,17 @@ async function createTeam() {
     toast.add({ severity: 'warn', summary: 'Upozornenie', detail: 'Akademický rok je povinný.', life: 4000 });
     return;
   }
+  if (!createTeamOccupation.value) {
+    teamMessage.value = '❌ Povolanie je povinné.';
+    toast.add({ severity: 'warn', summary: 'Upozornenie', detail: 'Povolanie je povinné.', life: 4000 });
+    return;
+  }
   loadingCreate.value = true;
   try {
     const formData = new FormData();
     formData.append('name', teamName.value);
     formData.append('academic_year_id', academicYear.value);
+    formData.append('occupation', createTeamOccupation.value);
 
     const res = await fetch(`${API_URL}/api/teams`, {
       method: 'POST',
@@ -589,19 +745,13 @@ const closeCreateTeamDialog = () => {
     team.value = null 
     teamName.value = ''
     academicYear.value = null
+    createTeamOccupation.value = null
 }
 
 // -------------------------
 // Statické Dáta a Filtrovanie
 // -------------------------
 const search = ref('')
-const selectedCategory = ref(null)
-const categories = ref([
-  { name: 'Všetky', value: null },
-  { name: 'Akčná' }, { name: 'Strategická' }, { name: 'RPG' }, { name: 'Simulátor' },
-  { name: 'Horor' }, { name: 'Dobrodužná' }, { name: 'Logická' }, { name: 'Adventura' },
-  { name: 'Puzzle' }, { name: 'Šport' }, { name: 'Preteky' }, { name: 'Vždelávacie' }
-])
 const types = ref([
   { label: 'Všetky', value: 'all' },
   { label: 'Hra', value: 'game' },
@@ -613,17 +763,97 @@ const types = ref([
 const selectedType = ref('all')
 const games = ref([]) 
 const loadingGames = ref(true)
-const showingMyProjects = ref(false) 
+const showingMyProjects = ref(false)
+
+// Nový filter systém
+const filterSchoolType = ref(null)
+const filterYearOfStudy = ref(null)
+const filterSubject = ref(null)
+const filterAcademicYear = ref(null)
+
+const filterSchoolTypes = ref([
+  { label: 'Všetky typy', value: null },
+  { label: 'Základná Škola (ZŠ)', value: 'zs' },
+  { label: 'Stredná škola (SŠ)', value: 'ss' },
+  { label: 'Vysoká Škola (VŠ)', value: 'vs' }
+])
+
+const filterSubjects = ref([
+  { label: 'Všetky predmety', value: null },
+  { label: 'Slovenský jazyk', value: 'Slovenský jazyk' },
+  { label: 'Matematika', value: 'Matematika' },
+  { label: 'Dejepis', value: 'Dejepis' },
+  { label: 'Geografia', value: 'Geografia' },
+  { label: 'Informatika', value: 'Informatika' },
+  { label: 'Grafika', value: 'Grafika' },
+  { label: 'Chémia', value: 'Chémia' },
+  { label: 'Fyzika', value: 'Fyzika' }
+])
+
+const filterYears = ref([
+  { label: 'Všetky ročníky', value: null },
+  ...Array.from({ length: 9 }, (_, i) => ({
+    label: `${i + 1}. ročník`,
+    value: i + 1
+  }))
+])
+
+const hasActiveFilters = computed(() => {
+  return filterSchoolType.value !== null || 
+         filterYearOfStudy.value !== null || 
+         filterSubject.value !== null ||
+         filterAcademicYear.value !== null ||
+         selectedType.value !== 'all' ||
+         search.value !== ''
+})
 
 const filteredGames = computed(() => {
   return games.value.filter(
     (g) => {
-      const matchesSearch = g.title.toLowerCase().includes(search.value.toLowerCase())
-      const matchesCategory = !selectedCategory.value || selectedCategory.value.value === null || g.category === selectedCategory.value.name
-      return matchesSearch && matchesCategory
+      const matchesSearch = !search.value || g.title.toLowerCase().includes(search.value.toLowerCase())
+      const matchesSchoolType = !filterSchoolType.value || g.school_type === filterSchoolType.value
+      const matchesYear = !filterYearOfStudy.value || g.year_of_study === filterYearOfStudy.value
+      const matchesSubject = !filterSubject.value || g.subject === filterSubject.value
+      const matchesAcademicYear = !filterAcademicYear.value || g.academic_year?.id === filterAcademicYear.value
+      return matchesSearch && matchesSchoolType && matchesYear && matchesSubject && matchesAcademicYear
     }
   )
 })
+
+function resetFilters() {
+  filterSchoolType.value = null
+  filterYearOfStudy.value = null
+  filterSubject.value = null
+  filterAcademicYear.value = null
+  selectedType.value = 'all'
+  search.value = ''
+  loadAllGames()
+}
+
+// Click handlers for filtering by attribute
+function filterByType(type) {
+  selectedType.value = type
+  loadAllGames()
+}
+
+function filterBySchoolType(schoolType) {
+  filterSchoolType.value = schoolType
+  loadAllGames()
+}
+
+function filterBySubject(subject) {
+  filterSubject.value = subject
+  loadAllGames()
+}
+
+function filterByAcademicYear(academicYearId) {
+  filterAcademicYear.value = academicYearId
+  loadAllGames()
+}
+
+function applyFilters() {
+  loadAllGames()
+}
 const viewProjectDetail = (project) => {
   router.push({ name: 'ProjectDetail', params: { id: project.id } })
 }
@@ -703,7 +933,7 @@ async function loadTeamStatus() {
     }
 }
 
-// Načítanie všetkých hier z DB
+// Načítanie všetkých hier z DB s novými filtrami
 async function loadAllGames() {
     showingMyProjects.value = false
     if (!token.value) {
@@ -712,7 +942,29 @@ async function loadAllGames() {
     }
     loadingGames.value = true
     try {
-        const query = selectedType.value && selectedType.value !== 'all' ? `?type=${encodeURIComponent(selectedType.value)}` : ''
+        const params = new URLSearchParams()
+        
+        if (selectedType.value && selectedType.value !== 'all') {
+            params.append('type', selectedType.value)
+        }
+        
+        if (filterSchoolType.value) {
+            params.append('school_type', filterSchoolType.value)
+        }
+        
+        if (filterYearOfStudy.value) {
+            params.append('year_of_study', filterYearOfStudy.value)
+        }
+        
+        if (filterSubject.value) {
+            params.append('subject', filterSubject.value)
+        }
+        
+        if (filterAcademicYear.value) {
+            params.append('academic_year_id', filterAcademicYear.value)
+        }
+        
+        const query = params.toString() ? `?${params.toString()}` : ''
         const res = await fetch(`${API_URL}/api/projects${query}`, {
             headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' }
         })
@@ -831,6 +1083,17 @@ watch(selectedTeam, (val) => {
   setActiveTeam(val)
 })
 watch(selectedType, () => { loadAllGames() })
+watch([filterSchoolType, filterYearOfStudy, filterSubject, filterAcademicYear], () => { loadAllGames() })
+
+// Helper function to get school type label
+function getSchoolTypeLabel(type) {
+  const map = {
+    'zs': 'ZŠ',
+    'ss': 'SŠ',
+    'vs': 'VŠ'
+  }
+  return map[type] || type
+}
 
 // Helper to resolve splash image path (local storage or absolute URL)
 function getSplashUrl(path) {

@@ -20,10 +20,13 @@ import axios from 'axios'
 import 'primeicons/primeicons.css'
 import router from './router'
 
-axios.defaults.baseURL = 'http://127.0.0.1:8000/api'
-axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem('access_token')}`
+// Use environment variable for API URL (no hardcoding)
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
+axios.defaults.baseURL = `${API_URL}/api`
+axios.defaults.headers.common['Accept'] = 'application/json'
+axios.defaults.timeout = 12000 // 12 second timeout
 
-// Automatické nastavenie tokenu
+// Set auth token if available
 const token = localStorage.getItem('access_token')
 if (token) {
   axios.defaults.headers.common['Authorization'] = `Bearer ${token}`

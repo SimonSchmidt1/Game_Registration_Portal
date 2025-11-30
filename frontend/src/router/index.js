@@ -19,6 +19,7 @@ const routes = [
   { path: '/forgot-password', name: 'ForgotPassword', component: ForgotPasswordView },
   { path: '/reset-password', name: 'ResetPassword', component: ResetPasswordView },
   { path: '/add-project', name: 'AddProject', component: AddProjectView, meta: { requiresAuth: true } },
+  { path: '/edit-project/:id', name: 'EditProject', component: AddProjectView, meta: { requiresAuth: true } },
   { path: '/project/:id', name: 'ProjectDetail', component: ProjectView },
   { path: '/team/:id', name: 'TeamDetail', component: TeamView },
   { path: '/add', name: 'AddGame', component: AddGameView, meta: { requiresAuth: true } }, // Backward compatibility

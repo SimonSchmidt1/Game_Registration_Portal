@@ -24,6 +24,7 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'student_type',
         'team_id',
         'avatar_path',
         'verification_token',
@@ -55,7 +56,7 @@ class User extends Authenticatable
 
     public function teams()
     {
-        return $this->belongsToMany(Team::class)->withPivot('role_in_team')->withTimestamps();
+        return $this->belongsToMany(Team::class)->withPivot('role_in_team', 'occupation')->withTimestamps();
     }
 
     /**

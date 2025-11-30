@@ -10,7 +10,9 @@ class ProjectData
         public readonly ProjectType $type,
         public readonly string $title,
         public readonly ?string $description,
-        public readonly ?string $category,
+        public readonly string $schoolType,
+        public readonly ?int $yearOfStudy,
+        public readonly string $subject,
         public readonly ?string $releaseDate,
         public readonly int $teamId,
         public readonly array $attachments = []
@@ -22,7 +24,9 @@ class ProjectData
             ProjectType::from($data['type'] ?? 'game'),
             $data['title'],
             $data['description'] ?? null,
-            $data['category'] ?? null,
+            $data['school_type'] ?? 'zs',
+            $data['year_of_study'] ?? null,
+            $data['subject'] ?? '',
             $data['release_date'] ?? null,
             (int)$data['team_id'],
             $data['attachments'] ?? []

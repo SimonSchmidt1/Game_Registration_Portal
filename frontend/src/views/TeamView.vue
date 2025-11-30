@@ -47,7 +47,7 @@
                   <i class="pi pi-users text-blue-400"></i>
                   <div>
                     <span class="text-gray-400 text-sm">Počet členov:</span>
-                    <p class="text-white font-medium">{{ team.members?.length || 0 }}/4</p>
+                    <p class="text-white font-medium">{{ team.members?.length || 0 }}/10</p>
                   </div>
                 </div>
                 <div class="flex items-center gap-3">
@@ -84,7 +84,8 @@
               <div 
                 v-for="member in team.members" 
                 :key="member.id"
-                class="flex items-center justify-between gap-3 bg-gray-900 rounded-lg px-4 py-3"
+                class="flex items-center justify-between gap-3 bg-gray-900 rounded-lg px-4 py-3 cursor-pointer hover:bg-gray-800 transition"
+                @click="showMemberDetails(member)"
               >
                 <div class="flex items-center gap-3">
                   <div 
@@ -103,23 +104,24 @@
                   >
                     {{ member.name?.charAt(0).toUpperCase() }}
                   </div>
-                  <div>
+                  <div class="flex-1">
                     <p class="text-white font-medium">{{ member.name }}</p>
                     <p class="text-xs text-gray-400">{{ member.email }}</p>
+                    <div v-if="member.pivot?.occupation" class="mt-2">
+                      <span class="px-2 py-1 bg-indigo-900 border border-indigo-700 text-indigo-300 rounded-md text-xs font-medium">
+                        {{ member.pivot.occupation }}
+                      </span>
+                    </div>
                   </div>
                 </div>
-                <span 
-                  v-if="isScumMaster(member)"
-                  class="px-3 py-1 bg-blue-900 border border-blue-700 text-blue-300 rounded-md text-xs font-semibold"
-                >
-                  Scrum Master
-                </span>
-                <span 
-                  v-else
-                  class="px-3 py-1 bg-gray-800 border border-gray-700 text-gray-400 rounded-md text-xs"
-                >
-                  Člen
-                </span>
+                <div class="flex items-center">
+                  <span 
+                    v-if="isScumMaster(member)"
+                    class="px-3 py-1 bg-blue-900 border border-blue-700 text-blue-300 rounded-md text-xs font-semibold"
+                  >
+                    S
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -159,12 +161,18 @@
             
             <h3 class="text-white font-semibold mb-2 line-clamp-1">{{ project.title }}</h3>
             
-            <div class="flex gap-2 text-xs mb-2">
+            <div class="flex flex-wrap gap-2 text-xs mb-2">
               <span class="px-2 py-1 rounded bg-teal-700 text-teal-100 uppercase">
                 {{ formatProjectType(project.type) }}
               </span>
-              <span class="px-2 py-1 rounded bg-gray-700 text-gray-300">
-                {{ project.category }}
+              <span v-if="project.school_type" class="px-2 py-1 rounded bg-blue-700 text-blue-100">
+                {{ getSchoolTypeLabel(project.school_type) }}
+              </span>
+              <span v-if="project.year_of_study" class="px-2 py-1 rounded bg-purple-700 text-purple-100">
+                {{ project.year_of_study }}. ročník
+              </span>
+              <span v-if="project.subject" class="px-2 py-1 rounded bg-green-700 text-green-100">
+                {{ project.subject }}
               </span>
             </div>
             
@@ -187,6 +195,94 @@
       </div>
     </div>
   </div>
+
+  <!-- Member Details Dialog -->
+  <Dialog 
+    v-model:visible="showMemberDialog" 
+    :modal="true" 
+    :closable="true" 
+    :draggable="false"
+    class="w-11/12 md:w-1/3"
+    :contentStyle="{ backgroundColor: '#1f2937', color: '#f3f4f6', padding: '1.5rem', border: 'none' }" 
+    :headerStyle="{ backgroundColor: '#1f2937', color: '#f3f4f6', borderBottom: '1px solid #374151', padding: '1.25rem 1.5rem', position: 'relative' }"
+    :style="{ borderRadius: '8px', overflow: 'hidden' }"
+  >
+    <template #header>
+      <div class="flex items-center justify-center w-full">
+        <span class="text-gray-100 font-medium text-lg w-full">Informácie o členovi</span>
+      </div>
+    </template>
+    
+    <div v-if="selectedMember" class="flex flex-col gap-6">
+      <!-- Avatar Section -->
+      <div class="flex flex-col items-center gap-4 p-6 bg-gray-800 rounded-lg">
+        <div class="relative">
+          <img 
+            v-if="selectedMember.avatar_path" 
+            :src="getAvatarUrl(selectedMember.avatar_path)" 
+            alt="Avatar"
+            class="w-24 h-24 rounded-full object-cover border-4 border-blue-500 shadow-lg"
+          />
+          <div v-else class="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-4xl shadow-lg border-4 border-blue-500">
+            {{ selectedMember.name?.charAt(0).toUpperCase() }}
+          </div>
+        </div>
+      </div>
+   
+      <!-- Member Info -->
+      <div class="flex flex-col gap-3">
+        <div class="flex justify-between items-center p-3 bg-gray-800 rounded-lg">
+          <span class="text-gray-400 font-medium">
+            Meno:
+          </span>
+          <span class="text-white font-semibold">{{ selectedMember.name }}</span>
+        </div>
+        
+        <div class="flex justify-between items-center p-3 bg-gray-800 rounded-lg">
+          <span class="text-gray-400 font-medium">
+            Email:
+          </span>
+          <span class="text-white font-semibold text-sm">{{ selectedMember.email }}</span>
+        </div>
+        
+        <div class="flex justify-between items-center p-3 bg-gray-800 rounded-lg">
+          <span class="text-gray-400 font-medium">
+            Typ študenta:
+          </span>
+          <span v-if="selectedMember.student_type" class="px-3 py-1 bg-purple-900 border border-purple-700 text-purple-300 rounded-md text-sm font-semibold">
+            {{ getStudentTypeLabel(selectedMember.student_type) }}
+          </span>
+          <span v-else class="text-gray-500 text-sm">Neuvedené</span>
+        </div>
+
+        <div v-if="selectedMember.pivot?.occupation" class="flex justify-between items-center p-3 bg-gray-800 rounded-lg">
+          <span class="text-gray-400 font-medium">
+            Povolanie:
+          </span>
+          <span class="px-3 py-1 bg-indigo-900 border border-indigo-700 text-indigo-300 rounded-md text-sm font-semibold">
+            {{ selectedMember.pivot.occupation }}
+          </span>
+        </div>
+
+        <div v-if="isScumMaster(selectedMember)" class="flex justify-between items-center p-3 bg-gray-800 rounded-lg">
+          <span class="text-gray-400 font-medium">
+            Rola:
+          </span>
+          <span class="px-3 py-1 bg-blue-900 border border-blue-700 text-blue-300 rounded-md text-sm font-semibold">
+            S
+          </span>
+        </div>
+      </div>
+   
+      <div class="flex gap-2">
+        <Button 
+          label="Zavrieť" 
+          class="p-button-outlined w-full"
+          @click="showMemberDialog = false" 
+        />
+      </div>
+    </div>
+  </Dialog>
 </template>
 
 <script setup>
@@ -195,6 +291,7 @@ import { useRoute, useRouter } from 'vue-router'
 import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
 import Button from 'primevue/button'
+import Dialog from 'primevue/dialog'
 import Tooltip from 'primevue/tooltip'
 
 const vTooltip = Tooltip
@@ -209,6 +306,8 @@ const projects = ref([])
 const loading = ref(true)
 const loadingProjects = ref(true)
 const error = ref(null)
+const showMemberDialog = ref(false)
+const selectedMember = ref(null)
 
 const projectCount = computed(() => projects.value.length)
 
@@ -286,6 +385,15 @@ function formatProjectType(type) {
   return type.replace(/_/g, ' ')
 }
 
+function getSchoolTypeLabel(type) {
+  const map = {
+    'zs': 'ZŠ',
+    'ss': 'SŠ',
+    'vs': 'VŠ'
+  }
+  return map[type] || type
+}
+
 function copyInviteCode() {
   if (team.value?.invite_code) {
     navigator.clipboard.writeText(team.value.invite_code)
@@ -296,6 +404,20 @@ function copyInviteCode() {
       life: 3000 
     })
   }
+}
+
+function showMemberDetails(member) {
+  selectedMember.value = member
+  showMemberDialog.value = true
+}
+
+function getStudentTypeLabel(type) {
+  if (!type) return 'Neuvedené'
+  const map = {
+    'denny': 'Denný študent',
+    'externy': 'Externý študent'
+  }
+  return map[type] || type
 }
 
 onMounted(() => {

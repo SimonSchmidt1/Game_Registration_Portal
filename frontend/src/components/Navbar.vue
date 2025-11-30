@@ -128,6 +128,13 @@
           </span>
           <span class="text-white font-semibold">{{ currentUser.role }}</span>
         </div>
+        
+        <div class="flex justify-between items-center p-3 bg-gray-800 rounded-lg">
+          <span class="text-gray-400 font-medium">
+            Typ študenta:
+          </span>
+          <span class="text-white font-semibold">{{ getStudentTypeLabel(currentUser.student_type) }}</span>
+        </div>
       </div>
 
       <div v-if="!editMode" class="flex gap-2">
@@ -459,6 +466,15 @@ function startEdit() {
 function cancelEdit() {
   editMode.value = false
   editName.value = ''
+}
+
+function getStudentTypeLabel(type) {
+  if (!type) return 'Neuvedené'
+  const map = {
+    'denny': 'Denný študent',
+    'externy': 'Externý študent'
+  }
+  return map[type] || type
 }
 
 async function saveProfile() {

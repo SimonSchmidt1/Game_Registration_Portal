@@ -13,6 +13,7 @@ Each project can include video (upload or YouTube), splash image, downloadable f
 ### Key Endpoints (auth:sanctum)
 `GET /api/projects` – list projects (filters: type, category, search, academic_year_id)
 `POST /api/projects` – create project (Scrum Master only)
+`PUT /api/projects/{id}` – update project (Scrum Master of project's team only)
 `GET /api/projects/{id}` – project detail
 `POST /api/projects/{id}/views` – increment views
 `POST /api/projects/{id}/rate` – rate once
@@ -37,8 +38,9 @@ npm run dev
 
 Set `VITE_API_URL` in frontend `.env` (or environment) to the backend URL (e.g. http://localhost:8000).
 
-### Project Creation Rules
-Scrum Master of a team may create projects. Team membership & role checked via pivot `team_user.role_in_team`.
+### Project Creation & Editing Rules
+- **Creation**: Scrum Master of a team may create projects. Team membership & role checked via pivot `team_user.role_in_team`.
+- **Editing**: Scrum Master of the project's team may edit their projects. Authorization is verified on each update request. Files can be replaced (old files are deleted when new ones are uploaded) or preserved if not changed.
 
 ### Rating Logic
 - First POST to `/rate` creates rating.

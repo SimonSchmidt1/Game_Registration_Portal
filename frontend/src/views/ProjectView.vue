@@ -13,11 +13,28 @@
     <div v-else-if="project" class="space-y-6">
       <div class="flex items-center justify-between mb-6">
         <Button label="Späť" icon="pi pi-arrow-left" class="p-button-text p-button-secondary" @click="goBack" />
+        <Button 
+          v-if="isCurrentUserScrumMaster" 
+          label="Upraviť projekt" 
+          icon="pi pi-pencil" 
+          class="p-button-outlined"
+          @click="editProject"
+        />
       </div>
       <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl shadow-xl p-6 border border-gray-700">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
           <h1 class="text-4xl font-bold text-gray-100">{{ project.title }}</h1>
-          <span class="px-4 py-2 rounded-lg border border-gray-600 bg-gray-700 text-gray-200 font-medium text-lg shadow-lg">{{ project.category }}</span>
+          <div class="flex flex-wrap gap-2">
+            <span v-if="project.school_type" class="px-4 py-2 rounded-lg border border-gray-600 bg-gray-700 text-gray-200 font-medium text-lg shadow-lg">
+              {{ getSchoolTypeLabel(project.school_type) }}
+            </span>
+            <span v-if="project.year_of_study" class="px-4 py-2 rounded-lg border border-gray-600 bg-gray-700 text-gray-200 font-medium text-lg shadow-lg">
+              {{ project.year_of_study }}. ročník
+            </span>
+            <span v-if="project.subject" class="px-4 py-2 rounded-lg border border-gray-600 bg-gray-700 text-gray-200 font-medium text-lg shadow-lg">
+              {{ project.subject }}
+            </span>
+          </div>
         </div>
         <div class="flex items-center gap-6 mb-4 pb-4 border-b border-gray-700">
           <div class="flex flex-col">
@@ -172,6 +189,8 @@ const project = ref(null)
 const loading = ref(true)
 const error = ref('')
 const userHasRated = ref(false)
+const currentUserId = ref(null)
+const isCurrentUserScrumMaster = ref(false)
 const videoContainer = ref(null)
 const videoPlayer = ref(null)
 const videoPlaying = ref(false)
@@ -197,10 +216,42 @@ async function loadProject() {
       prepareMetadata()
       await incrementViews(id)
       await loadUserRating(id)
+      await checkScrumMasterStatus()
     } else {
       error.value = data.message || 'Projekt nebol nájdený.'
     }
   } catch (e) { error.value = 'Chyba pri načítaní projektu.' } finally { loading.value = false }
+}
+
+async function loadCurrentUser() {
+  if (!token.value) return
+  try {
+    const res = await fetch(`${API_URL}/api/user`, {
+      headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' }
+    })
+    if (res.ok) {
+      const data = await res.json()
+      currentUserId.value = data.id
+    }
+  } catch (_) {}
+}
+
+async function checkScrumMasterStatus() {
+  if (!project.value || !project.value.team || !currentUserId.value) {
+    isCurrentUserScrumMaster.value = false
+    return
+  }
+  
+  // Check if current user is Scrum Master of the project's team
+  const currentUserMember = project.value.team.members?.find(m => m.id === currentUserId.value)
+  isCurrentUserScrumMaster.value = currentUserMember?.pivot?.role_in_team === 'scrum_master' || 
+                                    project.value.team.scrum_master_id === currentUserId.value
+}
+
+function editProject() {
+  if (project.value) {
+    router.push(`/edit-project/${project.value.id}`)
+  }
 }
 
 async function loadUserRating(id) {
@@ -255,6 +306,14 @@ function toggleFullscreen(){ const el=videoContainer.value; if(!el) return; if(!
 function formatTime(t){ const s=Math.floor(t); const m=Math.floor(s/60); const r=s%60; return `${m}:${String(r).padStart(2,'0')}` }
 function goToTeam(teamId){ if(teamId) router.push(`/team/${teamId}`) }
 function goBack(){ router.push('/') }
+function getSchoolTypeLabel(type) {
+  const map = {
+    'zs': 'ZŠ',
+    'ss': 'SŠ',
+    'vs': 'VŠ'
+  }
+  return map[type] || type
+}
 let fsHandler
 function prepareMetadata(){
   if(!project.value || !project.value.metadata) { techStack.value=[]; hasAnyMetadata.value=false; return }
@@ -265,6 +324,6 @@ function prepareMetadata(){
   else techStack.value = []
 }
 function handleKey(e){ const tag=(e.target&&e.target.tagName?e.target.tagName.toLowerCase():''); if(['input','textarea','select','button'].includes(tag)) return; if(!videoPlayer.value) return; switch(e.code){ case 'Space': e.preventDefault(); togglePlay(); break; case 'ArrowLeft': e.preventDefault(); skip(-5); break; case 'ArrowRight': e.preventDefault(); skip(5); break; } }
-onMounted(()=>{ loadProject(); fsHandler=()=>{ isFullscreen.value=!!document.fullscreenElement }; document.addEventListener('fullscreenchange',fsHandler); document.addEventListener('keydown',handleKey) })
+onMounted(()=>{ loadCurrentUser(); loadProject(); fsHandler=()=>{ isFullscreen.value=!!document.fullscreenElement }; document.addEventListener('fullscreenchange',fsHandler); document.addEventListener('keydown',handleKey) })
 onUnmounted(()=>{ if(fsHandler) document.removeEventListener('fullscreenchange',fsHandler); document.removeEventListener('keydown',handleKey) })
 </script>

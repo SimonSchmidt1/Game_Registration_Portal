@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Team;
 use App\Models\User;
 use App\Services\TeamService;
+use App\Enums\Occupation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule; 
@@ -40,14 +41,21 @@ class TeamController extends Controller
         $request->validate([
             'name' => ['required', 'string', 'max:255', Rule::unique('teams', 'name')],
             'academic_year_id' => 'required|exists:academic_years,id',
+            'occupation' => ['required', 'string', Rule::in(Occupation::values())],
         ]);
 
         $user = $request->user();
-        $team = $this->teamService->createTeam($user, $request->only('name','academic_year_id'));
-        return response()->json([
-            'message' => 'Tím bol úspešne vytvorený.',
-            'team' => $team
-        ], 201);
+        try {
+            $team = $this->teamService->createTeam($user, $request->only('name', 'academic_year_id', 'occupation'));
+            return response()->json([
+                'message' => 'Tím bol úspešne vytvorený.',
+                'team' => $team
+            ], 201);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json([
+                'message' => $e->getMessage()
+            ], 400);
+        }
     }
 
 
@@ -61,17 +69,20 @@ class TeamController extends Controller
     {
         $request->validate([
             'invite_code' => 'required|string|size:6',
+            'occupation' => ['required', 'string', Rule::in(Occupation::values())],
         ]);
 
         $user = $request->user();
-        $result = $this->teamService->joinTeam($user, $request->invite_code);
+        $result = $this->teamService->joinTeam($user, $request->invite_code, $request->occupation);
         if (isset($result['error'])) {
             return match($result['error']) {
                 'already_member' => response()->json(['message' => 'Už ste členom tohto tímu.'], 409),
-                'full' => response()->json(['message' => 'Tím je plný. Maximálny počet členov je ' . ($result['max'] ?? 4) . '.'], 403),
+                'full' => response()->json(['message' => 'Tím je plný. Maximálny počet členov je ' . ($result['max'] ?? 10) . '.'], 403),
                 'not_found' => response()->json(['message' => 'Tím s týmto kódom nebol nájdený. Skontrolujte správnosť kódu.'], 404),
                 'invalid_code' => response()->json(['message' => 'Neplatný kód tímu.'], 400),
                 'invalid_user' => response()->json(['message' => 'Neplatný používateľ.'], 400),
+                'occupation_required' => response()->json(['message' => 'Povinné je zadať povolanie.'], 400),
+                'invalid_occupation' => response()->json(['message' => 'Neplatné povolanie. Musí byť jedno z: ' . implode(', ', Occupation::values())], 400),
                 default => response()->json(['message' => 'Chyba pri pripájaní k tímu. Skúste to znova.'], 500),
             };
         }
@@ -91,7 +102,25 @@ class TeamController extends Controller
     public function show(Team $team)
     {
         $team->load(['members', 'academicYear']);
-        return response()->json($team);
+        
+        // Ensure pivot data and student_type are included in the response
+        $teamData = $team->toArray();
+        if (isset($teamData['members'])) {
+            $teamData['members'] = $team->members->map(function ($member) {
+                $memberArray = $member->toArray();
+                // Explicitly ensure student_type is included
+                $memberArray['student_type'] = $member->student_type;
+                if ($member->pivot) {
+                    $memberArray['pivot'] = [
+                        'role_in_team' => $member->pivot->role_in_team,
+                        'occupation' => $member->pivot->occupation,
+                    ];
+                }
+                return $memberArray;
+            })->toArray();
+        }
+        
+        return response()->json($teamData);
     }
 
     /**

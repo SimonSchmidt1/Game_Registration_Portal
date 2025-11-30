@@ -12,5 +12,6 @@ class TeamUser extends Pivot
         'team_id',
         'user_id',
         'role_in_team',
+        'occupation',
     ];
 }

@@ -26,7 +26,7 @@ class Team extends Model
         // ✅ Oprava: Používame withPivot('role_in_team') pre správne načítanie roly (member/Scrum Master)
         // Zároveň je potrebné odstrániť ->select(), aby sa pivot dáta správne načítali pre ďalšie operácie.
         return $this->belongsToMany(User::class, 'team_user')
-                    ->withPivot('role_in_team'); 
+                    ->withPivot('role_in_team', 'occupation'); 
     }
     
     /**

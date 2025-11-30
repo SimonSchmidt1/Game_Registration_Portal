@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Team;
 use App\Models\User;
+use App\Enums\Occupation;
 use Illuminate\Support\Str;
 
 class TeamService
@@ -41,6 +42,16 @@ class TeamService
             throw new \InvalidArgumentException('Academic year is required');
         }
         
+        if (empty($data['occupation'])) {
+            throw new \InvalidArgumentException('Occupation is required');
+        }
+        
+        // Validate occupation
+        $validOccupations = Occupation::values();
+        if (!in_array($data['occupation'], $validOccupations)) {
+            throw new \InvalidArgumentException('Invalid occupation. Must be one of: ' . implode(', ', $validOccupations));
+        }
+        
         // Use transaction to ensure atomic operation
         return \DB::transaction(function () use ($user, $data) {
             do {
@@ -54,15 +65,18 @@ class TeamService
                 'scrum_master_id' => $user->id,
             ]);
             
-            $user->teams()->attach($team->id, ['role_in_team' => 'scrum_master']);
+            $user->teams()->attach($team->id, [
+                'role_in_team' => 'scrum_master',
+                'occupation' => $data['occupation']
+            ]);
             $team->load('members');
             
-            \Log::info('Team created', ['team_id' => $team->id, 'user_id' => $user->id]);
+            \Log::info('Team created', ['team_id' => $team->id, 'user_id' => $user->id, 'occupation' => $data['occupation']]);
             return $team;
         });
     }
 
-    public function joinTeam(User $user, string $inviteCode)
+    public function joinTeam(User $user, string $inviteCode, ?string $occupation = null)
     {
         // Defensive: validate inputs
         if (!$user || !$user->id) {
@@ -72,6 +86,16 @@ class TeamService
         $inviteCode = trim(strtoupper($inviteCode));
         if (empty($inviteCode)) {
             return ['error' => 'invalid_code'];
+        }
+        
+        if (empty($occupation)) {
+            return ['error' => 'occupation_required'];
+        }
+        
+        // Validate occupation
+        $validOccupations = Occupation::values();
+        if (!in_array($occupation, $validOccupations)) {
+            return ['error' => 'invalid_occupation'];
         }
         
         $team = Team::where('invite_code', $inviteCode)->first();
@@ -84,19 +108,22 @@ class TeamService
             return ['error' => 'already_member'];
         }
 
-        $maxMembers = 4;
+        $maxMembers = 10;
         if ($team->members()->count() >= $maxMembers) {
             \Log::info('Team join failed: team full', ['team_id' => $team->id]);
             return ['error' => 'full', 'max' => $maxMembers];
         }
 
         // Use transaction for atomic operation
-        \DB::transaction(function () use ($user, $team) {
-            $user->teams()->attach($team->id, ['role_in_team' => 'member']);
+        \DB::transaction(function () use ($user, $team, $occupation) {
+            $user->teams()->attach($team->id, [
+                'role_in_team' => 'member',
+                'occupation' => $occupation
+            ]);
         });
         
         $team->load('members');
-        \Log::info('User joined team', ['user_id' => $user->id, 'team_id' => $team->id]);
+        \Log::info('User joined team', ['user_id' => $user->id, 'team_id' => $team->id, 'occupation' => $occupation]);
         return ['team' => $team];
     }
 

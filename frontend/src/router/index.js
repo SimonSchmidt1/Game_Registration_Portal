@@ -10,6 +10,7 @@ import TeamView from '../views/TeamView.vue'
 import VerifyEmail from '../views/VerifyEmail.vue'
 import ForgotPasswordView from '../views/ForgotPasswordView.vue'
 import ResetPasswordView from '../views/ResetPasswordView.vue'
+import AdminView from '../views/AdminView.vue'
 
 const routes = [
   { path: '/', name: 'Home', component: HomeView },
@@ -22,6 +23,7 @@ const routes = [
   { path: '/edit-project/:id', name: 'EditProject', component: AddProjectView, meta: { requiresAuth: true } },
   { path: '/project/:id', name: 'ProjectDetail', component: ProjectView },
   { path: '/team/:id', name: 'TeamDetail', component: TeamView },
+  { path: '/admin', name: 'Admin', component: AdminView, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/add', name: 'AddGame', component: AddGameView, meta: { requiresAuth: true } }, // Backward compatibility
   { path: '/game/:id', name: 'GameDetail', component: GameView }, // Backward compatibility
 ]
@@ -32,9 +34,12 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('access_token')
+  const user = JSON.parse(localStorage.getItem('user') || '{}')
 
   if (to.meta.requiresAuth && !token) {
     next('/login')
+  } else if (to.meta.requiresAdmin && user.role !== 'admin') {
+    next('/')
   } else {
     next()
   }

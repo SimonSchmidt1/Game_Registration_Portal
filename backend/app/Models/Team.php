@@ -16,6 +16,7 @@ class Team extends Model
         'invite_code',
         'academic_year_id',
         'scrum_master_id',
+        'status',
     ];
 
     /**
@@ -43,5 +44,13 @@ class Team extends Model
     public function games()
     {
         return $this->hasMany(Game::class);
+    }
+
+    /**
+     * Získava všetky projekty tímu.
+     */
+    public function projects()
+    {
+        return $this->hasMany(Project::class);
     }
 }

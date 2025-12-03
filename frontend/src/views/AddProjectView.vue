@@ -544,7 +544,22 @@ async function submitForm() {
         resetForm()
       }
     } else {
-      toast.add({ severity: 'error', summary: 'Chyba', detail: data.message || (isEditMode.value ? 'Nepodarilo sa aktualizovať projekt.' : 'Nepodarilo sa vytvoriť projekt.'), life: 7000 })
+      // Handle team status errors specifically
+      if (res.status === 403 && data.team_status) {
+        toast.add({ 
+          severity: 'warn', 
+          summary: 'Tím nie je aktívny', 
+          detail: data.message || 'Váš tím nie je aktívny. Nie je možné publikovať projekty.', 
+          life: 8000 
+        })
+      } else {
+        toast.add({ 
+          severity: 'error', 
+          summary: 'Chyba', 
+          detail: data.message || (isEditMode.value ? 'Nepodarilo sa aktualizovať projekt.' : 'Nepodarilo sa vytvoriť projekt.'), 
+          life: 7000 
+        })
+      }
     }
   } catch (e) {
     toast.add({ severity: 'fatal', summary: 'Chyba siete', detail: 'Problém s komunikáciou so serverom.', life: 8000 })

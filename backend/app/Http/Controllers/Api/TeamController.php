@@ -9,6 +9,7 @@ use App\Services\TeamService;
 use App\Enums\Occupation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule; 
 
 class TeamController extends Controller
@@ -47,9 +48,17 @@ class TeamController extends Controller
         $user = $request->user();
         try {
             $team = $this->teamService->createTeam($user, $request->only('name', 'academic_year_id', 'occupation'));
+            
+            // Check if team requires approval
+            $requiresApproval = Schema::hasColumn('teams', 'status') && ($team->status === 'pending');
+            $message = $requiresApproval 
+                ? 'Tím bol úspešne vytvorený a čaká na schválenie administrátorom. Po schválení budete môcť publikovať projekty.'
+                : 'Tím bol úspešne vytvorený.';
+            
             return response()->json([
-                'message' => 'Tím bol úspešne vytvorený.',
-                'team' => $team
+                'message' => $message,
+                'team' => $team,
+                'requires_approval' => $requiresApproval
             ], 201);
         } catch (\InvalidArgumentException $e) {
             return response()->json([

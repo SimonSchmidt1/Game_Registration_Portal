@@ -69,19 +69,18 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 // 🔴 Admin Routes - Protected by admin middleware
-// Ready for any future admin functionality (user management, analytics, etc.)
 Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function () {
-    // Placeholder endpoint - replace/expand based on actual admin requirements
-    Route::get('/dashboard', function (Request $request) {
-        return response()->json([
-            'message' => 'Admin prístup aktívny',
-            'user' => $request->user()->only(['id', 'name', 'email', 'role']),
-        ]);
-    });
+    // Dashboard stats
+    Route::get('/stats', [App\Http\Controllers\Api\AdminController::class, 'stats']);
     
-    // Future admin endpoints go here:
-    // Route::get('/users', [AdminUserController::class, 'index']);
-    // Route::get('/teams', [AdminTeamController::class, 'index']);
-    // Route::get('/projects', [AdminProjectController::class, 'index']);
-    // Route::get('/analytics', [AdminAnalyticsController::class, 'index']);
+    // Teams management
+    Route::get('/teams', [App\Http\Controllers\Api\AdminController::class, 'teams']);
+    Route::get('/teams/{team}', [App\Http\Controllers\Api\AdminController::class, 'showTeam']);
+    Route::put('/teams/{team}', [App\Http\Controllers\Api\AdminController::class, 'updateTeam']);
+    Route::delete('/teams/{team}', [App\Http\Controllers\Api\AdminController::class, 'deleteTeam']);
+    Route::post('/teams/{team}/approve', [App\Http\Controllers\Api\AdminController::class, 'approveTeam']);
+    Route::post('/teams/{team}/reject', [App\Http\Controllers\Api\AdminController::class, 'rejectTeam']);
+    
+    // Projects overview
+    Route::get('/projects', [App\Http\Controllers\Api\AdminController::class, 'projects']);
 });

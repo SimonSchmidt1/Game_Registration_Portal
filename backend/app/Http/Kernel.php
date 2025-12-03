@@ -41,9 +41,10 @@ class Kernel extends HttpKernel
     /**
      * Middleware pre jednotlivé routy (route middleware)
      */
-    protected $routeMiddleware = [
+    protected $middlewareAliases = [
         'auth' => \App\Http\Middleware\Authenticate::class,
-        'role' => \App\Http\Middleware\RoleMiddleware::class, 
+        'role' => \App\Http\Middleware\RoleMiddleware::class,
+        'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
     ];

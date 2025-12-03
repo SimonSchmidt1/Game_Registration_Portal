@@ -6,6 +6,7 @@ use App\Models\Team;
 use App\Models\User;
 use App\Enums\Occupation;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Schema;
 
 class TeamService
 {
@@ -58,12 +59,19 @@ class TeamService
                 $inviteCode = Str::random(6);
             } while (Team::where('invite_code', $inviteCode)->exists());
 
-            $team = Team::create([
+            $teamData = [
                 'name' => $data['name'],
                 'academic_year_id' => $data['academic_year_id'],
                 'invite_code' => strtoupper($inviteCode),
                 'scrum_master_id' => $user->id,
-            ]);
+            ];
+            
+            // Set status to 'pending' if status column exists (requires admin approval)
+            if (Schema::hasColumn('teams', 'status')) {
+                $teamData['status'] = 'pending';
+            }
+            
+            $team = Team::create($teamData);
             
             $user->teams()->attach($team->id, [
                 'role_in_team' => 'scrum_master',

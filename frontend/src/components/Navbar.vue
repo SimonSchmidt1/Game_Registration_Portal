@@ -3,7 +3,10 @@
     <div class="w-full max-w-6xl flex justify-between items-center px-4 sm:px-6 lg:px-8">
       <div class="flex items-center gap-6">
         <RouterLink to="/" class="text-lg font-semibold hover:underline">Domov</RouterLink>
-        <RouterLink v-if="canAddGame" to="/add-project" class="text-lg font-semibold hover:underline">Pridať projekt</RouterLink>
+        <RouterLink v-if="canAddGame && !isAdmin" to="/add-project" class="text-lg font-semibold hover:underline">Pridať projekt</RouterLink>
+        <RouterLink v-if="isAdmin" to="/admin" class="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-red-700 to-red-800 border-2 border-red-600 rounded-xl hover:border-red-400 transition cursor-pointer shadow-sm text-white text-sm font-semibold">
+          <span class="hidden sm:inline">Admin Panel</span>
+        </RouterLink>
       </div>
 
       <div class="flex items-center gap-3">
@@ -233,6 +236,7 @@ const API_URL = import.meta.env.VITE_API_URL
 const router = useRouter()
 const isLoggedIn = ref(!!localStorage.getItem('access_token'))
 const canAddGame = ref(false) // Derived from active team scrum master status (now for projects)
+const isAdmin = ref(false) // Whether current user is admin
 const userName = ref('')
 const currentUser = ref(null)
 const showUserProfileDialog = ref(false)
@@ -390,6 +394,7 @@ async function logout() {
     localStorage.removeItem('access_token')
     localStorage.removeItem('user')
     isLoggedIn.value = false
+    isAdmin.value = false
     currentUser.value = null
 
     toast.value.add({
@@ -413,10 +418,17 @@ onMounted(async () => {
       isLoggedIn.value = true
       currentUser.value = response.data
       userName.value = response.data.name
+      // Check admin status
+      isAdmin.value = response.data.role === 'admin'
+      // Admins should not see "Pridať projekt" button
+      if (isAdmin.value) {
+        canAddGame.value = false
+      }
     } catch {
       localStorage.removeItem('access_token')
       localStorage.removeItem('user')
       isLoggedIn.value = false
+      isAdmin.value = false
       if (router.currentRoute.value.meta.requiresAuth) {
         router.push('/login')
       }
@@ -427,6 +439,11 @@ onMounted(async () => {
     isLoggedIn.value = true
     const user = JSON.parse(localStorage.getItem('user') || '{}')
     userName.value = user.name || ''
+    isAdmin.value = user.role === 'admin'
+    // Admins should not see "Pridať projekt" button
+    if (isAdmin.value) {
+      canAddGame.value = false
+    }
     await loadCurrentUser()
   })
 
@@ -444,6 +461,12 @@ function refreshActiveTeamStatus(detail) {
   
   // Must be logged in to add games
   if (!token) {
+    canAddGame.value = false
+    return
+  }
+  
+  // Admins should not see "Pridať projekt" button
+  if (isAdmin.value) {
     canAddGame.value = false
     return
   }

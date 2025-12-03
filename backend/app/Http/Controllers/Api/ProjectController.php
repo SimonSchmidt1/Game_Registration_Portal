@@ -8,6 +8,7 @@ use App\Models\Project;
 use App\Models\GameRating;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use App\Rules\VideoMaxResolution;
 use App\Models\AcademicYear;
 
@@ -88,6 +89,22 @@ class ProjectController extends Controller
 
         if (!$team) {
             return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        // Check if team is active (only active teams can publish projects)
+        // Only check if status column exists
+        if (Schema::hasColumn('teams', 'status')) {
+            $teamStatus = $team->status ?? 'active';
+            if ($teamStatus !== 'active') {
+                $statusMessages = [
+                    'pending' => 'Váš tím čaká na schválenie administrátorom. Projekty môžete publikovať až po schválení tímu.',
+                    'suspended' => 'Váš tím bol pozastavený. Nie je možné publikovať projekty.',
+                ];
+                return response()->json([
+                    'message' => $statusMessages[$teamStatus] ?? 'Váš tím nie je aktívny. Nie je možné publikovať projekty.',
+                    'team_status' => $teamStatus
+                ], 403);
+            }
         }
 
         // Verify image file is actually an image (content verification)
@@ -231,6 +248,23 @@ class ProjectController extends Controller
 
         if (!$isScrumMaster) {
             return response()->json(['message' => 'Iba Scrum Master tímu môže upravovať projekt.'], 403);
+        }
+
+        // Check if team is active (only active teams can edit projects)
+        // Only check if status column exists
+        if (Schema::hasColumn('teams', 'status')) {
+            $team = $project->team;
+            $teamStatus = $team->status ?? 'active';
+            if ($teamStatus !== 'active') {
+                $statusMessages = [
+                    'pending' => 'Váš tím čaká na schválenie administrátorom. Projekty môžete upravovať až po schválení tímu.',
+                    'suspended' => 'Váš tím bol pozastavený. Nie je možné upravovať projekty.',
+                ];
+                return response()->json([
+                    'message' => $statusMessages[$teamStatus] ?? 'Váš tím nie je aktívny. Nie je možné upravovať projekty.',
+                    'team_status' => $teamStatus
+                ], 403);
+            }
         }
 
         $validated = $request->validate([

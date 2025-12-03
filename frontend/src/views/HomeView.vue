@@ -9,7 +9,7 @@
           Zoznam Registrovaných Projektov 
         </h2>
         
-        <div v-if="token" class="flex gap-3 flex-wrap items-center">
+        <div v-if="token && !isAdmin" class="flex gap-3 flex-wrap items-center">
           <!-- TLAČIDLO: Info o tíme (viditeľné len ak je používateľ v tíme) -->
           <Button 
             v-if="hasTeam"
@@ -33,7 +33,7 @@
       </div>
 
       <!-- Team Selector (minimalistic) -->
-      <div v-if="hasTeam && teams.length > 0" class="bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700 rounded-2xl p-5 shadow-xl">
+      <div v-if="hasTeam && teams.length > 0 && !isAdmin" class="bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700 rounded-2xl p-5 shadow-xl">
         <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
           <div class="flex items-center gap-3 flex-1">
             <div class="flex-1">
@@ -78,6 +78,7 @@
         </div>
       </div>
     </div>
+
 
 
     <div v-if="token" class="flex flex-col gap-4 mb-8 p-5 border border-gray-700 rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 shadow-xl">
@@ -151,14 +152,14 @@
       <!-- Tlačidlá a reset -->
       <div class="flex flex-wrap items-center gap-2">
         <Button 
-          v-if="hasTeam && selectedTeam && !showingMyProjects" 
+          v-if="hasTeam && selectedTeam && !showingMyProjects && !isAdmin" 
           label="Moje Projekty" 
           class="p-button-outlined" 
           icon="pi pi-filter" 
           @click="loadMyProjects" 
         />
         <Button 
-          v-if="showingMyProjects" 
+          v-if="showingMyProjects && !isAdmin" 
           label="Všetky Projekty" 
           class="p-button-outlined" 
           icon="pi pi-arrow-left" 
@@ -534,6 +535,10 @@ const token = ref(localStorage.getItem('access_token') || '')
 const hasTeam = ref(false) 
 const teams = ref([]) // All teams user is part of
 const selectedTeam = ref(null) // Currently selected team
+const isAdmin = computed(() => {
+  const user = JSON.parse(localStorage.getItem('user') || '{}')
+  return user.role === 'admin'
+})
 // Persist active team selection for cross-view authorization (AddGameView, Navbar)
 function setActiveTeam(team) {
   if (!team) {
@@ -710,7 +715,24 @@ async function createTeam() {
       team.value = data.team;
       teamCreatedSuccess.value = true;
       hasTeam.value = true;
-      toast.add({ severity: 'success', summary: 'Tím Vytvorený', detail: `Tím "${team.value.name}" bol úspešne vytvorený.`, life: 5000 });
+      
+      // Show appropriate message based on approval status
+      if (data.requires_approval) {
+        toast.add({ 
+          severity: 'info', 
+          summary: 'Tím Vytvorený', 
+          detail: data.message || `Tím "${team.value.name}" bol vytvorený a čaká na schválenie administrátorom.`, 
+          life: 8000 
+        });
+      } else {
+        toast.add({ 
+          severity: 'success', 
+          summary: 'Tím Vytvorený', 
+          detail: data.message || `Tím "${team.value.name}" bol úspešne vytvorený.`, 
+          life: 5000 
+        });
+      }
+      
       await loadTeamStatus(); // Reload all teams
       loadAllGames();
     } else {

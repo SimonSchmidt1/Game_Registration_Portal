@@ -1,42 +1,44 @@
 # Admin Login Documentation
 
+**Last Updated:** December 4, 2025
+
 ## Overview
 Special admin login system that bypasses normal email validation and uses config-based credentials. This allows administrators to log in without needing a UCM email address.
 
-## Admin Credentials
+## Quick Setup
 
-### Default Credentials
-- **Email**: `admin@gameportal.local`
-- **Password**: `qKyUtyz0kSOyJxLU5E09zMkKospW6XZ9`
-
-### Changing Admin Credentials
-
-#### Option 1: Environment Variables (Recommended)
-Add to your `.env` file:
+### 1. Backend Configuration
+Add to `backend/.env`:
 ```env
-ADMIN_EMAIL=your-admin@email.com
-ADMIN_PASSWORD=your-strong-password-here
+ADMIN_EMAIL=admin@gameportal.local
+ADMIN_PASSWORD=qKyUtyz0kSOyJxLU5E09zMkKospW6XZ9
 ```
 
-#### Option 2: Config File
-Edit `backend/config/admin.php`:
-```php
-'email' => 'your-admin@email.com',
-'password' => 'your-strong-password-here',
+### 2. Frontend Configuration
+Add to `frontend/.env`:
+```env
+VITE_ADMIN_EMAIL=admin@gameportal.local
 ```
 
-After changing credentials, clear config cache:
+### 3. Create Admin User
 ```bash
+cd backend
+php artisan db:seed
 php artisan config:clear
 ```
+
+## Default Credentials
+- **Email**: `admin@gameportal.local`
+- **Password**: `qKyUtyz0kSOyJxLU5E09zMkKospW6XZ9`
 
 ## How to Use
 
 ### Frontend
 1. Go to the login page (`/login`)
-2. Click "Admin prihlásenie" link at the top
-3. Enter admin email and password
-4. Click "Prihlásiť sa"
+2. Enter the admin email address
+3. The form automatically detects admin login (shows "Admin prihlásenie detekované")
+4. Enter admin password
+5. Click "Prihlásiť sa"
 
 ### Backend API
 ```http

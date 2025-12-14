@@ -15,6 +15,31 @@
       <i class="pi pi-lock text-4xl text-red-400"></i>
       <p class="mt-4 font-semibold text-red-200">Iba Scrum Master môže pridať projekt.</p>
     </div>
+    <div v-else-if="teamStatus === 'pending'" class="text-center p-8 bg-orange-900/30 rounded-lg border border-orange-600">
+      <i class="pi pi-exclamation-triangle text-4xl text-orange-400"></i>
+      <h3 class="mt-4 font-semibold text-orange-200 text-xl">Tím čaká na schválenie</h3>
+      <p class="mt-2 text-orange-300">Váš tím bol vytvorený a čaká na schválenie administrátorom.</p>
+      <p class="mt-1 text-orange-300/80 text-sm">Po schválení budete môcť publikovať projekty.</p>
+      <Button 
+        label="Späť na domov" 
+        icon="pi pi-home" 
+        class="mt-6"
+        style="background-color: #c2410c; border-color: #c2410c;"
+        @click="router.push('/')"
+      />
+    </div>
+    <div v-else-if="teamStatus === 'suspended'" class="text-center p-8 bg-red-900/30 rounded-lg border border-red-800">
+      <i class="pi pi-ban text-4xl text-red-400"></i>
+      <h3 class="mt-4 font-semibold text-red-200 text-xl">Tím bol pozastavený</h3>
+      <p class="mt-2 text-red-300">Váš tím bol pozastavený administrátorom.</p>
+      <p class="mt-1 text-red-300/80 text-sm">Kontaktujte administrátora pre viac informácií.</p>
+      <Button 
+        label="Späť na domov" 
+        icon="pi pi-home" 
+        class="mt-6 p-button-danger"
+        @click="router.push('/')"
+      />
+    </div>
 
     <form v-else @submit.prevent="submitForm" class="flex flex-col gap-5">
       <!-- Typ projektu -->
@@ -333,6 +358,7 @@ function onSchoolTypeChange() {
 const token = ref(localStorage.getItem('access_token') || '')
 const teamId = ref(null)
 const isScrumMaster = ref(false)
+const teamStatus = ref('active') // Team approval status: 'active', 'pending', 'suspended'
 const loadingTeam = ref(true)
 const route = useRoute()
 const isEditMode = ref(false)
@@ -363,6 +389,7 @@ async function loadUserTeamStatus() {
         const active = activeTeamId ? data.teams.find(t => String(t.id) === activeTeamId) : data.teams[0]
         teamId.value = active.id
         isScrumMaster.value = !!active.is_scrum_master
+        teamStatus.value = active.status || 'active'
       }
     }
   } catch (_) {} finally { loadingTeam.value = false }

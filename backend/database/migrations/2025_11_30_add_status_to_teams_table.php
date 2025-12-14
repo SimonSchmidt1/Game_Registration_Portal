@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('teams', function (Blueprint $table) {
-            $table->string('status')->default('active')->after('scrum_master_id');
-        });
+        if (!Schema::hasColumn('teams', 'status')) {
+            Schema::table('teams', function (Blueprint $table) {
+                $table->string('status')->default('active')->after('scrum_master_id');
+            });
+        }
     }
 
     /**
@@ -21,9 +23,11 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('teams', function (Blueprint $table) {
-            $table->dropColumn('status');
-        });
+        if (Schema::hasColumn('teams', 'status')) {
+            Schema::table('teams', function (Blueprint $table) {
+                $table->dropColumn('status');
+            });
+        }
     }
 };
 

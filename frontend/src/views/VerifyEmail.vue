@@ -52,7 +52,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
 import { useToast } from 'primevue/usetoast'
@@ -69,6 +69,14 @@ const success = ref(false)
 const error = ref(false)
 const errorMessage = ref('')
 const isResentMode = ref(false)
+
+let redirectTimer = null
+
+onUnmounted(() => {
+  if (redirectTimer) {
+    clearTimeout(redirectTimer)
+  }
+})
 
 onMounted(async () => {
   const token = route.query.token
@@ -120,7 +128,7 @@ onMounted(async () => {
     })
 
     // Redirect to login after 3 seconds
-    setTimeout(() => {
+    redirectTimer = setTimeout(() => {
       router.push('/login')
     }, 3000)
 

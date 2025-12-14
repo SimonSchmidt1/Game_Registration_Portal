@@ -1,183 +1,181 @@
 # Team Approval Workflow
 
-**Date:** November 30, 2025  
-**Status:** Implemented
+**Last Updated:** December 4, 2025  
+**Status:** Fully Implemented
 
 ---
 
 ## Overview
 
-When a user creates a new team, it is automatically set to **'pending'** status and requires admin approval before the team can publish projects.
+When a user creates a new team, it is automatically set to **'pending'** status and requires admin approval before the team becomes fully functional. **Nothing can be done with a pending team** - this includes project publishing, member management, and accepting new members.
 
 ---
 
-## How It Works
+## Team Statuses
 
-### 1. Team Creation (User Side)
+| Status | Description | Visual Indicator |
+|--------|-------------|------------------|
+| `pending` | Awaiting admin approval | Orange text, ⏳ badge |
+| `active` | Fully functional | Normal/green indicators |
+| `suspended` | Disabled by admin | Red text, 🚫 badge |
 
-**When a user creates a team:**
-1. Team is created with `status = 'pending'`
-2. User receives a message: *"Tím bol úspešne vytvorený a čaká na schválenie administrátorom. Po schválení budete môcť publikovať projekty."*
-3. Team appears in user's team list, but:
-   - ❌ **Cannot publish projects** (blocked by backend validation)
-   - ❌ **Cannot edit projects** (blocked by backend validation)
-   - ✅ Can invite members
-   - ✅ Can view team details
+---
 
-### 2. Admin Notification (Admin Side)
+## Pending Team Restrictions
 
-**When admin logs in:**
-1. **Statistics Card** shows pending teams count (yellow card with pulsing animation if > 0)
-2. **Prominent Notification Section** appears at the top of admin panel:
-   - Yellow/orange gradient background
-   - Bell icon with animation
-   - Badge showing count of pending teams
-   - List of all pending teams with:
-     - Team name
-     - Scrum Master name
-     - Academic year
-     - **Approve** button (green)
-     - **Reject** button (red)
+When a team has `status = 'pending'`:
 
-### 3. Admin Actions
+### ❌ BLOCKED Actions
+- **Create projects** - Backend returns 403
+- **Edit projects** - Backend returns 403
+- **Join team** (via invite code) - Backend returns 403 with message
+- **Remove members** - Backend returns 403
+- **Leave team** - Backend returns 403
+- **Invite code** - Displayed but marked inactive (strikethrough)
 
-#### Approve Team
-- Click **"Schváliť"** button
-- Team status changes from `'pending'` → `'active'`
-- Team can now publish projects
-- Notification disappears from admin panel
-
-#### Reject Team
-- Click **"Zamietnuť"** button
-- Optional: Enter rejection reason
-- Team is **soft-deleted** (removed from system)
-- Scrum Master can create a new team if needed
+### ✅ ALLOWED Actions
+- View team details
+- See team in user's team list
+- Admin can approve/reject
 
 ---
 
 ## Visual Indicators
 
-### Admin Panel
+### Home Page (Team Selector)
+- Team name displayed in **orange** for pending teams
+- ⏳ badge next to team name
+- Warning banner below team selector:
+  > "Váš tím bol vytvorený a čaká na schválenie administrátorom. Kód pre pripojenie je neaktívny a nie je možné spravovať tím ani publikovať projekty."
 
-1. **Statistics Card (Top Right)**
-   - Shows count of pending teams
-   - **Pulsing animation** when count > 0
-   - Yellow/orange gradient with glow effect
+### "Moje Tímy" Dialog
+- Team card has orange border for pending teams
+- Team name in orange
+- Invite code shown with strikethrough and "(neaktívny)" label
+- Warning message inside team card
+- **Remove** and **Leave** buttons hidden for pending teams
 
-2. **Notification Section**
-   - Appears below statistics
-   - Yellow/orange gradient background
-   - Animated bell icon
-   - Badge with count
-   - Each pending team in a card with approve/reject buttons
+### Add Project Page
+- Shows warning banner if selected team is pending
+- Project creation form hidden
+- Button to return to home page
 
-3. **Teams Table**
-   - Pending teams show **"Čakajúci"** status badge
-   - Yellow badge with border
+### Navbar
+- "Pridať projekt" link hidden if active team is pending
 
 ---
 
 ## Backend Implementation
 
-### Team Creation
-**File:** `backend/app/Services/TeamService.php`
+### TeamService.php
 
 ```php
-// Set status to 'pending' if status column exists
-if (Schema::hasColumn('teams', 'status')) {
-    $teamData['status'] = 'pending';
+// createTeam() - New teams start as pending
+$teamData['status'] = 'pending';
+
+// joinTeam() - Check team status
+if ($team->status !== 'active') {
+    return ['error' => 'team_not_active', 'status' => $team->status];
+}
+
+// removeMember() - Check team status
+if ($team->status !== 'active') {
+    return ['error' => 'team_' . $team->status];
+}
+
+// leaveTeam() - Check team status
+if ($team->status !== 'active') {
+    return ['error' => 'team_' . $team->status];
 }
 ```
 
-### Project Publishing Block
-**File:** `backend/app/Http/Controllers/Api/ProjectController.php`
+### TeamController.php
 
-- `store()` method checks team status before allowing project creation
-- `update()` method checks team status before allowing project editing
-- Returns 403 with message if team is not 'active'
+```php
+// Handles team_pending and team_suspended errors
+'team_pending' => response()->json([
+    'message' => 'Tím čaká na schválenie. Táto akcia nie je povolená.'
+], 403),
+'team_suspended' => response()->json([
+    'message' => 'Tím je pozastavený. Táto akcia nie je povolená.'
+], 403),
+```
 
-### Admin Endpoints
-**File:** `backend/app/Http/Controllers/Api/AdminController.php`
+### ProjectController.php
 
-- `GET /api/admin/stats` - Returns `pending_teams` count
-- `GET /api/admin/teams` - Returns teams with status indicators
-- `POST /api/admin/teams/{id}/approve` - Approves pending team
-- `POST /api/admin/teams/{id}/reject` - Rejects pending team
+```php
+// store() and update() check team status
+if ($team->status !== 'active') {
+    return response()->json([
+        'message' => 'Váš tím nie je aktívny. Nie je možné publikovať projekty.',
+        'team_status' => $team->status
+    ], 403);
+}
+```
 
 ---
 
-## Frontend Implementation
+## Admin Panel
 
-### Admin Panel
-**File:** `frontend/src/views/AdminView.vue`
+### Pending Teams Notification
+When pending teams exist:
+1. Statistics card shows count with pulsing animation
+2. Prominent yellow notification section appears
+3. Each pending team shows with Approve/Reject buttons
 
-- **Pending Teams Section**: Shows at top when `pendingTeams.length > 0`
-- **Statistics Card**: Pulsing animation when pending teams exist
-- **Approve/Reject Buttons**: Direct actions on each pending team
+### Admin Actions
 
-### User Experience
-**File:** `frontend/src/views/HomeView.vue`
+#### Approve Team
+- `POST /api/admin/teams/{id}/approve`
+- Changes status: `pending` → `active`
+- Team gains full functionality
 
-- Shows info toast when team requires approval
-- User can still see their team but cannot publish projects
+#### Reject Team
+- `POST /api/admin/teams/{id}/reject`
+- Optional reason parameter
+- Team is soft-deleted
 
 ---
 
 ## User Flow
 
-### Scenario: New Team Creation
+### Creating a New Team
 
-1. **User creates team** → Status set to `'pending'`
-2. **User sees message**: "Tím čaká na schválenie"
-3. **User tries to publish project** → Blocked with message: "Váš tím čaká na schválenie administrátorom"
-4. **Admin logs in** → Sees notification with pending team
-5. **Admin approves team** → Status changes to `'active'`
-6. **User can now publish projects** → Validation passes
+1. User fills team creation form
+2. Backend creates team with `status = 'pending'`
+3. Success message: "Tím bol úspešne vytvorený a čaká na schválenie administrátorom."
+4. Team appears in user's list with orange indicators
+5. User cannot perform any team actions
 
----
+### After Admin Approval
 
-## Status Values
-
-- **'active'**: Team is approved and can publish projects
-- **'pending'**: Team is waiting for admin approval
-- **'suspended'**: Team is temporarily disabled (future feature)
-
----
-
-## Testing
-
-### Test Case 1: Create Team as User
-1. Login as regular user
-2. Create a new team
-3. ✅ Should see message about approval needed
-4. ✅ Try to publish project → Should be blocked
-
-### Test Case 2: Admin Sees Pending Team
-1. Login as admin
-2. Go to Admin Panel
-3. ✅ Should see pending teams count in stats
-4. ✅ Should see notification section with pending team
-5. ✅ Should see team in table with "Čakajúci" badge
-
-### Test Case 3: Admin Approves Team
-1. Admin clicks "Schváliť"
-2. ✅ Team status changes to 'active'
-3. ✅ Notification disappears
-4. ✅ User can now publish projects
-
-### Test Case 4: Admin Rejects Team
-1. Admin clicks "Zamietnuť"
-2. ✅ Team is soft-deleted
-3. ✅ Notification disappears
-4. ✅ User can create new team
+1. Admin clicks "Schváliť" in admin panel
+2. Team status changes to `active`
+3. User can now:
+   - Publish projects
+   - Share invite code
+   - Manage members
+   - Leave team
 
 ---
 
-## Future Enhancements
+## Frontend Files
 
-1. **Email Notifications**: Send email to Scrum Master when team is approved/rejected
-2. **Auto-approval**: Option to auto-approve teams from verified users
-3. **Bulk Actions**: Approve/reject multiple teams at once
-4. **Approval History**: Track who approved/rejected and when
-5. **Rejection Reasons**: Store and display rejection reasons to users
+| File | Changes |
+|------|---------|
+| `HomeView.vue` | Orange team names, warning banners, disabled buttons |
+| `AddProjectView.vue` | Warning message, hidden form for pending teams |
+| `Navbar.vue` | Hidden "Pridať projekt" for pending/suspended teams |
+| `AdminView.vue` | Pending teams notification section |
 
+---
+
+## Testing Checklist
+
+- [ ] Create team → Shows as pending
+- [ ] Try to publish project → Blocked with message
+- [ ] Try to join pending team → Blocked with message  
+- [ ] Try to remove member → Blocked with message
+- [ ] Try to leave team → Blocked with message
+- [ ] Admin approves team → Status becomes active
+- [ ] All actions work after approval

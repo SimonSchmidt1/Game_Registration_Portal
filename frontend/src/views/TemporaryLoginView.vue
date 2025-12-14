@@ -23,7 +23,7 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import Card from 'primevue/card'
@@ -33,6 +33,8 @@ import Toast from 'primevue/toast'
 const router = useRouter()
 const toast = useToast()
 
+let redirectTimer = null
+
 onMounted(() => {
   toast.add({
     severity: 'info',
@@ -40,8 +42,14 @@ onMounted(() => {
     detail: 'Prihlásenie s dočasným heslom je teraz na hlavnej prihlasovacej stránke.',
     life: 3000,
   })
-  setTimeout(() => {
+  redirectTimer = setTimeout(() => {
     router.push('/login')
   }, 2000)
+})
+
+onUnmounted(() => {
+  if (redirectTimer) {
+    clearTimeout(redirectTimer)
+  }
 })
 </script>

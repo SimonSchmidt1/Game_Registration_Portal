@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->enum('student_type', ['denny', 'externy'])->nullable()->after('role');
-        });
+        if (!Schema::hasColumn('users', 'student_type')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->enum('student_type', ['denny', 'externy'])->nullable()->after('role');
+            });
+        }
     }
 
     /**
@@ -21,8 +23,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn('student_type');
-        });
+        if (Schema::hasColumn('users', 'student_type')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->dropColumn('student_type');
+            });
+        }
     }
 };

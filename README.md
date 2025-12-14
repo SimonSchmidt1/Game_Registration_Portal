@@ -1,81 +1,169 @@
-## Game Registration Portal (Multi-Project Edition)
+## Game Registration Portal
 
 ### Overview
-This portal now supports registering multiple project types beyond games:
+A web-based platform for UCM university students to register, showcase, and rate academic projects. Features team management with admin approval, project submissions with multimedia assets, and a modern dark-themed UI.
+
+**Supported Project Types:**
 - game
 - web_app
 - mobile_app
 - library
 - other
 
-Each project can include video (upload or YouTube), splash image, downloadable files, and rich metadata (live_url, github_url, npm_url, package_name, platform, tech_stack). Ratings are restricted to a single rating per authenticated user per project (enforced at DB and application layers).
+### Quick Start
 
-### Key Endpoints (auth:sanctum)
-`GET /api/projects` – list projects (filters: type, category, search, academic_year_id)
-`POST /api/projects` – create project (Scrum Master only)
-`PUT /api/projects/{id}` – update project (Scrum Master of project's team only)
-`GET /api/projects/{id}` – project detail
-`POST /api/projects/{id}/views` – increment views
-`POST /api/projects/{id}/rate` – rate once
-`GET /api/projects/{id}/user-rating` – current user rating
-`GET /api/projects/my?team_id={id}` – list projects for active team
+#### Prerequisites
+- PHP 8.2+
+- Node.js 18+
+- MySQL/MariaDB
+- Composer
 
-Legacy game routes are commented out in `backend/routes/api.php` and legacy views (`GameView.vue`, `AddGameView.vue`) are marked deprecated.
-
-### Setup
+#### Backend Setup
 ```powershell
 cd backend
+
+# Install dependencies
 composer install
+
+# Configure environment
+cp .env.example .env
+php artisan key:generate
+
+# Add required environment variables to .env:
+# ADMIN_EMAIL=admin@gameportal.local
+# ADMIN_PASSWORD=qKyUtyz0kSOyJxLU5E09zMkKospW6XZ9
+
+# Database setup
 php artisan migrate
-php artisan serve --host=0.0.0.0 --port=8000
+php artisan db:seed
+
+# Storage symlink
+php artisan storage:link
+
+# Start server
+php artisan serve
 ```
-In a second terminal:
+
+#### Frontend Setup
 ```powershell
 cd frontend
+
+# Install dependencies
 npm install
+
+# Create .env file with:
+# VITE_API_URL=http://127.0.0.1:8000
+# VITE_ADMIN_EMAIL=admin@gameportal.local
+
+# Start development server
 npm run dev
 ```
 
-Set `VITE_API_URL` in frontend `.env` (or environment) to the backend URL (e.g. http://localhost:8000).
+### Key Features
 
-### Project Creation & Editing Rules
-- **Creation**: Scrum Master of a team may create projects. Team membership & role checked via pivot `team_user.role_in_team`.
-- **Editing**: Scrum Master of the project's team may edit their projects. Authorization is verified on each update request. Files can be replaced (old files are deleted when new ones are uploaded) or preserved if not changed.
+#### Team Management
+- **Create Teams:** Users can create teams (requires admin approval)
+- **Join Teams:** Members join via 6-character invite codes
+- **Occupations:** All members select their role (Programátor, Grafik 2D/3D, Tester, Animátor)
+- **Scrum Master:** Team creator becomes Scrum Master with project publishing rights
 
-### Rating Logic
-- First POST to `/rate` creates rating.
-- Subsequent attempt returns 422.
-- Aggregates `rating` (rounded) and `rating_count` stored on project row.
+#### Team Approval Workflow
+New teams are created with `pending` status:
+- ⏳ **Pending Teams:** Cannot publish projects, invite code inactive, orange visual indicators
+- ✅ **Active Teams:** Full functionality after admin approval
+- 🚫 **Suspended Teams:** All actions disabled
 
-### Metadata Parsing
-`tech_stack` accepts comma or semicolon separated string; stored as array. Other optional fields copied verbatim if present.
+See [TEAM_APPROVAL_WORKFLOW.md](TEAM_APPROVAL_WORKFLOW.md) for details.
 
-### Testing
-Feature tests added at `backend/tests/Feature/ProjectTest.php` covering:
-- Scrum master creation success
-- Non-scrum master forbidden
-- Single rating enforcement
-- Type filtering
-- Metadata extraction (web_app)
+#### Admin Panel
+- Access at `/admin` (admin login required)
+- View/approve/reject pending teams
+- Manage all teams and projects
+- Statistics dashboard
 
-Run tests:
-```powershell
-cd backend
-php artisan test --filter=ProjectTest
+See [ADMIN_LOGIN.md](ADMIN_LOGIN.md) for admin credentials.
+
+### API Endpoints
+
+#### Projects (auth:sanctum)
+```
+GET    /api/projects                    # List projects (filters: type, school_type, year_of_study, subject)
+POST   /api/projects                    # Create project (Scrum Master only, active team required)
+PUT    /api/projects/{id}               # Update project
+GET    /api/projects/{id}               # Project detail
+POST   /api/projects/{id}/views         # Increment views
+POST   /api/projects/{id}/rate          # Rate (once per user)
+GET    /api/projects/{id}/user-rating   # Current user's rating
+GET    /api/projects/my?team_id={id}    # Team's projects
 ```
 
-### Frontend Filters
-Home view includes type dropdown + team scoped button ("Moje Projekty"). Selecting a type triggers API query param `?type=`.
+#### Teams
+```
+GET    /api/user/team                   # User's teams with status
+POST   /api/teams                       # Create team (becomes pending)
+POST   /api/teams/join                  # Join via invite code
+DELETE /api/teams/{id}/members/{userId} # Remove member (active teams only)
+POST   /api/teams/{id}/leave            # Leave team (active teams only)
+```
 
-### Optional Follow-Up
-- Remove deprecated game components entirely once confirmed.
-- Add indexing (`projects.type`, `projects.team_id`) for performance.
-- Extend tests for file uploads & view counting.
+#### Admin
+```
+POST   /api/admin/login                 # Admin authentication
+GET    /api/admin/stats                 # Dashboard statistics
+GET    /api/admin/teams                 # List all teams
+POST   /api/admin/teams/{id}/approve    # Approve pending team
+POST   /api/admin/teams/{id}/reject     # Reject pending team
+DELETE /api/admin/teams/{id}            # Delete team
+```
+
+### Project Categorization
+Projects are categorized by:
+- **School Type:** ZŠ (základná), SŠ (stredná), VŠ (vysoká)
+- **Year of Study:** 1-9 (ZŠ) or 1-5 (SŠ/VŠ)
+- **Subject:** Slovenský jazyk, Matematika, Informatika, etc.
+
+### UI Design
+Modern dark-themed interface with:
+- Glass-morphism card effects
+- Indigo-violet gradient accents
+- Seamless background across all components
+- Responsive design for all screen sizes
+
+### Environment Variables
+
+#### Backend (.env)
+```env
+APP_URL=http://127.0.0.1:8000
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_DATABASE=game_portal
+ADMIN_EMAIL=admin@gameportal.local
+ADMIN_PASSWORD=your-secure-password
+```
+
+#### Frontend (.env)
+```env
+VITE_API_URL=http://127.0.0.1:8000
+VITE_ADMIN_EMAIL=admin@gameportal.local
+```
 
 ### Troubleshooting
-- 403 on create: ensure user attached to team with role_in_team = scrum_master.
-- 422 on second rating: expected (single rating rule).
-- Empty tech stack display: ensure proper delimiters.
 
----
-Multi-project functionality ready for manual and automated testing.
+#### 404 Errors on API calls
+1. Verify `VITE_API_URL` is set in `frontend/.env`
+2. Ensure backend server is running on port 8000
+3. Check CORS configuration in `backend/config/cors.php`
+
+#### Admin Login Not Working
+1. Verify `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `backend/.env`
+2. Run `php artisan config:clear`
+3. Ensure admin user exists: `php artisan db:seed`
+
+#### Migration Errors (Duplicate Column)
+Migrations are now idempotent - they check for column existence before modifications.
+
+### Documentation
+- [ADMIN_LOGIN.md](ADMIN_LOGIN.md) - Admin authentication
+- [TEAM_APPROVAL_WORKFLOW.md](TEAM_APPROVAL_WORKFLOW.md) - Team approval process
+- [ARCHITECTURE.md](ARCHITECTURE.md) - System architecture
+- [CHANGELOG.md](CHANGELOG.md) - Version history

@@ -54,7 +54,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { useToast } from 'primevue/usetoast'
@@ -72,6 +72,14 @@ const email = ref('')
 const password = ref('')
 const password_confirmation = ref('')
 const studentType = ref(null)
+
+let redirectTimer = null
+
+onUnmounted(() => {
+  if (redirectTimer) {
+    clearTimeout(redirectTimer)
+  }
+})
 
 const studentTypes = [
   { label: 'Denný študent', value: 'denny' },
@@ -107,7 +115,7 @@ async function register() {
     })
 
     // Redirect to verify-email page (not home, since user has no token yet)
-    setTimeout(() => router.push('/verify-email'), 2000)
+    redirectTimer = setTimeout(() => router.push('/verify-email'), 2000)
 
   } catch (error) {
     const errorMessage = error.response?.data?.errors 

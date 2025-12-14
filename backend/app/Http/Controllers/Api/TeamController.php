@@ -92,6 +92,12 @@ class TeamController extends Controller
                 'invalid_user' => response()->json(['message' => 'Neplatný používateľ.'], 400),
                 'occupation_required' => response()->json(['message' => 'Povinné je zadať povolanie.'], 400),
                 'invalid_occupation' => response()->json(['message' => 'Neplatné povolanie. Musí byť jedno z: ' . implode(', ', Occupation::values())], 400),
+                'team_not_active' => response()->json([
+                    'message' => $result['status'] === 'pending' 
+                        ? 'Tento tím čaká na schválenie administrátorom. Nie je možné sa pripojiť.' 
+                        : 'Tento tím nie je aktívny. Nie je možné sa pripojiť.',
+                    'team_status' => $result['status'] ?? 'inactive'
+                ], 403),
                 default => response()->json(['message' => 'Chyba pri pripájaní k tímu. Skúste to znova.'], 500),
             };
         }
@@ -147,6 +153,12 @@ class TeamController extends Controller
                     'not_member' => response()->json(['message' => 'Používateľ nie je členom tímu.'], 404),
                     'cannot_remove_scrum' => response()->json(['message' => 'Scrum Mastera nie je možné odstrániť. Najprv musí byť prenesená rola.'], 422),
                     'invalid_input' => response()->json(['message' => 'Neplatné vstupné údaje.'], 400),
+                    'team_not_active' => response()->json([
+                        'message' => $result['status'] === 'pending' 
+                            ? 'Tím čaká na schválenie administrátorom. Nie je možné spravovať členov.' 
+                            : 'Tím nie je aktívny. Nie je možné spravovať členov.',
+                        'team_status' => $result['status'] ?? 'inactive'
+                    ], 403),
                     default => response()->json(['message' => 'Chyba pri odstraňovaní člena. Skúste to znova.'], 500),
                 };
             }
@@ -175,6 +187,12 @@ class TeamController extends Controller
                     'not_member' => response()->json(['message' => 'Nie ste členom tohto tímu.'], 404),
                     'cannot_leave_as_scrum' => response()->json(['message' => 'Scrum Master nemôže opustiť tím. Najprv musíte preniesť rolu alebo zrušiť tím.'], 422),
                     'invalid_input' => response()->json(['message' => 'Neplatné vstupné údaje.'], 400),
+                    'team_not_active' => response()->json([
+                        'message' => $result['status'] === 'pending' 
+                            ? 'Tím čaká na schválenie administrátorom. Nie je možné opustiť tím.' 
+                            : 'Tím nie je aktívny. Nie je možné opustiť tím.',
+                        'team_status' => $result['status'] ?? 'inactive'
+                    ], 403),
                     default => response()->json(['message' => 'Chyba pri opúšťaní tímu. Skúste to znova.'], 500),
                 };
             }

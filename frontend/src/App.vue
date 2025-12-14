@@ -2,12 +2,12 @@
   <div class="min-h-screen flex flex-col">
     <Navbar />
 
-    <main class="flex-1 p-6">
+    <main class="flex-1">
       <router-view />
     </main>
 
-    <footer class="border-t p-4 text-center text-gray-600 text-sm">
-      © 2025 Evidenčný portál hier
+    <footer class="border-t border-slate-700/30 backdrop-blur-md bg-slate-900/20 py-6 text-center">
+      <p class="text-slate-500 text-sm">© 2025 Evidenčný portál hier</p>
     </footer>
   </div>
 </template>

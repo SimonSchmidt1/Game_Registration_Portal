@@ -567,5 +567,94 @@ If issues persist:
 
 ---
 
-**Last Updated:** November 2025  
-**Version:** 1.0
+## Admin Issues
+
+### Problem: Admin Login Not Working
+
+**Symptoms:**
+- "Neplatné admin prihlasovacie údaje" error
+- Admin panel not accessible
+
+**Solution:**
+1. Verify environment variables in `backend/.env`:
+   ```env
+   ADMIN_EMAIL=admin@gameportal.local
+   ADMIN_PASSWORD=qKyUtyz0kSOyJxLU5E09zMkKospW6XZ9
+   ```
+2. Verify frontend `.env`:
+   ```env
+   VITE_ADMIN_EMAIL=admin@gameportal.local
+   ```
+3. Clear config and create admin user:
+   ```bash
+   cd backend
+   php artisan config:clear
+   php artisan db:seed
+   ```
+4. Verify admin user exists:
+   ```bash
+   php artisan tinker
+   User::where('email', 'admin@gameportal.local')->first();
+   ```
+
+---
+
+### Problem: Admin Panel Shows 0 Stats
+
+**Symptoms:**
+- Statistics cards show 0
+- Teams/projects not loading
+
+**Solution:**
+1. Check database has data
+2. Verify admin middleware is working:
+   ```bash
+   php artisan route:list | grep admin
+   ```
+3. Check Laravel logs for errors:
+   ```bash
+   tail -f storage/logs/laravel.log
+   ```
+4. Verify `status` column exists in teams table:
+   ```bash
+   php artisan tinker
+   Schema::hasColumn('teams', 'status');
+   ```
+
+---
+
+### Problem: Cannot Approve/Reject Teams
+
+**Symptoms:**
+- 403 Forbidden error
+- "Prístup zamietnutý" message
+
+**Solution:**
+1. Verify you're logged in as admin
+2. Check user role in database:
+   ```bash
+   php artisan tinker
+   User::where('email', 'your@email')->first()->role;
+   ```
+3. Re-login as admin
+
+---
+
+### Problem: "Pridať projekt" Button Not Visible
+
+**Symptoms:**
+- Button hidden even though user is Scrum Master
+
+**Solution:**
+1. Check team status is `active` (not `pending` or `suspended`)
+2. Verify active team is selected in HomeView
+3. Check localStorage:
+   ```javascript
+   console.log(localStorage.getItem('active_team_status'));
+   ```
+4. Ask admin to approve team if status is `pending`
+
+---
+
+**Last Updated:** December 2025  
+**Version:** 1.3

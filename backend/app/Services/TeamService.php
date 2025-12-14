@@ -16,6 +16,13 @@ class TeamService
         return $teams->map(function ($team) use ($user) {
             $pivot = $team->members()->where('user_id', $user->id)->first()?->pivot;
             $isScrumMaster = $pivot && $pivot->role_in_team === 'scrum_master';
+            
+            // Get team status (default to 'active' if column doesn't exist)
+            $status = 'active';
+            if (Schema::hasColumn('teams', 'status')) {
+                $status = $team->status ?? 'active';
+            }
+            
             return [
                 'id' => $team->id,
                 'name' => $team->name,
@@ -23,6 +30,7 @@ class TeamService
                 'academic_year' => $team->academicYear,
                 'members' => $team->members,
                 'is_scrum_master' => $isScrumMaster,
+                'status' => $status,
             ];
         });
     }
@@ -112,6 +120,15 @@ class TeamService
             return ['error' => 'not_found'];
         }
 
+        // Check if team is active - pending teams cannot accept new members
+        if (Schema::hasColumn('teams', 'status')) {
+            $teamStatus = $team->status ?? 'active';
+            if ($teamStatus !== 'active') {
+                \Log::info('Team join failed: team not active', ['team_id' => $team->id, 'status' => $teamStatus]);
+                return ['error' => 'team_not_active', 'status' => $teamStatus];
+            }
+        }
+
         if ($user->teams()->where('team_id', $team->id)->exists()) {
             return ['error' => 'already_member'];
         }
@@ -140,6 +157,15 @@ class TeamService
         // Defensive: validate inputs
         if (!$authUser || !$authUser->id || !$team || !$team->id || !$target || !$target->id) {
             return ['error' => 'invalid_input'];
+        }
+
+        // Check if team is active - pending teams cannot modify members
+        if (Schema::hasColumn('teams', 'status')) {
+            $teamStatus = $team->status ?? 'active';
+            if ($teamStatus !== 'active') {
+                \Log::info('Member removal failed: team not active', ['team_id' => $team->id, 'status' => $teamStatus]);
+                return ['error' => 'team_not_active', 'status' => $teamStatus];
+            }
         }
         
         $isScrumMasterByOwner = $team->scrum_master_id && ((int)$team->scrum_master_id === (int)$authUser->id);
@@ -180,6 +206,15 @@ class TeamService
         // Defensive: validate inputs
         if (!$user || !$user->id || !$team || !$team->id) {
             return ['error' => 'invalid_input'];
+        }
+
+        // Check if team is active - pending teams cannot modify members
+        if (Schema::hasColumn('teams', 'status')) {
+            $teamStatus = $team->status ?? 'active';
+            if ($teamStatus !== 'active') {
+                \Log::info('Leave team failed: team not active', ['team_id' => $team->id, 'status' => $teamStatus]);
+                return ['error' => 'team_not_active', 'status' => $teamStatus];
+            }
         }
         
         $pivot = $team->members()->where('users.id', $user->id)->first();

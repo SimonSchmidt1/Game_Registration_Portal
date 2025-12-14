@@ -1,53 +1,84 @@
 <template>
-  <nav class="border-b p-4 flex justify-center items-center shadow-sm">
-    <div class="w-full max-w-6xl flex justify-between items-center px-4 sm:px-6 lg:px-8">
-      <div class="flex items-center gap-6">
-        <RouterLink to="/" class="text-lg font-semibold hover:underline">Domov</RouterLink>
-        <RouterLink v-if="canAddGame && !isAdmin" to="/add-project" class="text-lg font-semibold hover:underline">Pridať projekt</RouterLink>
-        <RouterLink v-if="isAdmin" to="/admin" class="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-red-700 to-red-800 border-2 border-red-600 rounded-xl hover:border-red-400 transition cursor-pointer shadow-sm text-white text-sm font-semibold">
-          <span class="hidden sm:inline">Admin Panel</span>
-        </RouterLink>
-      </div>
-
-      <div class="flex items-center gap-3">
-        <RouterLink v-if="!isLoggedIn" to="/register">
-          <Button label="Registrovať sa" icon="pi pi-user-plus" class="p-button-outlined p-button-sm text-black" />
-        </RouterLink>
-
-        <RouterLink v-if="!isLoggedIn" to="/login">
-          <Button label="Prihlásiť sa" icon="pi pi-user" class="p-button-outlined p-button-sm text-black" />
-        </RouterLink>
-
-        <div v-if="isLoggedIn" class="flex items-center gap-3">
-          <!-- User Avatar and Profile -->
-          <div 
-            @click="showUserProfileDialog = true"
-            class="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-gray-700 to-gray-800 border-2 border-gray-600 rounded-xl hover:border-blue-400 transition cursor-pointer shadow-sm"
-            style="height:40px; min-width:120px;"
+  <nav class="backdrop-blur-md bg-slate-900/30 border-b border-slate-700/30">
+    <div class="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+      <div class="flex justify-between items-center">
+        <!-- Left side navigation -->
+        <div class="flex items-center gap-2 sm:gap-4">
+          <RouterLink 
+            to="/" 
+            class="nav-link group"
           >
-            <div class="relative">
-              <img 
-                v-if="currentUser?.avatar_path" 
-                :key="currentUser.avatar_path"
-                :src="getAvatarUrl(currentUser.avatar_path)" 
-                alt="Avatar"
-                class="w-8 h-8 rounded-full object-cover border-2 border-white shadow"
-              />
-              <div v-else class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow">
-                {{ userName?.charAt(0).toUpperCase() }}
+            <span>Domov</span>
+          </RouterLink>
+          
+          <RouterLink 
+            v-if="canAddGame && !isAdmin" 
+            to="/add-project" 
+            class="nav-link group"
+          >
+            <span>Pridať projekt</span>
+          </RouterLink>
+          
+          <RouterLink 
+            v-if="isAdmin" 
+            to="/admin" 
+            class="admin-badge group"
+          >
+            <span>Admin Panel</span>
+          </RouterLink>
+        </div>
+
+        <!-- Right side - Auth buttons -->
+        <div class="flex items-center gap-2 sm:gap-3">
+          <!-- Not logged in -->
+          <template v-if="!isLoggedIn">
+            <RouterLink to="/register">
+              <button class="btn-ghost-nav">
+                Registrovať sa
+              </button>
+            </RouterLink>
+
+            <RouterLink to="/login">
+              <button class="btn-primary-nav">
+                Prihlásiť sa
+              </button>
+            </RouterLink>
+          </template>
+
+          <!-- Logged in -->
+          <template v-else>
+            <!-- User Profile Button -->
+            <button 
+              @click="showUserProfileDialog = true"
+              class="user-profile-btn group"
+            >
+              <div class="relative">
+                <img 
+                  v-if="currentUser?.avatar_path" 
+                  :key="currentUser.avatar_path"
+                  :src="getAvatarUrl(currentUser.avatar_path)" 
+                  alt="Avatar"
+                  class="w-8 h-8 rounded-full object-cover ring-2 ring-indigo-500/50 group-hover:ring-indigo-400 transition-all"
+                />
+                <div 
+                  v-else 
+                  class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-bold text-sm ring-2 ring-indigo-500/50 group-hover:ring-indigo-400 transition-all"
+                >
+                  {{ userName?.charAt(0).toUpperCase() }}
+                </div>
               </div>
-            </div>
-            <span class="font-semibold text-white hidden sm:inline text-sm">{{ userName }}</span>
-          </div>
+              <span class="font-medium text-slate-200 hidden sm:inline group-hover:text-white transition-colors">{{ userName }}</span>
+            </button>
 
-          <button
-            @click="logout"
-            class="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-gray-700 to-gray-800 border-2 border-gray-600 rounded-xl hover:border-blue-400 transition cursor-pointer shadow-sm font-semibold text-white text-sm"
-            style="height:40px; min-width:120px;"
-          >
-            <i class="pi pi-sign-out text-base"></i>
-            <span class="hidden sm:inline">Odhlásiť sa</span>
-          </button>
+            <!-- Logout Button -->
+            <button
+              @click="logout"
+              class="btn-logout group"
+            >
+              <i class="pi pi-sign-out text-base"></i>
+              <span class="hidden sm:inline">Odhlásiť sa</span>
+            </button>
+          </template>
         </div>
       </div>
     </div>
@@ -60,37 +91,46 @@
   <Dialog 
     v-model:visible="showUserProfileDialog" 
     :modal="true" 
-    :closable="true" 
+    :closable="false" 
     :draggable="false"
-    class="w-11/12 md:w-1/3"
-    :contentStyle="{ backgroundColor: '#1f2937', color: '#f3f4f6', padding: '1.5rem', border: 'none' }" 
-    :headerStyle="{ backgroundColor: '#1f2937', color: '#f3f4f6', borderBottom: '1px solid #374151', padding: '1.25rem 1.5rem', position: 'relative' }"
-    :style="{ borderRadius: '8px', overflow: 'hidden' }"
+    class="w-11/12 md:w-[420px]"
+    :contentStyle="{ backgroundColor: '#0f172a', color: '#f1f5f9', padding: '1.5rem', border: 'none' }" 
+    :headerStyle="{ backgroundColor: '#0f172a', color: '#f1f5f9', borderBottom: '1px solid rgba(71, 85, 105, 0.5)', padding: '1rem 1.5rem', position: 'relative' }"
+    :style="{ borderRadius: '16px', overflow: 'hidden' }"
   >
     <template #header>
-      <div class="flex items-center justify-center w-full">
-        <span class="text-gray-100 font-medium text-lg w-full">Môj Profil</span>
+      <div class="dialog-header-custom">
+        <span class="dialog-title-centered">Môj Profil</span>
+        <button class="dialog-close-btn" @click="showUserProfileDialog = false">
+          <i class="pi pi-times"></i>
+        </button>
       </div>
     </template>
     
-    <div v-if="currentUser" class="flex flex-col gap-6">
+    <div v-if="currentUser" class="flex flex-col gap-5">
       <!-- Avatar Section -->
-      <div class="flex flex-col items-center gap-4 p-6 bg-gray-800 rounded-lg">
-        <div class="relative group">
+      <div class="flex flex-col items-center gap-4 p-6 bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl border border-slate-700/30">
+        <div class="relative group cursor-pointer">
           <img 
             v-if="currentUser.avatar_path" 
             :key="currentUser.avatar_path"
             :src="getAvatarUrl(currentUser.avatar_path)" 
             alt="Avatar"
-            class="w-32 h-32 rounded-full object-cover border-4 border-blue-500 shadow-lg"
+            class="w-28 h-28 rounded-full object-cover ring-4 ring-indigo-500/30 shadow-2xl transition-all group-hover:ring-indigo-400/50"
           />
-          <div v-else class="w-32 h-32 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-5xl shadow-lg border-4 border-blue-500">
+          <div 
+            v-else 
+            class="w-28 h-28 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-bold text-4xl shadow-2xl ring-4 ring-indigo-500/30 transition-all group-hover:ring-indigo-400/50"
+          >
             {{ currentUser.name?.charAt(0).toUpperCase() }}
           </div>
           
           <!-- Upload overlay -->
-          <label class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-60 rounded-full opacity-0 group-hover:opacity-100 transition cursor-pointer">
-            <i class="pi pi-camera text-white text-3xl"></i>
+          <label class="absolute inset-0 flex items-center justify-center bg-slate-900/70 rounded-full opacity-0 group-hover:opacity-100 transition-all cursor-pointer backdrop-blur-sm">
+            <div class="flex flex-col items-center gap-1">
+              <i class="pi pi-camera text-white text-2xl"></i>
+              <span class="text-xs text-white/80">Zmeniť</span>
+            </div>
             <input 
               type="file" 
               accept="image/*" 
@@ -100,70 +140,78 @@
           </label>
         </div>
         
-        <p class="text-xs text-gray-400 text-center">Kliknutím na avatar môžete zmeniť obrázok</p>
+        <p class="text-xs text-slate-500 text-center">Kliknutím na avatar môžete zmeniť obrázok</p>
       </div>
 
       <!-- User Info -->
-      <div class="flex flex-col gap-3">
-        <div class="flex justify-between items-center p-3 bg-gray-800 rounded-lg">
-          <span class="text-gray-400 font-medium">
-            Meno:
+      <div class="flex flex-col gap-2.5">
+        <div class="profile-info-row">
+          <span class="profile-label">
+            <i class="pi pi-user text-xs"></i>
+            Meno
           </span>
-          <span v-if="!editMode" class="text-white font-semibold">{{ currentUser.name }}</span>
+          <span v-if="!editMode" class="profile-value">{{ currentUser.name }}</span>
           <input 
             v-else 
             v-model="editName" 
             type="text" 
-            class="bg-gray-700 text-white px-2 py-1 rounded border border-gray-600 focus:border-blue-500 focus:outline-none"
+            class="profile-input"
           />
         </div>
         
-        <div class="flex justify-between items-center p-3 bg-gray-800 rounded-lg">
-          <span class="text-gray-400 font-medium">
-            Email:
+        <div class="profile-info-row">
+          <span class="profile-label">
+            <i class="pi pi-envelope text-xs"></i>
+            Email
           </span>
-          <span class="text-white font-semibold text-sm">{{ currentUser.email }}</span>
+          <span class="profile-value text-sm">{{ currentUser.email }}</span>
         </div>
         
-        <div class="flex justify-between items-center p-3 bg-gray-800 rounded-lg">
-          <span class="text-gray-400 font-medium">
-            Rola:
+        <div class="profile-info-row">
+          <span class="profile-label">
+            <i class="pi pi-id-card text-xs"></i>
+            Rola
           </span>
-          <span class="text-white font-semibold">{{ currentUser.role }}</span>
+          <span class="profile-value capitalize">{{ currentUser.role }}</span>
         </div>
         
-        <div class="flex justify-between items-center p-3 bg-gray-800 rounded-lg">
-          <span class="text-gray-400 font-medium">
-            Typ študenta:
+        <div class="profile-info-row">
+          <span class="profile-label">
+            <i class="pi pi-graduation-cap text-xs"></i>
+            Typ študenta
           </span>
-          <span class="text-white font-semibold">{{ getStudentTypeLabel(currentUser.student_type) }}</span>
+          <span class="profile-value">{{ getStudentTypeLabel(currentUser.student_type) }}</span>
         </div>
       </div>
 
-      <div v-if="!editMode" class="flex gap-2">
-        <Button 
-          label="Upraviť profil" 
-          class="p-button-outlined flex-1"
+      <!-- Action Buttons -->
+      <div v-if="!editMode" class="flex gap-2 pt-2">
+        <button 
+          class="btn-secondary-dialog flex-1"
           @click="startEdit" 
-        />
-        <Button 
-          label="Zmeniť heslo" 
-          class="p-button-outlined flex-1"
-          severity="secondary"
+        >
+          Upraviť profil
+        </button>
+        <button 
+          class="btn-ghost-dialog flex-1"
           @click="openPasswordDialog" 
-        />
+        >
+          Zmeniť heslo
+        </button>
       </div>
-      <div v-else class="flex gap-2">
-        <Button 
-          label="Uložiť" 
-          class="p-button-outlined w-full"
+      <div v-else class="flex gap-2 pt-2">
+        <button 
+          class="btn-primary-dialog flex-1"
           @click="saveProfile" 
-        />
-        <Button 
-          label="Zrušiť" 
-          class="p-button-text w-full"
+        >
+          Uložiť
+        </button>
+        <button 
+          class="btn-ghost-dialog flex-1"
           @click="cancelEdit" 
-        />
+        >
+          Zrušiť
+        </button>
       </div>
     </div>
   </Dialog>
@@ -171,53 +219,73 @@
   <!-- Password Change Dialog -->
   <Dialog 
     v-model:visible="showPasswordDialog" 
-    header="Zmena hesla" 
-    modal
-    :style="{ width: '450px' }"
-    class="p-fluid"
+    :modal="true"
+    :closable="false"
+    :draggable="false"
+    class="w-11/12 md:w-[420px]"
+    :contentStyle="{ backgroundColor: '#0f172a', color: '#f1f5f9', padding: '1.5rem', border: 'none' }" 
+    :headerStyle="{ backgroundColor: '#0f172a', color: '#f1f5f9', borderBottom: '1px solid rgba(71, 85, 105, 0.5)', padding: '1rem 1.5rem', position: 'relative' }"
+    :style="{ borderRadius: '16px', overflow: 'hidden' }"
   >
-    <div class="flex flex-col gap-4 p-4">
+    <template #header>
+      <div class="dialog-header-custom">
+        <span class="dialog-title-centered">Zmena hesla</span>
+        <button class="dialog-close-btn" @click="showPasswordDialog = false">
+          <i class="pi pi-times"></i>
+        </button>
+      </div>
+    </template>
+    
+    <div class="flex flex-col gap-4">
       <div>
-        <label class="block mb-2 font-medium text-gray-300">Aktuálne heslo</label>
-        <input 
-          v-model="currentPassword" 
-          type="password" 
-          class="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600 focus:border-blue-500 focus:outline-none" 
-          placeholder="Zadaj aktuálne heslo"
-        />
+        <label class="block mb-2 font-medium text-slate-300 text-sm">Aktuálne heslo</label>
+        <div class="relative">
+          <i class="pi pi-lock absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500"></i>
+          <input 
+            v-model="currentPassword" 
+            type="password" 
+            class="password-input" 
+            placeholder="Zadaj aktuálne heslo"
+          />
+        </div>
       </div>
       <div>
-        <label class="block mb-2 font-medium text-gray-300">Nové heslo</label>
-        <input 
-          v-model="newPassword" 
-          type="password" 
-          class="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600 focus:border-blue-500 focus:outline-none" 
-          placeholder="Aspoň 8 znakov"
-        />
+        <label class="block mb-2 font-medium text-slate-300 text-sm">Nové heslo</label>
+        <div class="relative">
+          <i class="pi pi-lock absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500"></i>
+          <input 
+            v-model="newPassword" 
+            type="password" 
+            class="password-input" 
+            placeholder="Aspoň 8 znakov"
+          />
+        </div>
       </div>
       <div>
-        <label class="block mb-2 font-medium text-gray-300">Potvrdiť nové heslo</label>
-        <input 
-          v-model="newPasswordConfirm" 
-          type="password" 
-          class="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600 focus:border-blue-500 focus:outline-none" 
-          placeholder="Zadaj heslo znova"
-        />
+        <label class="block mb-2 font-medium text-slate-300 text-sm">Potvrdiť nové heslo</label>
+        <div class="relative">
+          <i class="pi pi-lock absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500"></i>
+          <input 
+            v-model="newPasswordConfirm" 
+            type="password" 
+            class="password-input" 
+            placeholder="Zadaj heslo znova"
+          />
+        </div>
       </div>
       <div class="flex gap-2 mt-2">
-        <Button 
-          label="Zrušiť" 
-          icon="pi pi-times" 
+        <button 
+          class="btn-ghost-dialog flex-1"
           @click="showPasswordDialog = false" 
-          text 
-          class="flex-1"
-        />
-        <Button 
-          label="Uložiť" 
-          icon="pi pi-check" 
+        >
+          Zrušiť
+        </button>
+        <button 
+          class="btn-primary-dialog flex-1"
           @click="savePassword" 
-          class="flex-1"
-        />
+        >
+          Uložiť
+        </button>
       </div>
     </div>
   </Dialog>
@@ -228,7 +296,7 @@ import { RouterLink, useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import axios from 'axios'
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
 
@@ -408,6 +476,23 @@ async function logout() {
   }
 }
 
+// Event handler references for proper cleanup
+const handleLoginEvent = async () => {
+  isLoggedIn.value = true
+  const user = JSON.parse(localStorage.getItem('user') || '{}')
+  userName.value = user.name || ''
+  isAdmin.value = user.role === 'admin'
+  // Admins should not see "Pridať projekt" button
+  if (isAdmin.value) {
+    canAddGame.value = false
+  }
+  await loadCurrentUser()
+}
+
+const handleTeamChangedEvent = (e) => {
+  refreshActiveTeamStatus(e.detail)
+}
+
 onMounted(async () => {
   const token = localStorage.getItem('access_token')
   if (token) {
@@ -435,29 +520,24 @@ onMounted(async () => {
     }
   }
 
-  window.addEventListener('login', async () => {
-    isLoggedIn.value = true
-    const user = JSON.parse(localStorage.getItem('user') || '{}')
-    userName.value = user.name || ''
-    isAdmin.value = user.role === 'admin'
-    // Admins should not see "Pridať projekt" button
-    if (isAdmin.value) {
-      canAddGame.value = false
-    }
-    await loadCurrentUser()
-  })
+  // Add event listeners
+  window.addEventListener('login', handleLoginEvent)
+  window.addEventListener('team-changed', handleTeamChangedEvent)
 
   // Initialize scrum master flag from persisted active team
   refreshActiveTeamStatus()
-  // Listen for team changes broadcast from HomeView
-  window.addEventListener('team-changed', (e) => {
-    refreshActiveTeamStatus(e.detail)
-  })
+})
+
+// Cleanup event listeners on unmount to prevent memory leaks
+onUnmounted(() => {
+  window.removeEventListener('login', handleLoginEvent)
+  window.removeEventListener('team-changed', handleTeamChangedEvent)
 })
 
 function refreshActiveTeamStatus(detail) {
   const token = localStorage.getItem('access_token')
   const stored = localStorage.getItem('active_team_is_scrum_master')
+  const storedStatus = localStorage.getItem('active_team_status')
   
   // Must be logged in to add games
   if (!token) {
@@ -473,9 +553,13 @@ function refreshActiveTeamStatus(detail) {
   
   // Prefer event detail if available
   if (detail && typeof detail.isScrumMaster === 'boolean') {
-    canAddGame.value = detail.isScrumMaster
+    // Only allow adding projects if scrum master AND team is active
+    const isActive = detail.status === 'active' || !detail.status
+    canAddGame.value = detail.isScrumMaster && isActive
   } else if (stored !== null) {
-    canAddGame.value = stored === '1'
+    // Only allow adding projects if scrum master AND team is active
+    const isActive = storedStatus === 'active' || !storedStatus
+    canAddGame.value = stored === '1' && isActive
   } else {
     canAddGame.value = false
   }
@@ -534,4 +618,195 @@ async function saveProfile() {
 }
 </script>
 
+<style scoped>
+/* Navigation Link */
+.nav-link {
+  @apply flex items-center gap-2 px-3 py-2 text-slate-300 font-medium rounded-lg transition-all duration-200;
+}
 
+.nav-link:hover {
+  @apply text-white bg-slate-800/50;
+}
+
+/* Admin Badge */
+.admin-badge {
+  @apply flex items-center gap-2 px-3 py-2 font-semibold text-sm rounded-xl transition-all duration-200;
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.2) 0%, rgba(185, 28, 28, 0.3) 100%);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+}
+
+.admin-badge:hover {
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.3) 0%, rgba(185, 28, 28, 0.4) 100%);
+  border-color: rgba(239, 68, 68, 0.6);
+  color: #fecaca;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
+}
+
+/* Ghost Nav Button */
+.btn-ghost-nav {
+  @apply flex items-center gap-2 px-3 py-2 text-slate-300 font-medium rounded-lg transition-all duration-200;
+}
+
+.btn-ghost-nav:hover {
+  @apply text-white bg-slate-800/50;
+}
+
+/* Primary Nav Button */
+.btn-primary-nav {
+  @apply flex items-center gap-2 px-4 py-2 font-semibold text-white rounded-xl transition-all duration-200;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+}
+
+.btn-primary-nav:hover {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+  transform: translateY(-1px);
+}
+
+/* User Profile Button */
+.user-profile-btn {
+  @apply flex items-center gap-2.5 px-3 py-1.5 rounded-xl transition-all duration-200;
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(71, 85, 105, 0.5);
+  backdrop-filter: blur(8px);
+}
+
+.user-profile-btn:hover {
+  background: rgba(51, 65, 85, 0.6);
+  border-color: rgba(99, 102, 241, 0.5);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Logout Button */
+.btn-logout {
+  @apply flex items-center gap-2 px-3 py-2 text-slate-300 font-medium rounded-xl transition-all duration-200;
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(71, 85, 105, 0.5);
+  backdrop-filter: blur(8px);
+}
+
+.btn-logout:hover {
+  @apply text-rose-300;
+  background: rgba(159, 18, 57, 0.2);
+  border-color: rgba(244, 63, 94, 0.4);
+}
+
+/* Dialog Buttons */
+.btn-primary-dialog {
+  @apply flex items-center justify-center gap-2 px-4 py-2.5 font-semibold text-white rounded-xl transition-all duration-200;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+}
+
+.btn-primary-dialog:hover {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+.btn-secondary-dialog {
+  @apply flex items-center justify-center gap-2 px-4 py-2.5 font-semibold text-slate-200 rounded-xl transition-all duration-200;
+  background: rgba(51, 65, 85, 0.5);
+  border: 1px solid rgba(100, 116, 139, 0.5);
+}
+
+.btn-secondary-dialog:hover {
+  @apply text-white;
+  background: rgba(71, 85, 105, 0.6);
+  border-color: rgba(148, 163, 184, 0.5);
+}
+
+.btn-ghost-dialog {
+  @apply flex items-center justify-center gap-2 px-4 py-2.5 font-medium text-slate-400 rounded-xl transition-all duration-200;
+  background: transparent;
+  border: 1px solid transparent;
+}
+
+.btn-ghost-dialog:hover {
+  @apply text-slate-200;
+  background: rgba(51, 65, 85, 0.3);
+  border-color: rgba(71, 85, 105, 0.3);
+}
+
+/* Profile Info Rows */
+.profile-info-row {
+  @apply flex justify-between items-center p-3 rounded-lg;
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(51, 65, 85, 0.5);
+}
+
+.profile-label {
+  @apply flex items-center gap-2 text-slate-400 font-medium text-sm;
+}
+
+.profile-value {
+  @apply text-white font-semibold;
+}
+
+.profile-input {
+  @apply bg-slate-800/80 text-white px-3 py-1.5 rounded-lg border border-slate-600/50 transition-all duration-200;
+}
+
+.profile-input:focus {
+  @apply outline-none border-indigo-500/50;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+/* Password Input */
+.password-input {
+  @apply w-full bg-slate-800/50 text-white px-3 py-2.5 pl-10 rounded-xl border border-slate-700/50 transition-all duration-200;
+}
+
+.password-input:focus {
+  @apply outline-none border-indigo-500/50;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.password-input::placeholder {
+  @apply text-slate-500;
+}
+
+/* Dialog Header - Custom centered layout with close button */
+.dialog-header-custom {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  position: relative;
+}
+
+.dialog-title-centered {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #f1f5f9;
+  text-align: center;
+}
+
+.dialog-close-btn {
+  position: absolute;
+  right: -0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  background: transparent;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dialog-close-btn:hover {
+  color: #f1f5f9;
+  background: rgba(71, 85, 105, 0.5);
+}
+
+.dialog-close-btn i {
+  font-size: 0.875rem;
+}
+</style>

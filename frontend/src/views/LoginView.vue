@@ -71,7 +71,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { useToast } from 'primevue/usetoast'
@@ -87,6 +87,15 @@ const email = ref('')
 const password = ref('')
 const temporaryPassword = ref('')
 const showTemporaryLogin = ref(false)
+
+// Track timeouts for cleanup
+let redirectTimer = null
+
+onUnmounted(() => {
+  if (redirectTimer) {
+    clearTimeout(redirectTimer)
+  }
+})
 
 // Admin email from environment variable (no hardcoding secrets)
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || ''
@@ -139,7 +148,7 @@ async function login() {
         detail: data.message || 'Účet nie je overený. Skontrolujte e-mail a dokončite overenie.',
         life: 8000
       })
-      setTimeout(() => router.push('/verify-email'), 1600)
+      redirectTimer = setTimeout(() => router.push('/verify-email'), 1600)
       return
     }
 
@@ -151,7 +160,7 @@ async function login() {
         detail: data.message || 'Príliš veľa pokusov. Skontrolujte e‑mail a obnovte účet.',
         life: 8000
       })
-      setTimeout(() => router.push('/verify-email?resent=true'), 1600)
+      redirectTimer = setTimeout(() => router.push('/verify-email?resent=true'), 1600)
       return
     }
 
@@ -187,7 +196,7 @@ async function login() {
           detail: data.message || 'Príliš veľa pokusov. Skontrolujte e‑mail a obnovte účet.',
           life: 8000
         })
-        setTimeout(() => router.push('/verify-email?resent=true'), 1600)
+        redirectTimer = setTimeout(() => router.push('/verify-email?resent=true'), 1600)
         return
       }
       

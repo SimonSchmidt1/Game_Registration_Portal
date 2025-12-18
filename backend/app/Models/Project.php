@@ -19,6 +19,7 @@ class Project extends Model
         'school_type',
         'year_of_study',
         'subject',
+        'predmet',
         'release_date',
         'splash_screen_path',
         'video_path',

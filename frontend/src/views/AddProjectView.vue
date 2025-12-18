@@ -99,6 +99,20 @@
             required
           />
         </div>
+
+        <!-- Univerzitný predmet -->
+        <div class="mb-4">
+          <label class="block mb-1 font-medium text-gray-300">Univerzitný predmet <span class="text-red-400">*</span></label>
+          <Dropdown 
+            v-model="predmet" 
+            :options="predmety" 
+            optionLabel="label" 
+            optionValue="value" 
+            placeholder="Vyberte univerzitný predmet" 
+            class="w-full bg-gray-800 text-white border-gray-700"
+            required
+          />
+        </div>
       </div>
 
       <!-- Dátum vydania -->
@@ -125,6 +139,7 @@
         </div>
         <div v-else>
           <FileUpload name="video" mode="basic" accept="video/*" :maxFileSize="52428800" chooseLabel="Vybrať video (max. 50MB)" @select="onFileSelect($event, 'video')" @clear="onFileClear('video')" />
+          <p class="text-sm text-gray-400 mt-1">Max rozlíšenie: 1920x1080 (FullHD), dĺžka: odporúčané ≤ 90s • Max. veľkosť: 50MB</p>
           <p v-if="files.video.name" class="text-sm mt-2 text-gray-400">Nahratý súbor: <strong>{{ files.video.name }}</strong></p>
         </div>
       </div>
@@ -132,7 +147,8 @@
       <!-- Splash Screen -->
       <div class="border-t border-gray-700 pt-4">
         <h3 class="text-lg font-semibold mb-2 text-teal-400">Poster / Náhľad</h3>
-        <FileUpload name="splash_screen" mode="basic" accept="image/*" :maxFileSize="5242880" chooseLabel="Vybrať obrázok" @select="onFileSelect($event, 'splash_screen')" @clear="onFileClear('splash_screen')" />
+        <p class="text-sm text-gray-400 mb-2">Odporúčané: FullHD (1920x1080) • Max. veľkosť: 8MB</p>
+        <FileUpload name="splash_screen" mode="basic" accept="image/*" :maxFileSize="8388608" chooseLabel="Vybrať obrázok" @select="onFileSelect($event, 'splash_screen')" @clear="onFileClear('splash_screen')" />
         <p v-if="files.splash_screen.name" class="text-sm mt-2 text-gray-400">Nahratý súbor: <strong>{{ files.splash_screen.name }}</strong></p>
       </div>
 
@@ -293,6 +309,7 @@ const name = ref('')
 const schoolType = ref(null)
 const yearOfStudy = ref(null)
 const subject = ref(null)
+const predmet = ref(null)
 const releaseDate = ref(null)
 const description = ref('')
 const videoType = ref('upload')
@@ -333,6 +350,15 @@ const subjects = ref([
   { label: 'Grafika', value: 'Grafika' },
   { label: 'Chémia', value: 'Chémia' },
   { label: 'Fyzika', value: 'Fyzika' }
+])
+
+const predmety = ref([
+  { label: 'Grafika', value: 'Grafika' },
+  { label: 'Multimediálne systémy', value: 'Multimediálne systémy' },
+  { label: 'Grafika 2', value: 'Grafika 2' },
+  { label: 'Systémy Virtuálnej Reality', value: 'Systémy Virtuálnej Reality' },
+  { label: 'Tímový projekt', value: 'Tímový projekt' },
+  { label: 'Internetové Technológie', value: 'Internetové Technológie' }
 ])
 
 const availableYears = ref([])
@@ -412,6 +438,7 @@ async function loadProjectForEdit() {
       schoolType.value = existingProject.value.school_type
       yearOfStudy.value = existingProject.value.year_of_study
       subject.value = existingProject.value.subject
+      predmet.value = existingProject.value.predmet
       releaseDate.value = existingProject.value.release_date ? new Date(existingProject.value.release_date) : null
       description.value = existingProject.value.description || ''
       videoUrl.value = existingProject.value.video_url || ''
@@ -463,6 +490,10 @@ async function submitForm() {
     toast.add({ severity: 'warn', summary: 'Chýba predmet', detail: 'Vyberte predmet.', life: 4000 })
     return
   }
+  if (!predmet.value) {
+    toast.add({ severity: 'warn', summary: 'Chýba univerzitný predmet', detail: 'Vyberte univerzitný predmet.', life: 4000 })
+    return
+  }
   loadingSubmit.value = true
   try {
     const formData = new FormData()
@@ -479,6 +510,7 @@ async function submitForm() {
       formData.append('year_of_study', yearOfStudy.value)
     }
     formData.append('subject', subject.value)
+    formData.append('predmet', predmet.value)
     formData.append('description', description.value || '')
     // Always send release_date when editing (even if null to clear it)
     if (releaseDate.value) {
@@ -546,6 +578,7 @@ async function submitForm() {
       type: projectType.value,
       school_type: schoolType.value,
       subject: subject.value,
+      predmet: predmet.value,
       description: description.value
     })
     
@@ -599,6 +632,7 @@ function resetForm() {
   schoolType.value = null
   yearOfStudy.value = null
   subject.value = null
+  predmet.value = null
   releaseDate.value = null
   description.value = ''
   videoType.value = 'upload'

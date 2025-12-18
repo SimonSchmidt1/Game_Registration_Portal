@@ -59,10 +59,11 @@ class ProjectController extends Controller
             'school_type' => 'required|in:zs,ss,vs',
             'year_of_study' => 'nullable|integer|min:1|max:9',
             'subject' => 'required|string|max:255',
+            'predmet' => 'required|string|max:100',
             'release_date' => 'nullable|date',
             'academic_year_id' => 'nullable|exists:academic_years,id',
             'team_id' => 'required|exists:teams,id',
-            'splash_screen' => 'nullable|image|max:10240',
+            'splash_screen' => 'nullable|image|max:8192',
             'video' => ['nullable', 'file', 'mimes:mp4,webm,mov', 'max:51200', new VideoMaxResolution(1920, 1080)],
             'video_url' => 'nullable|url',
         ]);
@@ -153,6 +154,7 @@ class ProjectController extends Controller
                     'school_type' => $validated['school_type'],
                     'year_of_study' => $validated['year_of_study'] ?? null,
                     'subject' => $validated['subject'],
+                    'predmet' => $validated['predmet'],
                     'release_date' => $validated['release_date'] ?? null,
                     'academic_year_id' => $academicYearId,
                     'splash_screen_path' => $splashPath,
@@ -274,9 +276,10 @@ class ProjectController extends Controller
             'school_type' => 'required|in:zs,ss,vs',
             'year_of_study' => 'nullable|integer|min:1|max:9',
             'subject' => 'required|string|max:255',
+            'predmet' => 'required|string|max:100',
             'release_date' => 'nullable|date',
             'academic_year_id' => 'nullable|exists:academic_years,id',
-            'splash_screen' => 'nullable|image|max:10240',
+            'splash_screen' => 'nullable|image|max:8192',
             'video' => ['nullable', 'file', 'mimes:mp4,webm,mov', 'max:51200', new VideoMaxResolution(1920, 1080)],
             'video_url' => 'nullable|url',
         ]);
@@ -310,6 +313,7 @@ class ProjectController extends Controller
         $updateData['type'] = $validated['type'];
         $updateData['school_type'] = $validated['school_type'];
         $updateData['subject'] = $validated['subject'];
+        $updateData['predmet'] = $validated['predmet'];
         
         // Handle nullable fields - convert empty strings to null (but allow 0 for year_of_study)
         if (isset($validated['year_of_study']) && $validated['year_of_study'] !== '' && $validated['year_of_study'] !== null) {

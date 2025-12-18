@@ -42,6 +42,11 @@ class TeamService
             throw new \InvalidArgumentException('Invalid user');
         }
         
+        // Validate student type is set
+        if (empty($user->student_type)) {
+            throw new \InvalidArgumentException('Student type is required to create a team');
+        }
+        
         $data['name'] = trim($data['name'] ?? '');
         if (empty($data['name'])) {
             throw new \InvalidArgumentException('Team name is required');
@@ -63,14 +68,19 @@ class TeamService
         
         // Use transaction to ensure atomic operation
         return \DB::transaction(function () use ($user, $data) {
+            // Determine prefix based on student type
+            $prefix = ($user->student_type === 'denny') ? 'DEN' : 'EXT';
+            
+            // Generate unique invite code with prefix (e.g., DENABC123 or EXTXYZ789)
             do {
-                $inviteCode = Str::random(6);
+                $randomPart = strtoupper(Str::random(6));
+                $inviteCode = $prefix . $randomPart;
             } while (Team::where('invite_code', $inviteCode)->exists());
 
             $teamData = [
                 'name' => $data['name'],
                 'academic_year_id' => $data['academic_year_id'],
-                'invite_code' => strtoupper($inviteCode),
+                'invite_code' => $inviteCode,
                 'scrum_master_id' => $user->id,
             ];
             
@@ -87,7 +97,7 @@ class TeamService
             ]);
             $team->load('members');
             
-            \Log::info('Team created', ['team_id' => $team->id, 'user_id' => $user->id, 'occupation' => $data['occupation']]);
+            \Log::info('Team created', ['team_id' => $team->id, 'user_id' => $user->id, 'occupation' => $data['occupation'], 'student_type' => $user->student_type, 'invite_code' => $inviteCode]);
             return $team;
         });
     }
@@ -97,6 +107,11 @@ class TeamService
         // Defensive: validate inputs
         if (!$user || !$user->id) {
             return ['error' => 'invalid_user'];
+        }
+        
+        // Validate user has student type set
+        if (empty($user->student_type)) {
+            return ['error' => 'student_type_required'];
         }
         
         $inviteCode = trim(strtoupper($inviteCode));
@@ -127,6 +142,24 @@ class TeamService
                 \Log::info('Team join failed: team not active', ['team_id' => $team->id, 'status' => $teamStatus]);
                 return ['error' => 'team_not_active', 'status' => $teamStatus];
             }
+        }
+
+        // Validate student type matches team type from invite code
+        $codePrefix = substr($inviteCode, 0, 3);
+        $teamType = ($codePrefix === 'DEN') ? 'denny' : (($codePrefix === 'EXT') ? 'externy' : null);
+        
+        if ($teamType && $user->student_type !== $teamType) {
+            \Log::info('Team join failed: student type mismatch', [
+                'user_id' => $user->id,
+                'user_type' => $user->student_type,
+                'team_type' => $teamType,
+                'code' => $inviteCode
+            ]);
+            return [
+                'error' => 'student_type_mismatch',
+                'user_type' => $user->student_type,
+                'team_type' => $teamType
+            ];
         }
 
         if ($user->teams()->where('team_id', $team->id)->exists()) {

@@ -34,6 +34,9 @@
             <span v-if="project.subject" class="px-4 py-2 rounded-lg border border-gray-600 bg-gray-700 text-gray-200 font-medium text-lg shadow-lg">
               {{ project.subject }}
             </span>
+            <span v-if="project.predmet" class="px-4 py-2 rounded-lg border border-gray-600 bg-gray-800 text-gray-200 font-medium text-lg shadow-lg">
+              <i class="pi pi-book mr-2"></i>{{ project.predmet }}
+            </span>
           </div>
         </div>
         <div class="flex items-center gap-6 mb-4 pb-4 border-b border-gray-700">

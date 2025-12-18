@@ -77,7 +77,7 @@ class TeamController extends Controller
     public function join(Request $request)
     {
         $request->validate([
-            'invite_code' => 'required|string|size:6',
+            'invite_code' => 'required|string|size:9',
             'occupation' => ['required', 'string', Rule::in(Occupation::values())],
         ]);
 
@@ -90,6 +90,14 @@ class TeamController extends Controller
                 'not_found' => response()->json(['message' => 'Tím s týmto kódom nebol nájdený. Skontrolujte správnosť kódu.'], 404),
                 'invalid_code' => response()->json(['message' => 'Neplatný kód tímu.'], 400),
                 'invalid_user' => response()->json(['message' => 'Neplatný používateľ.'], 400),
+                'student_type_required' => response()->json(['message' => 'Pre pripojenie k tímu je potrebné mať nastavený typ študenta.'], 400),
+                'student_type_mismatch' => response()->json([
+                    'message' => $result['team_type'] === 'denny' 
+                        ? 'Tento tím je určený len pre denných študentov. Externí študenti sa nemôžu pripojiť.'
+                        : 'Tento tím je určený len pre externých študentov. Denní študenti sa nemôžu pripojiť.',
+                    'user_type' => $result['user_type'] ?? null,
+                    'team_type' => $result['team_type'] ?? null
+                ], 403),
                 'occupation_required' => response()->json(['message' => 'Povinné je zadať povolanie.'], 400),
                 'invalid_occupation' => response()->json(['message' => 'Neplatné povolanie. Musí byť jedno z: ' . implode(', ', Occupation::values())], 400),
                 'team_not_active' => response()->json([

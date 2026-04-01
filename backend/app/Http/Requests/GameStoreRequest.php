@@ -19,11 +19,11 @@ class GameStoreRequest extends FormRequest
             'description' => ['nullable','string','max:2000'],
             'category' => ['nullable','string','max:100'],
             'release_date' => ['nullable','date'],
-            'trailer' => ['nullable','file','mimetypes:video/mp4,video/quicktime','max:20480'],
+            'trailer' => ['nullable','file','mimetypes:video/mp4,video/quicktime','max:102400'],
             'trailer_url' => ['nullable','url'],
             'splash_screen' => ['nullable','file','image','max:5120'],
-            'source_code' => ['nullable','file','max:51200'],
-            'export' => ['nullable','file','max:51200'],
+            'source_code' => ['nullable','file','max:102400'],
+            'export' => ['nullable','file','max:102400'],
         ];
     }
 
@@ -32,7 +32,7 @@ class GameStoreRequest extends FormRequest
         return [
             'team_id.required' => 'Tím je povinný.',
             'title.required' => 'Názov hry je povinný.',
-            'trailer.max' => 'Video je príliš veľké (max 20MB).',
+            'trailer.max' => 'Video je príliš veľké (max 100MB).',
         ];
     }
 }

@@ -131,8 +131,9 @@ class TeamController extends Controller
         if (isset($teamData['members'])) {
             $teamData['members'] = $team->members->map(function ($member) {
                 $memberArray = $member->toArray();
-                // Explicitly ensure student_type is included
+                // Explicitly ensure student_type and is_absolvent are included
                 $memberArray['student_type'] = $member->student_type;
+                $memberArray['is_absolvent'] = (bool) ($member->is_absolvent ?? false);
                 if ($member->pivot) {
                     $memberArray['pivot'] = [
                         'role_in_team' => $member->pivot->role_in_team,

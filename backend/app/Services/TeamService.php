@@ -145,10 +145,17 @@ class TeamService
         }
 
         // Validate student type matches team type from invite code
+        // International teams (SPE prefix) accept any student type
         $codePrefix = substr($inviteCode, 0, 3);
-        $teamType = ($codePrefix === 'DEN') ? 'denny' : (($codePrefix === 'EXT') ? 'externy' : null);
+        $teamType = match($codePrefix) {
+            'DEN' => 'denny',
+            'EXT' => 'externy',
+            'SPE' => 'international',
+            default => null
+        };
         
-        if ($teamType && $user->student_type !== $teamType) {
+        // Skip student type check for international teams
+        if ($teamType && $teamType !== 'international' && $user->student_type !== $teamType) {
             \Log::info('Team join failed: student type mismatch', [
                 'user_id' => $user->id,
                 'user_type' => $user->student_type,

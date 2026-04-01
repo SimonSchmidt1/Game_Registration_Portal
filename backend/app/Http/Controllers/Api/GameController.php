@@ -29,11 +29,11 @@ class GameController extends Controller
             'release_date' => 'nullable|date',
             'team_id' => 'required|exists:teams,id',
             'category' => 'required|string|max:255',
-            'trailer' => 'nullable|file|mimes:mp4,mov,avi|max:20480',
+            'trailer' => 'nullable|file|mimes:mp4,mov,avi|max:102400',
             'trailer_url' => 'nullable|url|max:255',
             'splash_screen' => 'nullable|image|max:5120',
-            'source_code' => 'nullable|file|mimes:zip,rar,7z|max:51200',
-            'export' => 'nullable|file|mimes:zip,exe,apk|max:51200',
+            'source_code' => 'nullable|file|mimes:zip,rar,7z|max:102400',
+            'export' => 'nullable|file|mimes:zip,exe,apk|max:102400',
         ]);
 
         $user = $request->user();

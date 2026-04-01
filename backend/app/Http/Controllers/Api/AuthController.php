@@ -23,10 +23,19 @@ class AuthController extends Controller
     // Registrácia
     public function register(Request $request)
     {
+        // Check if registering for an international team (SPE code) - allows any email
+        $isInternational = $request->has('invite_code') && 
+                           str_starts_with(strtoupper($request->invite_code ?? ''), 'SPE');
+
+        // Email validation - international teams can use any email
+        $emailRules = $isInternational 
+            ? ['required', 'string', 'email', 'max:255', 'unique:users']
+            : ['required', 'string', 'email', 'max:255', 'unique:users', 'regex:/^[0-9]{7}@ucm\.sk$/'];
+
         // 1. Validácia dát
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users', 'regex:/^[0-9]{7}@ucm\.sk$/'],
+            'email' => $emailRules,
             'password' => ['required', 'confirmed', Rules\Password::min(8)->letters()->mixedCase()->numbers()->symbols()],
             'student_type' => ['required', 'in:denny,externy'],
         ], [
@@ -34,6 +43,32 @@ class AuthController extends Controller
             'student_type.required' => 'Vyberte typ študenta.',
             'student_type.in' => 'Typ študenta musí byť Denný študent alebo Externý študent.',
         ]);
+
+        // Check if student authorization is required (FEATURE FLAG - disabled by default)
+        if (config('app.require_authorized_students')) {
+            // Skip check for international teams (SPE prefix)
+            $inviteCode = $request->input('invite_code');
+            $isInternationalTeam = $inviteCode && str_starts_with(strtoupper($inviteCode), 'SPE');
+            
+            if (!$isInternationalTeam) {
+                $authorizedStudent = \App\Models\AuthorizedStudent::getByEmail($request->email);
+                
+                if (!$authorizedStudent) {
+                    return response()->json([
+                        'error' => 'Nie ste registrovaný v systéme UCM. Kontaktujte administrátora.',
+                        'requires_authorization' => true,
+                    ], 403);
+                }
+                
+                // Optional: Auto-fill verified data from authorized list
+                if (!$request->filled('name') && $authorizedStudent->name) {
+                    $request->merge(['name' => $authorizedStudent->name]);
+                }
+                if (!$request->filled('student_type') && $authorizedStudent->student_type) {
+                    $request->merge(['student_type' => $authorizedStudent->student_type]);
+                }
+            }
+        }
 
         // 2. Delegácia do service vrstvy (funkcionalita nezmenená)
         $this->authService->register($request->only('name','email','password','student_type'));
@@ -60,13 +95,27 @@ class AuthController extends Controller
             return $this->adminLogin($request);
         }
 
-        // Regular users must have UCM email format
-        $request->validate([
-            'email' => ['email', 'regex:/^[0-9]{7}@ucm\.sk$/'],
-        ], [
-            'email.email' => 'Email musí mať platný formát.',
-            'email.regex' => 'Email musí byť v tvare: 7 číslic@ucm.sk (napr. 1234567@ucm.sk)'
-        ]);
+        // Check if user exists and is in an international team (SPE code) - bypass UCM validation
+        $user = \App\Models\User::where('email', trim(strtolower($request->email)))->first();
+        $isInternationalMember = false;
+        if ($user) {
+            $isInternationalMember = $user->teams()
+                ->where(function($q) {
+                    $q->where('invite_code', 'like', 'SPE%')
+                      ->orWhere('team_type', 'international');
+                })
+                ->exists();
+        }
+
+        // Regular users must have UCM email format (unless international team member)
+        if (!$isInternationalMember) {
+            $request->validate([
+                'email' => ['email', 'regex:/^[0-9]{7}@ucm\.sk$/'],
+            ], [
+                'email.email' => 'Email musí mať platný formát.',
+                'email.regex' => 'Email musí byť v tvare: 7 číslic@ucm.sk (napr. 1234567@ucm.sk)'
+            ]);
+        }
 
         $result = $this->authService->attemptLogin($request->email, $request->password);
 
@@ -102,6 +151,11 @@ class AuthController extends Controller
                 return response()->json([
                     'message' => 'Účet nie je overený. Skontrolujte e-mail a dokončite overenie.',
                     'requires_verification' => true
+                ], 403);
+            case 'inactive':
+                return response()->json([
+                    'message' => 'Váš účet bol deaktivovaný. Kontaktujte administrátora.',
+                    'account_inactive' => true
                 ], 403);
             case 'ok':
                 return response()->json([
@@ -266,7 +320,7 @@ class AuthController extends Controller
     public function forgotPassword(Request $request)
     {
         $request->validate([
-            'email' => ['required', 'email', 'regex:/^[0-9]{7}@ucm\.sk$/'],
+            'email' => ['required', 'email'],
         ]);
 
         $user = User::where('email', $request->email)->first();
@@ -278,26 +332,39 @@ class AuthController extends Controller
             ]);
         }
 
-        // Invalidate old tokens
+        // Delete old reset tokens for this user (since email is PK, we can't have duplicates)
         PasswordResetToken::where('user_id', $user->id)
             ->where('type', 'reset')
-            ->where('used', false)
-            ->update(['used' => true]);
+            ->delete();
 
         // Create new token
         $token = Str::random(64);
         
-        PasswordResetToken::create([
-            'user_id' => $user->id,
-            'token' => $token,
-            'type' => 'reset',
-            'expires_at' => now()->addHour(),
-            'ip_address' => $request->ip(),
-        ]);
+        PasswordResetToken::updateOrCreate(
+            ['email' => $user->email],
+            [
+                'user_id' => $user->id,
+                'token' => $token,
+                'type' => 'reset',
+                'expires_at' => now()->addHour(),
+                'used' => false,
+                'used_at' => null,
+                'ip_address' => $request->ip(),
+            ]
+        );
 
         $resetUrl = config('app.frontend_url') . '/reset-password?token=' . $token;
         
-        $user->notify(new PasswordResetNotification($resetUrl));
+        try {
+            $user->notify(new PasswordResetNotification($resetUrl));
+        } catch (\Throwable $e) {
+            \Log::error('Failed to send password reset email', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'error' => $e->getMessage(),
+            ]);
+            // Do not fail the request on mail errors; user can still use token.
+        }
 
         return response()->json([
             'message' => 'Ak účet s týmto e-mailom existuje, poslali sme ti odkaz na reset hesla.',

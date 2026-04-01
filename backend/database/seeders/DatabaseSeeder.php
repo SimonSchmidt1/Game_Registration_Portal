@@ -28,5 +28,11 @@ class DatabaseSeeder extends Seeder
         );
         
         $this->command->info('Admin user created/updated: ' . $adminEmail);
+        
+        // Seed academic years
+        $this->call(AcademicYearSeeder::class);
+
+        // Seed demo data (teams, users, projects)
+        $this->call(DemoDataSeeder::class);
     }
 }

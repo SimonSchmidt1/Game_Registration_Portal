@@ -14,6 +14,7 @@ class Team extends Model
     protected $fillable = [
         'name',
         'invite_code',
+        'team_type',
         'academic_year_id',
         'scrum_master_id',
         'status',

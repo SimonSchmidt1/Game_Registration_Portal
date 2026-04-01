@@ -74,7 +74,13 @@ class AuthService
         
         // Use timing-safe comparison for credentials
         $emailMatches = hash_equals(strtolower(trim($adminEmail)), strtolower(trim($email)));
-        $passwordMatches = hash_equals($adminPassword, $password);
+        $passwordMatches = false;
+        if (preg_match('/^\\$2[ayb]\\$|^\\$argon2(id|i)\\$/', $adminPassword)) {
+            $passwordMatches = Hash::check($password, $adminPassword);
+        } else {
+            // Backward compatibility for existing plaintext ADMIN_PASSWORD values
+            $passwordMatches = hash_equals($adminPassword, $password);
+        }
         
         if (!$emailMatches || !$passwordMatches) {
             RateLimiter::hit($rateLimitKey, 60); // Lock for 60 seconds after 5 failures
@@ -126,6 +132,11 @@ class AuthService
 
         if (!$user || !Hash::check($password, $user->password)) {
             return $this->handleFailedAttempt($user);
+        }
+
+        // Check if user account is inactive (disabled by admin)
+        if (!$user->isActive()) {
+            return ['status' => 'inactive'];
         }
 
         if (!$user->email_verified_at) {
@@ -230,13 +241,18 @@ class AuthService
         $temporaryPassword = Str::upper(Str::random(4)) . '-' . Str::upper(Str::random(4)) . '-' . Str::upper(Str::random(4));
         
         // Store hashed version in database
-        PasswordResetToken::create([
-            'user_id' => $user->id,
-            'token' => Hash::make($temporaryPassword),
-            'type' => 'temporary',
-            'expires_at' => now()->addMinutes(15),
-            'ip_address' => request()->ip() ?? 'unknown',
-        ]);
+        PasswordResetToken::updateOrCreate(
+            ['email' => $user->email],
+            [
+                'user_id' => $user->id,
+                'token' => Hash::make($temporaryPassword),
+                'type' => 'temporary',
+                'expires_at' => now()->addMinutes(15),
+                'used' => false,
+                'used_at' => null,
+                'ip_address' => request()->ip() ?? 'unknown',
+            ]
+        );
 
         // Send plain password via email (only time it's visible)
         // NOTE: Never log the temporary password - security risk!

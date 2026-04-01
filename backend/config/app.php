@@ -125,4 +125,17 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Student Authorization System
+    |--------------------------------------------------------------------------
+    |
+    | When enabled, only students in the authorized_students table can register.
+    | Disabled by default - set REQUIRE_AUTHORIZED_STUDENTS=true in .env to enable.
+    | International teams (SPE prefix) are always exempt from this requirement.
+    |
+    */
+
+    'require_authorized_students' => (bool) env('REQUIRE_AUTHORIZED_STUDENTS', false),
+
 ];

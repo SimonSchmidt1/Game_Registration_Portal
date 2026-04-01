@@ -7,6 +7,7 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -25,7 +26,7 @@ class AppServiceProvider extends ServiceProvider
 {
     // Reset password URL
     ResetPassword::createUrlUsing(function (object $notifiable, string $token) {
-        return config('app.frontend_url')."/password-reset/$token?email={$notifiable->getEmailForPasswordReset()}";
+        return config('app.frontend_url')."/reset-password?token=$token&email={$notifiable->getEmailForPasswordReset()}";
     });
 
     // ✅ Rate limiting pre login
@@ -48,6 +49,16 @@ class AppServiceProvider extends ServiceProvider
     // ✅ Rate limiting pre hodnotenie projektov
     RateLimiter::for('ratings', function (Request $request) {
         return Limit::perMinute(30)->by($request->user()?->id ?: $request->ip());
+    });
+
+    // ✅ Rate limiting pre zabudnuté heslo / resend reset email
+    RateLimiter::for('forgot-password', function (Request $request) {
+        $email = Str::lower((string) $request->email);
+        // Limit: 1 request per minute per email+IP, with a secondary hourly cap
+        return [
+            Limit::perMinute(1)->by($email.$request->ip()),
+            Limit::perHour(5)->by($email.$request->ip()),
+        ];
     });
 }
 }

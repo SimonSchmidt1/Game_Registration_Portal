@@ -8,6 +8,7 @@ use App\Models\Project;
 use App\Models\GameRating;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 use App\Rules\VideoMaxResolution;
 use App\Models\AcademicYear;
@@ -16,7 +17,113 @@ class ProjectController extends Controller
 {
     public function index(Request $request)
     {
+        $query = $this->buildProjectQuery($request, false);
+        $perPage = min((int) $request->query('per_page', 20), 50);
+        $projects = $query->orderBy('created_at', 'desc')->paginate($perPage);
+        return response()->json($projects);
+    }
+
+    public function publicIndex(Request $request)
+    {
+        $query = $this->buildProjectQuery($request, true);
+        $perPage = min((int) $request->query('per_page', 20), 50);
+        $projects = $query->orderBy('created_at', 'desc')->paginate($perPage);
+        return response()->json($projects);
+    }
+
+    public function topRated(Request $request)
+    {
+        $limit = (int) $request->query('limit', 12);
+        $limit = max(1, min($limit, 30));
+
         $query = Project::with(['team.members', 'academicYear']);
+
+        // Only include projects from active teams if status exists
+        if (Schema::hasColumn('teams', 'status')) {
+            $query->whereHas('team', function ($q) {
+                $q->where('status', 'active');
+            });
+        }
+
+        $projects = $query
+            ->orderByDesc('rating')
+            ->orderByDesc('rating_count')
+            ->orderByDesc('created_at')
+            ->limit($limit)
+            ->get();
+
+        return response()->json($projects);
+    }
+
+    public function publicShow($id)
+    {
+        $query = Project::with(['team.members', 'academicYear'])->where('id', $id);
+
+        if (Schema::hasColumn('teams', 'status')) {
+            $query->whereHas('team', function ($q) {
+                $q->where('status', 'active');
+            });
+        }
+
+        $project = $query->first();
+
+        if (!$project) {
+            return response()->json(['message' => 'Projekt nebol nájdený.'], 404);
+        }
+
+        return response()->json(['project' => $project]);
+    }
+
+    public function ratePublic(Request $request, $id)
+    {
+        $request->validate(['rating' => 'required|integer|min:1|max:5']);
+
+        $fingerprint = sha1(($request->ip() ?? 'unknown') . '|' . ($request->userAgent() ?? '')); 
+        $voteKey = "public_project_rating:{$id}:{$fingerprint}";
+        if (Cache::has($voteKey)) {
+            return response()->json(['message' => 'Tento projekt ste už hodnotili.'], 429);
+        }
+
+        $query = Project::where('id', $id);
+        if (Schema::hasColumn('teams', 'status')) {
+            $query->whereHas('team', function ($q) {
+                $q->where('status', 'active');
+            });
+        }
+
+        $project = $query->first();
+        if (!$project) {
+            return response()->json(['message' => 'Projekt nebol nájdený.'], 404);
+        }
+
+        return DB::transaction(function () use ($id, $request, $project) {
+            GameRating::create(['project_id' => $id, 'rating' => $request->rating]);
+
+            $avgRating = GameRating::where('project_id', $id)->avg('rating');
+            $ratingCount = GameRating::where('project_id', $id)->count();
+            $project->update(['rating' => round($avgRating, 2), 'rating_count' => $ratingCount]);
+
+            $fingerprint = sha1(($request->ip() ?? 'unknown') . '|' . ($request->userAgent() ?? ''));
+            $voteKey = "public_project_rating:{$id}:{$fingerprint}";
+            Cache::put($voteKey, true, now()->addDays(30));
+
+            return response()->json([
+                'message' => 'Hodnotenie uložené',
+                'rating' => $project->rating,
+                'rating_count' => $project->rating_count
+            ]);
+        });
+    }
+
+    private function buildProjectQuery(Request $request, bool $onlyActiveTeams)
+    {
+        $query = Project::with(['team.members', 'academicYear']);
+
+        if ($onlyActiveTeams && Schema::hasColumn('teams', 'status')) {
+            $query->whereHas('team', function ($q) {
+                $q->where('status', 'active');
+            });
+        }
 
         if ($request->has('type') && $request->type !== 'all') {
             $query->where('type', $request->type);
@@ -29,7 +136,6 @@ class ProjectController extends Controller
             });
         }
 
-        // New categorization filters
         if ($request->has('school_type') && $request->school_type !== 'all') {
             $query->where('school_type', $request->school_type);
         }
@@ -46,8 +152,7 @@ class ProjectController extends Controller
             $query->where('academic_year_id', $request->academic_year_id);
         }
 
-        $projects = $query->orderBy('created_at', 'desc')->get();
-        return response()->json($projects);
+        return $query;
     }
 
     public function store(Request $request)
@@ -64,7 +169,7 @@ class ProjectController extends Controller
             'academic_year_id' => 'nullable|exists:academic_years,id',
             'team_id' => 'required|exists:teams,id',
             'splash_screen' => 'nullable|image|max:8192',
-            'video' => ['nullable', 'file', 'mimes:mp4,webm,mov', 'max:51200', new VideoMaxResolution(1920, 1080)],
+            'video' => ['nullable', 'file', 'mimes:mp4,webm,mov', 'max:102400', new VideoMaxResolution(1920, 1080)],
             'video_url' => 'nullable|url',
         ]);
 
@@ -83,18 +188,28 @@ class ProjectController extends Controller
         $typeValidation = $this->getTypeSpecificValidation($request->type);
         $request->validate($typeValidation);
 
-        $team = $request->user()->teams()
-            ->wherePivot('role_in_team', 'scrum_master')
-            ->where('teams.id', $validated['team_id'])
-            ->first();
+        // Check if user is admin - admins can create projects for any team
+        $isAdmin = $request->user()->role === 'admin';
 
-        if (!$team) {
-            return response()->json(['message' => 'Unauthorized'], 403);
+        if ($isAdmin) {
+            // Admin can create project for any team
+            $team = Team::findOrFail($validated['team_id']);
+        } else {
+            // Regular user must be Scrum Master of the team
+            $team = $request->user()->teams()
+                ->wherePivot('role_in_team', 'scrum_master')
+                ->where('teams.id', $validated['team_id'])
+                ->first();
+
+            if (!$team) {
+                return response()->json(['message' => 'Unauthorized'], 403);
+            }
         }
 
         // Check if team is active (only active teams can publish projects)
+        // Admins can bypass this check
         // Only check if status column exists
-        if (Schema::hasColumn('teams', 'status')) {
+        if (!$isAdmin && Schema::hasColumn('teams', 'status')) {
             $teamStatus = $team->status ?? 'active';
             if ($teamStatus !== 'active') {
                 $statusMessages = [
@@ -122,8 +237,16 @@ class ProjectController extends Controller
                 $splashPath = null;
                 $videoPath = null;
 
+                // Debug logging for splash screen upload
                 if ($request->hasFile('splash_screen')) {
+                    \Log::info('Splash screen file received', [
+                        'original_name' => $request->file('splash_screen')->getClientOriginalName(),
+                        'mime_type' => $request->file('splash_screen')->getMimeType(),
+                        'size' => $request->file('splash_screen')->getSize()
+                    ]);
                     $splashPath = $request->file('splash_screen')->store("projects/{$request->type}/splash_screens", 'public');
+                } else {
+                    \Log::warning('No splash screen file received during project upload');
                 }
 
                 if ($request->hasFile('video')) {
@@ -229,10 +352,21 @@ class ProjectController extends Controller
 
     public function my(Request $request)
     {
-        $teamId = $request->query('team_id');
-        if (!$teamId) {
+        $teamId = (int) $request->query('team_id');
+        if ($teamId <= 0) {
             return response()->json(['message' => 'team_id query parameter required'], 422);
         }
+
+        $user = $request->user();
+        $isAdmin = $user && $user->role === 'admin';
+        $isMember = $user
+            ? $user->teams()->where('teams.id', $teamId)->exists()
+            : false;
+
+        if (!$isAdmin && !$isMember) {
+            return response()->json(['message' => 'Nemáte prístup k projektom tohto tímu.'], 403);
+        }
+
         $projects = Project::where('team_id', $teamId)->with(['academicYear','team'])->orderBy('created_at','desc')->get();
         return response()->json(['projects' => $projects, 'count' => $projects->count()], 200);
     }
@@ -242,19 +376,25 @@ class ProjectController extends Controller
         $project = Project::with('team.members')->findOrFail($id);
         $user = $request->user();
 
-        // Check if user is Scrum Master of the team that owns this project
-        $isScrumMaster = $project->team->members()
-            ->where('users.id', $user->id)
-            ->where('team_user.role_in_team', 'scrum_master')
-            ->exists();
+        // Check if user is admin - admins can update any project
+        $isAdmin = $user->role === 'admin';
 
-        if (!$isScrumMaster) {
-            return response()->json(['message' => 'Iba Scrum Master tímu môže upravovať projekt.'], 403);
+        if (!$isAdmin) {
+            // Check if user is Scrum Master of the team that owns this project
+            $isScrumMaster = $project->team->members()
+                ->where('users.id', $user->id)
+                ->where('team_user.role_in_team', 'scrum_master')
+                ->exists();
+
+            if (!$isScrumMaster) {
+                return response()->json(['message' => 'Iba Scrum Master tímu môže upravovať projekt.'], 403);
+            }
         }
 
         // Check if team is active (only active teams can edit projects)
+        // Admins can bypass this check
         // Only check if status column exists
-        if (Schema::hasColumn('teams', 'status')) {
+        if (!$isAdmin && Schema::hasColumn('teams', 'status')) {
             $team = $project->team;
             $teamStatus = $team->status ?? 'active';
             if ($teamStatus !== 'active') {
@@ -280,8 +420,9 @@ class ProjectController extends Controller
             'release_date' => 'nullable|date',
             'academic_year_id' => 'nullable|exists:academic_years,id',
             'splash_screen' => 'nullable|image|max:8192',
-            'video' => ['nullable', 'file', 'mimes:mp4,webm,mov', 'max:51200', new VideoMaxResolution(1920, 1080)],
+            'video' => ['nullable', 'file', 'mimes:mp4,webm,mov', 'max:102400', new VideoMaxResolution(1920, 1080)],
             'video_url' => 'nullable|url',
+            'project_folder' => 'nullable|file|mimes:zip,rar|max:20480',
         ]);
 
         // Validate year_of_study range if provided
@@ -416,25 +557,41 @@ class ProjectController extends Controller
 
     private function getTypeSpecificValidation($type)
     {
-        return match($type) {
-            'game' => ['export' => 'nullable|file|mimes:zip|max:512000', 'source_code' => 'nullable|file|mimes:zip|max:204800', 'tech_stack' => 'nullable|string', 'github_url' => 'nullable|url'],
-            'web_app' => ['live_url' => 'nullable|url', 'github_url' => 'nullable|url', 'tech_stack' => 'nullable|string', 'source_code' => 'nullable|file|mimes:zip|max:204800'],
-            'mobile_app' => ['apk_file' => 'nullable|file|max:102400', 'ios_file' => 'nullable|file|max:102400', 'platform' => 'nullable|in:android,ios,both', 'source_code' => 'nullable|file|mimes:zip|max:204800', 'github_url' => 'nullable|url', 'tech_stack' => 'nullable|string'],
-            'library' => ['package_name' => 'nullable|string', 'npm_url' => 'nullable|url', 'github_url' => 'nullable|url', 'documentation' => 'nullable|file|mimes:pdf,zip|max:51200', 'source_code' => 'nullable|file|mimes:zip|max:204800', 'tech_stack' => 'nullable|string'],
-            'other' => ['live_url' => 'nullable|url', 'github_url' => 'nullable|url', 'tech_stack' => 'nullable|string', 'source_code' => 'nullable|file|mimes:zip|max:204800'],
+        // Universal file uploads for all project types
+        $universalValidation = [
+            'documentation' => 'nullable|file|mimes:pdf,docx,zip,rar|max:10240', // 10MB - PDF, DOCX, ZIP, or RAR
+            'presentation' => 'nullable|file|mimes:pdf,ppt,pptx|max:15360', // 15MB
+            'source_code' => 'nullable|file|mimes:zip,rar|max:204800', // 200MB
+            'export' => 'nullable|file|mimes:zip,rar,exe,apk,ipa|max:512000', // 500MB
+            'project_folder' => 'nullable|file|mimes:zip,rar|max:20480', // 20MB
+            'export_type' => 'nullable|in:standalone,webgl,mobile,executable',
+            'tech_stack' => 'nullable|string',
+            'github_url' => 'nullable|url',
+        ];
+
+        // Type-specific additional validation
+        $typeSpecific = match($type) {
+            'game' => [],
+            'web_app' => ['live_url' => 'nullable|url'],
+            'mobile_app' => ['platform' => 'nullable|in:android,ios,both'],
+            'library' => ['package_name' => 'nullable|string', 'npm_url' => 'nullable|url'],
+            'other' => ['live_url' => 'nullable|url'],
             default => [],
         };
+
+        return array_merge($universalValidation, $typeSpecific);
     }
 
     private function getFileFieldsForType($type)
     {
-        return match($type) {
-            'game' => ['export' => ['folder' => 'exports'], 'source_code' => ['folder' => 'source']],
-            'web_app' => ['source_code' => ['folder' => 'source']],
-            'mobile_app' => ['apk_file' => ['folder' => 'apk'], 'ios_file' => ['folder' => 'ios'], 'source_code' => ['folder' => 'source']],
-            'library' => ['documentation' => ['folder' => 'docs'], 'source_code' => ['folder' => 'source']],
-            default => [],
-        };
+        // Universal file fields for all project types
+        return [
+            'documentation' => ['folder' => 'documentation'],
+            'presentation' => ['folder' => 'presentations'],
+            'source_code' => ['folder' => 'source'],
+            'export' => ['folder' => 'exports'],
+            'project_folder' => ['folder' => 'folders'],
+        ];
     }
 
     private function extractMetadata(Request $request)
@@ -457,7 +614,7 @@ class ProjectController extends Controller
         }
         
         // String fields - sanitize
-        $stringFields = ['package_name', 'platform'];
+        $stringFields = ['package_name', 'platform', 'export_type'];
         foreach ($stringFields as $field) {
             if ($request->has($field)) {
                 $val = $request->input($field);

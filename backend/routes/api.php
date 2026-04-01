@@ -12,10 +12,17 @@ use App\Models\AcademicYear;
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
 Route::post('/admin/login', [AuthController::class, 'adminLogin'])->middleware('throttle:login'); // Special admin login
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:register');
-Route::post('/verify-email', [AuthController::class, 'verifyEmail']); // Verifikácia e-mailu
-Route::post('/forgot-password', [AuthController::class, 'forgotPassword']); // Zabudnuté heslo
-Route::post('/reset-password', [AuthController::class, 'resetPassword']); // Reset hesla s tokenom
-Route::post('/login-temporary', [AuthController::class, 'loginWithTemporaryPassword']); // Prihlásenie s dočasným heslom
+Route::post('/verify-email', [AuthController::class, 'verifyEmail'])->middleware('throttle:6,1'); // Verifikácia e-mailu
+Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:forgot-password'); // Zabudnuté heslo (rate-limited)
+Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:6,1'); // Reset hesla s tokenom
+Route::post('/login-temporary', [AuthController::class, 'loginWithTemporaryPassword'])->middleware('throttle:login'); // Prihlásenie s dočasným heslom
+
+// 🟢 Verejné guest routy – dostupné bez tokenu
+Route::get('/public/projects', [ProjectController::class, 'publicIndex']);
+Route::get('/public/projects/top-rated', [ProjectController::class, 'topRated']);
+Route::get('/public/projects/{id}', [ProjectController::class, 'publicShow']);
+Route::post('/public/projects/{id}/views', [ProjectController::class, 'incrementViews']);
+Route::post('/public/projects/{id}/rate', [ProjectController::class, 'ratePublic'])->middleware('throttle:ratings');
 
 // 🟡 Chránené routy – vyžadujú autentifikáciu
 Route::middleware('auth:sanctum')->group(function () {
@@ -34,6 +41,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // 🎮 Projects (nové - nahrádzajú games)
     Route::get('/projects', [ProjectController::class, 'index']);  // Získanie všetkých projektov (s filtrami)
     Route::post('/projects', [ProjectController::class, 'store']) ->middleware('throttle:projects'); // Pridanie projektu
+    Route::get('/projects/top-rated', [ProjectController::class, 'topRated']); // Najlepšie hodnotené projekty
     Route::get('/projects/my', [ProjectController::class, 'my']); // Projekty aktivneho timu (MUST be before {id})
     Route::get('/projects/{id}', [ProjectController::class, 'show']); // Jeden projekt podľa ID
     Route::match(['PUT', 'POST'], '/projects/{id}', [ProjectController::class, 'update'])->middleware('throttle:projects'); // Aktualizácia projektu (Scrum Master) - accepts both PUT and POST (with _method=PUT)
@@ -75,12 +83,37 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function ()
     
     // Teams management
     Route::get('/teams', [App\Http\Controllers\Api\AdminController::class, 'teams']);
+    Route::post('/teams', [App\Http\Controllers\Api\AdminController::class, 'createTeam']);
     Route::get('/teams/{team}', [App\Http\Controllers\Api\AdminController::class, 'showTeam']);
+    Route::get('/teams/{team}/projects', [App\Http\Controllers\Api\AdminController::class, 'teamProjects']);
     Route::put('/teams/{team}', [App\Http\Controllers\Api\AdminController::class, 'updateTeam']);
     Route::delete('/teams/{team}', [App\Http\Controllers\Api\AdminController::class, 'deleteTeam']);
     Route::post('/teams/{team}/approve', [App\Http\Controllers\Api\AdminController::class, 'approveTeam']);
     Route::post('/teams/{team}/reject', [App\Http\Controllers\Api\AdminController::class, 'rejectTeam']);
     
+    // Team member management (admin bypass)
+    Route::delete('/teams/{team}/members/{user}', [App\Http\Controllers\Api\AdminController::class, 'removeMember']);
+    Route::post('/teams/{team}/scrum-master', [App\Http\Controllers\Api\AdminController::class, 'changeScrumMaster']);
+
+    // Academic years (admin)
+    Route::post('/academic-years', [App\Http\Controllers\Api\AdminController::class, 'createAcademicYear']);
+    
     // Projects overview
     Route::get('/projects', [App\Http\Controllers\Api\AdminController::class, 'projects']);
+    Route::delete('/projects/{project}', [App\Http\Controllers\Api\AdminController::class, 'deleteProject']);
+    
+    // User management
+    Route::get('/users', [App\Http\Controllers\Api\AdminController::class, 'users']);
+    Route::post('/users', [App\Http\Controllers\Api\AdminController::class, 'createUser']);
+    Route::post('/users/{user}/move-team', [App\Http\Controllers\Api\AdminController::class, 'moveUserBetweenTeams']);
+    Route::post('/users/{user}/deactivate', [App\Http\Controllers\Api\AdminController::class, 'deactivateUser']);
+    Route::post('/users/{user}/activate', [App\Http\Controllers\Api\AdminController::class, 'activateUser']);
+    
+    // Authorized students management (CSV import system)
+    Route::post('/authorized-students/import', [App\Http\Controllers\Api\AdminController::class, 'importAuthorizedStudents']);
+    Route::get('/authorized-students', [App\Http\Controllers\Api\AdminController::class, 'authorizedStudents']);
+    Route::post('/authorized-students/{id}/toggle', [App\Http\Controllers\Api\AdminController::class, 'toggleAuthorizedStudent']);
+    
+    // Admin configuration
+    Route::get('/config', [App\Http\Controllers\Api\AdminController::class, 'getConfig']);
 });

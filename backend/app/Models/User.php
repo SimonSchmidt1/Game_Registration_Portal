@@ -24,10 +24,13 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'status',
+        'is_absolvent',
         'student_type',
         'team_id',
         'avatar_path',
         'verification_token',
+            'email_verified_at',
         'failed_login_attempts',
     ];
 
@@ -51,6 +54,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_absolvent' => 'boolean',
         ];
     }
 
@@ -66,6 +70,15 @@ class User extends Authenticatable
     public function isAdmin(): bool
     {
         return $this->role === 'admin';
+    }
+
+    /**
+     * Check if user account is active.
+     * Inactive users cannot log in or access the portal.
+     */
+    public function isActive(): bool
+    {
+        return $this->status === 'active';
     }
 
     /**

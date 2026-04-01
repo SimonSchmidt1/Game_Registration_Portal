@@ -6,20 +6,31 @@
       <router-view />
     </main>
 
-    <footer class="border-t border-slate-700/30 backdrop-blur-md bg-slate-900/20 py-6 text-center">
-      <p class="text-slate-500 text-sm">© 2025 Evidenčný portál hier</p>
+    <footer ref="footerEl" class="app-footer py-5 text-center">
+      <p class="text-sm">© 2026 Portál Projektov &mdash; UCM</p>
     </footer>
   </div>
 </template>
 
 <script setup>
-import { onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import Navbar from './components/Navbar.vue'
 
 const router = useRouter()
 const toast = useToast()
+const footerEl = ref(null)
+
+let footerGlowTimer = null
+function onScroll() {
+  if (!footerEl.value) return
+  footerEl.value.classList.add('footer-glow')
+  clearTimeout(footerGlowTimer)
+  footerGlowTimer = setTimeout(() => {
+    if (footerEl.value) footerEl.value.classList.remove('footer-glow')
+  }, 600)
+}
 
 const INACTIVITY_TIMEOUT = 5 * 60 * 1000 // 5 minutes in milliseconds
 let inactivityTimer = null
@@ -69,6 +80,9 @@ onMounted(() => {
   activityEvents.forEach(event => {
     window.addEventListener(event, resetInactivityTimer)
   })
+
+  // Footer glow on scroll
+  window.addEventListener('scroll', onScroll)
 })
 
 onUnmounted(() => {
@@ -76,10 +90,12 @@ onUnmounted(() => {
   if (inactivityTimer) {
     clearTimeout(inactivityTimer)
   }
+  clearTimeout(footerGlowTimer)
 
   // Remove event listeners
   activityEvents.forEach(event => {
     window.removeEventListener(event, resetInactivityTimer)
   })
+  window.removeEventListener('scroll', onScroll)
 })
 </script>

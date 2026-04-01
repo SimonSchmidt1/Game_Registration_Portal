@@ -1,50 +1,45 @@
 <template>
-  <div class="max-w-md mx-auto p-6 border rounded-lg mt-12">
-    <!-- Show "Check your email" message when resent=true -->
-    <div v-if="isResentMode" class="text-center">
-      <i class="pi pi-envelope text-6xl text-blue-500 mb-4"></i>
-      <h2 class="text-2xl font-semibold mb-4 text-blue-600">Skontrolujte svoj email</h2>
-      <p class="mb-4 text-gray-600">
-        Príliš veľa neúspešných pokusov o prihlásenie. Overovací e-mail bol odoslaný znova na vašu emailovú adresu.
-      </p>
-      <p class="mb-6 text-gray-600">
-        Kliknite na odkaz v e-maili na overenie účtu a potom sa môžete prihlásiť.
-      </p>
-      <Button 
-        label="Späť na prihlásenie" 
-        icon="pi pi-arrow-left" 
-        class="w-full" 
-        @click="goToLogin"
-      />
-    </div>
+  <div class="auth-shell">
+    <div class="auth-card">
+      <div v-if="isResentMode" class="auth-state">
+        <h2 class="auth-title">Skontrolujte svoj email</h2>
+        <p class="auth-text">
+          Príliš veľa neúspešných pokusov o prihlásenie. Overovací e-mail bol odoslaný znova na vašu emailovú adresu.
+        </p>
+        <p class="auth-text">
+          Kliknite na odkaz v e-maili na overenie účtu a potom sa môžete prihlásiť.
+        </p>
+        <Button 
+          label="Späť na prihlásenie" 
+          class="steam-btn steam-btn-dark auth-btn-block" 
+          @click="goToLogin"
+        />
+      </div>
 
-    <div v-else-if="loading" class="text-center">
-      <i class="pi pi-spin pi-spinner text-4xl text-blue-500 mb-4"></i>
-      <h2 class="text-xl font-semibold">Overujem váš email...</h2>
-    </div>
+      <div v-else-if="loading" class="auth-state">
+        <h2 class="auth-title">Overujem váš email...</h2>
+        <p class="auth-text">Prosím chvíľu počkajte.</p>
+      </div>
 
-    <div v-else-if="success" class="text-center">
-      <i class="pi pi-check-circle text-6xl text-green-500 mb-4"></i>
-      <h2 class="text-2xl font-semibold mb-4 text-green-600">Email overený!</h2>
-      <p class="mb-6 text-gray-600">Váš účet bol úspešne overený. Presmerovávame vás na prihlásenie...</p>
-      <Button 
-        label="Prihlásiť sa teraz" 
-        icon="pi pi-sign-in" 
-        class="w-full" 
-        @click="goToLogin"
-      />
-    </div>
+      <div v-else-if="success" class="auth-state">
+        <h2 class="auth-title">Email overený!</h2>
+        <p class="auth-text">Váš účet bol úspešne overený. Presmerovávame vás na prihlásenie...</p>
+        <Button 
+          label="Prihlásiť sa teraz" 
+          class="steam-btn steam-btn-accent auth-btn-block" 
+          @click="goToLogin"
+        />
+      </div>
 
-    <div v-else-if="error" class="text-center">
-      <i class="pi pi-times-circle text-6xl text-red-500 mb-4"></i>
-      <h2 class="text-2xl font-semibold mb-4 text-red-600">Overenie zlyhalo</h2>
-      <p class="mb-6 text-gray-600">{{ errorMessage }}</p>
-      <Button 
-        label="Späť na hlavnú stránku" 
-        icon="pi pi-home" 
-        class="w-full" 
-        @click="goToHome"
-      />
+      <div v-else-if="error" class="auth-state">
+        <h2 class="auth-title">Overenie zlyhalo</h2>
+        <p class="auth-text">{{ errorMessage }}</p>
+        <Button 
+          label="Späť na hlavnú stránku" 
+          class="steam-btn steam-btn-dark auth-btn-block" 
+          @click="goToHome"
+        />
+      </div>
     </div>
 
     <Toast />
@@ -160,3 +155,125 @@ function goToHome() {
   router.push('/')
 }
 </script>
+
+<style scoped>
+/* ═══════════════════════════════════════════════════════════ */
+/* AUTH SHELL (Steam-style)                                   */
+/* ═══════════════════════════════════════════════════════════ */
+.auth-shell {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 84px 24px 120px;
+}
+
+.auth-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 32px 28px;
+  box-shadow: 0 14px 40px rgba(10, 18, 26, 0.35);
+}
+
+.auth-state {
+  text-align: center;
+}
+
+.auth-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 10px 0 10px;
+}
+
+.auth-text {
+  color: var(--color-text-muted);
+  font-size: 0.92rem;
+  line-height: 1.6;
+  margin-bottom: 14px;
+}
+
+.auth-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(var(--color-accent-rgb), 0.12);
+  color: var(--color-accent);
+  font-size: 1.8rem;
+}
+
+.auth-icon-warn {
+  background: rgba(var(--color-warning-rgb), 0.12);
+  color: var(--color-warning);
+}
+
+.auth-icon-success {
+  background: rgba(var(--color-accent-rgb), 0.12);
+  color: var(--color-accent);
+}
+
+.auth-icon-danger {
+  background: rgba(var(--color-danger-rgb), 0.12);
+  color: var(--color-danger);
+}
+
+.auth-btn-block {
+  width: 100%;
+}
+
+/* ═══════════════════════════════════════════════════════════ */
+/* BUTTONS (Steam-flat style)                                 */
+/* ═══════════════════════════════════════════════════════════ */
+.steam-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: 3px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, opacity 0.12s;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.steam-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.steam-btn-accent {
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+}
+
+.steam-btn-accent:hover:not(:disabled) {
+  background: var(--color-accent-hover);
+}
+
+.steam-btn-dark {
+  background: var(--color-border);
+  color: var(--color-text);
+}
+
+.steam-btn-dark:hover:not(:disabled) {
+  background: var(--color-border-strong);
+  color: var(--color-text-strong);
+}
+
+@media (max-width: 640px) {
+  .auth-shell {
+    padding: 64px 16px 96px;
+  }
+
+  .auth-card {
+    padding: 24px 20px;
+  }
+}
+</style>

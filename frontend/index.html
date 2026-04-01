@@ -1,10 +1,20 @@
 <!DOCTYPE html>
-<html lang="sk">
+<html lang="sk" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Registration Portal</title>
     
+    <!-- Apply saved theme preference before any rendering to prevent flash -->
+    <script>
+      (function() {
+        var theme = localStorage.getItem('theme_preference');
+        if (theme === 'light') {
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+      })();
+    </script>
+
     <!-- Google Fonts - Inter for modern, elegant typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,9 +29,12 @@
     <style>
       /* Prevent flash of white/black during page load */
       html, body {
-        background: #020617;
+        background: #1b2838;
         margin: 0;
         padding: 0;
+      }
+      html[data-theme='light'], html[data-theme='light'] body {
+        background: #f1f4f8;
       }
     </style>
   </head>

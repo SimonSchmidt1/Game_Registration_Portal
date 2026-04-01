@@ -1,91 +1,73 @@
 <template>
-  <nav class="backdrop-blur-md bg-slate-900/30 border-b border-slate-700/30">
-    <div class="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-      <div class="flex justify-between items-center">
-        <!-- Left side navigation -->
-        <div class="flex items-center gap-2 sm:gap-4">
-          <RouterLink 
-            to="/" 
-            class="nav-link group"
-          >
-            <span>Domov</span>
-          </RouterLink>
-          
-          <RouterLink 
-            v-if="canAddGame && !isAdmin" 
-            to="/add-project" 
-            class="nav-link group"
-          >
-            <span>Pridať projekt</span>
-          </RouterLink>
-          
-          <RouterLink 
-            v-if="isAdmin" 
-            to="/admin" 
-            class="admin-badge group"
-          >
-            <span>Admin Panel</span>
-          </RouterLink>
-        </div>
+  <nav ref="navRef" class="nav-bar">
+    <div class="nav-inner">
+      <!-- Left: Navigation links -->
+      <div class="nav-left">
+        <RouterLink to="/" class="nav-link">{{ t('nav.home') }}</RouterLink>
+        <RouterLink v-if="canAddGame && !isAdmin" to="/add-project" class="nav-link">{{ t('nav.add_project') }}</RouterLink>
+        <RouterLink v-if="isAdmin" to="/admin" class="nav-link nav-link-admin">{{ t('nav.admin_panel') }}</RouterLink>
+      </div>
 
-        <!-- Right side - Auth buttons -->
-        <div class="flex items-center gap-2 sm:gap-3">
-          <!-- Not logged in -->
-          <template v-if="!isLoggedIn">
-            <RouterLink to="/register">
-              <button class="btn-ghost-nav">
-                Registrovať sa
-              </button>
-            </RouterLink>
+      <!-- Center: Logo -->
+      <RouterLink to="/" class="nav-brand">
+        <img src="@/assets/logo/logo_fpv.png" alt="FPV UCM" class="nav-logo" />
+      </RouterLink>
 
-            <RouterLink to="/login">
-              <button class="btn-primary-nav">
-                Prihlásiť sa
-              </button>
-            </RouterLink>
-          </template>
-
-          <!-- Logged in -->
-          <template v-else>
-            <!-- User Profile Button -->
-            <button 
-              @click="showUserProfileDialog = true"
-              class="user-profile-btn group"
-            >
-              <div class="relative">
-                <img 
-                  v-if="currentUser?.avatar_path" 
-                  :key="currentUser.avatar_path"
-                  :src="getAvatarUrl(currentUser.avatar_path)" 
-                  alt="Avatar"
-                  class="w-8 h-8 rounded-full object-cover ring-2 ring-indigo-500/50 group-hover:ring-indigo-400 transition-all"
-                />
-                <div 
-                  v-else 
-                  class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-bold text-sm ring-2 ring-indigo-500/50 group-hover:ring-indigo-400 transition-all"
-                >
-                  {{ userName?.charAt(0).toUpperCase() }}
-                </div>
-              </div>
-              <span class="font-medium text-slate-200 hidden sm:inline group-hover:text-white transition-colors">{{ userName }}</span>
-            </button>
-
-            <!-- Logout Button -->
+      <!-- Right: Auth / Profile -->
+      <div class="nav-right">
+        <!-- Language Switcher -->
+        <div class="nav-lang-switcher" v-click-outside="() => showLangMenu = false">
+          <button class="nav-btn-ghost nav-lang-btn" @click="showLangMenu = !showLangMenu" :title="currentLocaleInfo.label">
+            <span class="nav-lang-flag">{{ currentLocaleInfo.flag }}</span>
+            <span class="nav-lang-code">{{ currentLocaleInfo.code.toUpperCase() }}</span>
+          </button>
+          <div v-if="showLangMenu" class="nav-lang-menu">
             <button
-              @click="logout"
-              class="btn-logout group"
+              v-for="loc in SUPPORTED_LOCALES"
+              :key="loc.code"
+              class="nav-lang-option"
+              :class="{ active: loc.code === locale }"
+              @click="switchLocale(loc.code)"
             >
-              <i class="pi pi-sign-out text-base"></i>
-              <span class="hidden sm:inline">Odhlásiť sa</span>
+              <span>{{ loc.flag }}</span>
+              <span>{{ loc.label }}</span>
             </button>
-          </template>
+          </div>
         </div>
+
+        <button class="nav-btn-ghost nav-theme-toggle" @click="toggleTheme">
+          <span class="nav-theme-label">{{ isLightTheme ? t('nav.dark_mode') : t('nav.light_mode') }}</span>
+        </button>
+        <template v-if="!isLoggedIn">
+          <RouterLink to="/register">
+            <button class="nav-btn-ghost">{{ t('nav.register') }}</button>
+          </RouterLink>
+          <RouterLink to="/login">
+            <button class="nav-btn-accent">{{ t('nav.login') }}</button>
+          </RouterLink>
+        </template>
+
+        <template v-else>
+          <button @click="showUserProfileDialog = true" class="nav-user-btn">
+            <img
+              v-if="currentUser?.avatar_path"
+              :key="currentUser.avatar_path"
+              :src="getAvatarUrl(currentUser.avatar_path)"
+              alt="Avatar"
+              class="nav-avatar"
+            />
+            <div v-else class="nav-avatar-placeholder" :style="{ background: avatarColor }">{{ userName?.charAt(0).toUpperCase() }}</div>
+            <span class="nav-user-name">{{ userName }}</span>
+          </button>
+          <button @click="logout" class="nav-btn-ghost nav-btn-logout">
+            <span>{{ t('nav.logout') }}</span>
+          </button>
+        </template>
       </div>
     </div>
-
-    <!-- Toast notifikácie -->
-    <Toast ref="toast" />
   </nav>
+
+  <Toast ref="toast" />
 
   <!-- USER PROFILE DIALOG -->
   <Dialog 
@@ -93,43 +75,43 @@
     :modal="true" 
     :closable="false" 
     :draggable="false"
-    class="w-11/12 md:w-[420px]"
-    :contentStyle="{ backgroundColor: '#0f172a', color: '#f1f5f9', padding: '1.5rem', border: 'none' }" 
-    :headerStyle="{ backgroundColor: '#0f172a', color: '#f1f5f9', borderBottom: '1px solid rgba(71, 85, 105, 0.5)', padding: '1rem 1.5rem', position: 'relative' }"
+    class="w-11/12 md:w-[450px]"
+    :contentStyle="{ backgroundColor: 'var(--color-surface)', color: 'var(--color-text)', padding: '0', border: '1px solid var(--color-border)', borderRadius: '16px' }"
+    :showHeader="false"
     :style="{ borderRadius: '16px', overflow: 'hidden' }"
   >
-    <template #header>
-      <div class="dialog-header-custom">
-        <span class="dialog-title-centered">Môj Profil</span>
-        <button class="dialog-close-btn" @click="showUserProfileDialog = false">
-          <i class="pi pi-times"></i>
-        </button>
-      </div>
-    </template>
-    
-    <div v-if="currentUser" class="flex flex-col gap-5">
-      <!-- Avatar Section -->
-      <div class="flex flex-col items-center gap-4 p-6 bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl border border-slate-700/30">
-        <div class="relative group cursor-pointer">
+    <div v-if="currentUser" class="relative flex flex-col pt-10">
+      <button 
+        class="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/20 text-gray-800 dark:text-white transition-colors z-10" 
+        @click="showUserProfileDialog = false"
+      >
+        <span class="text-lg font-bold">✕</span>
+      </button>
+
+      <!-- Content Area -->
+      <div class="px-8 pb-8 relative flex flex-col items-center">
+        <!-- Avatar Section -->
+        <div class="relative mb-4 group cursor-pointer shadow-lg rounded-full">
           <img 
             v-if="currentUser.avatar_path" 
             :key="currentUser.avatar_path"
             :src="getAvatarUrl(currentUser.avatar_path)" 
             alt="Avatar"
-            class="w-28 h-28 rounded-full object-cover ring-4 ring-indigo-500/30 shadow-2xl transition-all group-hover:ring-indigo-400/50"
+            class="w-32 h-32 rounded-full object-cover"
+            style="background-color: var(--color-surface);"
           />
           <div 
             v-else 
-            class="w-28 h-28 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-bold text-4xl shadow-2xl ring-4 ring-indigo-500/30 transition-all group-hover:ring-indigo-400/50"
+            class="w-32 h-32 rounded-full flex items-center justify-center text-white font-bold text-5xl transition-transform duration-300 group-hover:scale-105"
+            :style="{ background: avatarColor }"
           >
             {{ currentUser.name?.charAt(0).toUpperCase() }}
           </div>
           
           <!-- Upload overlay -->
-          <label class="absolute inset-0 flex items-center justify-center bg-slate-900/70 rounded-full opacity-0 group-hover:opacity-100 transition-all cursor-pointer backdrop-blur-sm">
-            <div class="flex flex-col items-center gap-1">
-              <i class="pi pi-camera text-white text-2xl"></i>
-              <span class="text-xs text-white/80">Zmeniť</span>
+          <label class="absolute inset-x-0 bottom-0 top-0 m-auto w-32 h-32 flex items-center justify-center bg-black/60 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer backdrop-blur-sm">
+            <div class="flex flex-col items-center gap-1 text-white">
+              <span class="text-xs font-medium tracking-wide">{{ t('profile.change_btn') }}</span>
             </div>
             <input 
               type="file" 
@@ -140,78 +122,69 @@
           </label>
         </div>
         
-        <p class="text-xs text-slate-500 text-center">Kliknutím na avatar môžete zmeniť obrázok</p>
-      </div>
-
-      <!-- User Info -->
-      <div class="flex flex-col gap-2.5">
-        <div class="profile-info-row">
-          <span class="profile-label">
-            <i class="pi pi-user text-xs"></i>
-            Meno
-          </span>
-          <span v-if="!editMode" class="profile-value">{{ currentUser.name }}</span>
+        <h2 class="text-2xl font-bold mb-1 tracking-tight" style="color: var(--color-text-strong)">
+          <span v-if="!editMode">{{ currentUser.name }}</span>
           <input 
             v-else 
             v-model="editName" 
             type="text" 
-            class="profile-input"
+            class="text-center bg-transparent border-b-2 focus:outline-none w-full pb-1 transition-colors"
+            style="color: var(--color-text-strong); border-bottom-color: rgb(91, 189, 138);"
+            placeholder="Vaše meno"
           />
-        </div>
-        
-        <div class="profile-info-row">
-          <span class="profile-label">
-            <i class="pi pi-envelope text-xs"></i>
-            Email
-          </span>
-          <span class="profile-value text-sm">{{ currentUser.email }}</span>
-        </div>
-        
-        <div class="profile-info-row">
-          <span class="profile-label">
-            <i class="pi pi-id-card text-xs"></i>
-            Rola
-          </span>
-          <span class="profile-value capitalize">{{ currentUser.role }}</span>
-        </div>
-        
-        <div class="profile-info-row">
-          <span class="profile-label">
-            <i class="pi pi-graduation-cap text-xs"></i>
-            Typ študenta
-          </span>
-          <span class="profile-value">{{ getStudentTypeLabel(currentUser.student_type) }}</span>
-        </div>
-      </div>
+        </h2>
+        <p class="text-sm font-medium mb-6" style="color: var(--color-text-muted)">
+          {{ currentUser.email }}
+        </p>
 
-      <!-- Action Buttons -->
-      <div v-if="!editMode" class="flex gap-2 pt-2">
-        <button 
-          class="btn-secondary-dialog flex-1"
-          @click="startEdit" 
-        >
-          Upraviť profil
-        </button>
-        <button 
-          class="btn-ghost-dialog flex-1"
-          @click="openPasswordDialog" 
-        >
-          Zmeniť heslo
-        </button>
-      </div>
-      <div v-else class="flex gap-2 pt-2">
-        <button 
-          class="btn-primary-dialog flex-1"
-          @click="saveProfile" 
-        >
-          Uložiť
-        </button>
-        <button 
-          class="btn-ghost-dialog flex-1"
-          @click="cancelEdit" 
-        >
-          Zrušiť
-        </button>
+        <!-- User Role & Type Badges -->
+        <div class="flex gap-3 w-full justify-center mb-8">
+          <div class="px-4 py-2 rounded-xl border flex flex-col items-center flex-1" style="background: var(--color-elevated); border-color: var(--color-border)">
+            <span class="text-xs uppercase tracking-wider mb-1" style="color: var(--color-text-subtle)">Rola</span>
+            <span class="text-sm font-bold capitalize" style="color: var(--color-text)">{{ currentUser.role }}</span>
+          </div>
+          <div class="px-4 py-2 rounded-xl border flex flex-col items-center flex-1" style="background: var(--color-elevated); border-color: var(--color-border)">
+            <span class="text-xs uppercase tracking-wider mb-1" style="color: var(--color-text-subtle)">Štúdium</span>
+            <span class="text-sm font-bold capitalize" style="color: var(--color-text)">{{ getStudentTypeLabel(currentUser.student_type) }}</span>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-col gap-3 w-full">
+          <template v-if="!editMode">
+            <button 
+              class="w-full py-3 rounded-xl font-bold transition-all duration-200 flex items-center justify-center gap-2"
+              style="background: var(--color-accent); color: var(--color-accent-contrast);"
+              @click="startEdit" 
+            >
+              Zmeniť meno
+            </button>
+            <button 
+              class="w-full py-3 rounded-xl font-semibold transition-all duration-200 hover:bg-black/5 flex items-center justify-center gap-2 border"
+              style="border-color: var(--color-border); color: var(--color-text);"
+              @click="openPasswordDialog" 
+            >
+              <i class="pi pi-lock"></i> {{ t('profile.change_password_btn') }}
+            </button>
+          </template>
+          
+          <template v-else>
+            <button 
+              class="w-full py-3 rounded-xl font-bold transition-all duration-200 flex items-center justify-center gap-2"
+              style="background: var(--color-accent); color: var(--color-accent-contrast);"
+              @click="saveProfile" 
+            >
+              {{ t('profile.save_btn') }}
+            </button>
+            <button 
+              class="w-full py-3 rounded-xl font-semibold transition-all duration-200 hover:bg-black/5 flex items-center justify-center gap-2 border"
+              style="border-color: var(--color-border); color: var(--color-text-muted);"
+              @click="cancelEdit" 
+            >
+              {{ t('profile.cancel_btn') }}
+            </button>
+          </template>
+        </div>
       </div>
     </div>
   </Dialog>
@@ -223,24 +196,23 @@
     :closable="false"
     :draggable="false"
     class="w-11/12 md:w-[420px]"
-    :contentStyle="{ backgroundColor: '#0f172a', color: '#f1f5f9', padding: '1.5rem', border: 'none' }" 
-    :headerStyle="{ backgroundColor: '#0f172a', color: '#f1f5f9', borderBottom: '1px solid rgba(71, 85, 105, 0.5)', padding: '1rem 1.5rem', position: 'relative' }"
-    :style="{ borderRadius: '16px', overflow: 'hidden' }"
+    :contentStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', padding: '1.5rem', border: 'none' }" 
+    :headerStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', borderBottom: '1px solid var(--color-border)', padding: '1rem 1.5rem', position: 'relative' }"
+    :style="{ borderRadius: '4px', overflow: 'hidden' }"
   >
     <template #header>
       <div class="dialog-header-custom">
-        <span class="dialog-title-centered">Zmena hesla</span>
+        <span class="dialog-title-centered">{{ t('profile.change_password_title') }}</span>
         <button class="dialog-close-btn" @click="showPasswordDialog = false">
-          <i class="pi pi-times"></i>
+          ×
         </button>
       </div>
     </template>
     
     <div class="flex flex-col gap-4">
       <div>
-        <label class="block mb-2 font-medium text-slate-300 text-sm">Aktuálne heslo</label>
+        <label class="block mb-2 font-medium text-slate-300 text-sm">{{ t('profile.current_password_label') }}</label>
         <div class="relative">
-          <i class="pi pi-lock absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500"></i>
           <input 
             v-model="currentPassword" 
             type="password" 
@@ -250,9 +222,8 @@
         </div>
       </div>
       <div>
-        <label class="block mb-2 font-medium text-slate-300 text-sm">Nové heslo</label>
+        <label class="block mb-2 font-medium text-slate-300 text-sm">{{ t('profile.new_password_label') }}</label>
         <div class="relative">
-          <i class="pi pi-lock absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500"></i>
           <input 
             v-model="newPassword" 
             type="password" 
@@ -262,9 +233,8 @@
         </div>
       </div>
       <div>
-        <label class="block mb-2 font-medium text-slate-300 text-sm">Potvrdiť nové heslo</label>
+        <label class="block mb-2 font-medium text-slate-300 text-sm">{{ t('profile.confirm_password_label') }}</label>
         <div class="relative">
-          <i class="pi pi-lock absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500"></i>
           <input 
             v-model="newPasswordConfirm" 
             type="password" 
@@ -278,13 +248,13 @@
           class="btn-ghost-dialog flex-1"
           @click="showPasswordDialog = false" 
         >
-          Zrušiť
+          {{ t('profile.cancel_btn') }}
         </button>
         <button 
           class="btn-primary-dialog flex-1"
           @click="savePassword" 
         >
-          Uložiť
+          {{ t('profile.save_password_btn') }}
         </button>
       </div>
     </div>
@@ -296,12 +266,48 @@ import { RouterLink, useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import axios from 'axios'
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
+import { useI18n } from 'vue-i18n'
+import { SUPPORTED_LOCALES, setLocale } from '@/i18n'
+
+const { t, locale } = useI18n()
+const showLangMenu = ref(false)
+const currentLocaleInfo = computed(() => SUPPORTED_LOCALES.find(l => l.code === locale.value) || SUPPORTED_LOCALES[0])
+function switchLocale(code) {
+  setLocale(code)
+  showLangMenu.value = false
+}
 
 const API_URL = import.meta.env.VITE_API_URL
 const router = useRouter()
+const THEME_KEY = 'theme_preference'
+
+// Navbar scroll-up logo shine
+const navRef = ref(null)
+let lastScrollY = 0
+let glowTimer = null
+let shineTimer = null
+let lastShineAt = 0
+function handleScroll() {
+  const sy = window.scrollY
+  const now = Date.now()
+  if (sy < lastScrollY - 6 && now - lastShineAt > 900) {
+    lastShineAt = now
+    navRef.value?.classList.add('nav-glow')
+    navRef.value?.classList.add('nav-shine')
+    clearTimeout(glowTimer)
+    glowTimer = setTimeout(() => {
+      navRef.value?.classList.remove('nav-glow')
+    }, 500)
+    clearTimeout(shineTimer)
+    shineTimer = setTimeout(() => {
+      navRef.value?.classList.remove('nav-shine')
+    }, 700)
+  }
+  lastScrollY = sy
+}
 const isLoggedIn = ref(!!localStorage.getItem('access_token'))
 const canAddGame = ref(false) // Derived from active team scrum master status (now for projects)
 const isAdmin = ref(false) // Whether current user is admin
@@ -317,6 +323,24 @@ const editEmail = ref('')
 const currentPassword = ref('')
 const newPassword = ref('')
 const newPasswordConfirm = ref('')
+function generateRandomColor() {
+  const h = Math.floor(Math.random() * 360)
+  return `hsl(${h}, 65%, 45%)`
+}
+const avatarColor = ref(generateRandomColor())
+const themePreference = ref('dark')
+const isLightTheme = computed(() => themePreference.value === 'light')
+
+function applyTheme(theme) {
+  const resolved = theme === 'light' ? 'light' : 'dark'
+  themePreference.value = resolved
+  document.documentElement.setAttribute('data-theme', resolved)
+  localStorage.setItem(THEME_KEY, resolved)
+}
+
+function toggleTheme() {
+  applyTheme(isLightTheme.value ? 'dark' : 'light')
+}
 
 async function loadCurrentUser() {
   const token = localStorage.getItem('access_token')
@@ -363,17 +387,17 @@ async function handleAvatarUpload(event) {
       currentUser.value = data.user
       userName.value = data.user.name
       console.log('Avatar updated successfully:', data.user.avatar_path)
-      toastService.add({ severity: 'success', summary: 'Avatar aktualizovaný', detail: 'Váš avatar bol úspešne zmenený.', life: 3000 })
+      toastService.add({ severity: 'success', summary: t('profile.updated'), detail: t('profile.updated_desc'), life: 3000 })
       
       // Reset input to allow re-selecting the same file
       event.target.value = ''
     } else {
       console.error('Avatar upload failed:', data)
-      toastService.add({ severity: 'error', summary: 'Chyba', detail: data.message || 'Nepodarilo sa aktualizovať avatar.', life: 3000 })
+      toastService.add({ severity: 'error', summary: t('toast.error'), detail: data.message || t('profile.update_error_desc'), life: 3000 })
     }
   } catch (err) {
     console.error('Error uploading avatar:', err)
-    toastService.add({ severity: 'error', summary: 'Chyba', detail: 'Chyba pri nahrávaní avatara.', life: 3000 })
+    toastService.add({ severity: 'error', summary: t('toast.error'), detail: t('profile.update_error_desc'), life: 3000 })
   }
 }
 
@@ -389,8 +413,8 @@ async function savePassword() {
   if (newPassword.value !== newPasswordConfirm.value) {
     toastService.add({ 
       severity: 'error', 
-      summary: 'Chyba', 
-      detail: 'Heslá sa nezhodujú', 
+      summary: t('toast.error'), 
+      detail: t('auth.passwords_mismatch'), 
       life: 3000 
     })
     return
@@ -399,8 +423,8 @@ async function savePassword() {
   if (newPassword.value.length < 8) {
     toastService.add({ 
       severity: 'error', 
-      summary: 'Chyba', 
-      detail: 'Heslo musí mať aspoň 8 znakov', 
+      summary: t('toast.error'), 
+      detail: t('auth.password_too_short'), 
       life: 3000 
     })
     return
@@ -426,24 +450,24 @@ async function savePassword() {
     if (res.ok) {
       toastService.add({ 
         severity: 'success', 
-        summary: 'Úspech', 
-        detail: data.message || 'Heslo bolo zmenené', 
+        summary: t('profile.password_changed'), 
+        detail: data.message || t('profile.password_changed_desc'),
         life: 4000 
       })
       showPasswordDialog.value = false
     } else {
       toastService.add({ 
         severity: 'error', 
-        summary: 'Chyba', 
-        detail: data.message || 'Nepodarilo sa zmeniť heslo', 
+        summary: t('toast.error'), 
+        detail: data.message || t('profile.password_error_desc'), 
         life: 4000 
       })
     }
   } catch (err) {
     toastService.add({ 
       severity: 'error', 
-      summary: 'Chyba siete', 
-      detail: 'Nepodarilo sa spojiť so serverom', 
+      summary: t('common.network_error'), 
+      detail: t('common.try_again'), 
       life: 4000 
     })
   }
@@ -467,8 +491,8 @@ async function logout() {
 
     toast.value.add({
       severity: 'success',
-      summary: 'Odhlásenie',
-      detail: 'Úspešne odhlásený',
+      summary: t('toast.success'),
+      detail: t('toast.logout_success'),
       life: 3000
     })
 
@@ -494,6 +518,9 @@ const handleTeamChangedEvent = (e) => {
 }
 
 onMounted(async () => {
+  const storedTheme = localStorage.getItem(THEME_KEY)
+  applyTheme(storedTheme === 'light' ? 'light' : 'dark')
+
   const token = localStorage.getItem('access_token')
   if (token) {
     try {
@@ -523,6 +550,7 @@ onMounted(async () => {
   // Add event listeners
   window.addEventListener('login', handleLoginEvent)
   window.addEventListener('team-changed', handleTeamChangedEvent)
+  window.addEventListener('scroll', handleScroll, { passive: true })
 
   // Initialize scrum master flag from persisted active team
   refreshActiveTeamStatus()
@@ -532,6 +560,7 @@ onMounted(async () => {
 onUnmounted(() => {
   window.removeEventListener('login', handleLoginEvent)
   window.removeEventListener('team-changed', handleTeamChangedEvent)
+  window.removeEventListener('scroll', handleScroll)
 })
 
 function refreshActiveTeamStatus(detail) {
@@ -607,206 +636,489 @@ async function saveProfile() {
       currentUser.value = data.user
       userName.value = data.user.name
       editMode.value = false
-      toastService.add({ severity: 'success', summary: 'Profil aktualizovaný', detail: 'Vaše údaje boli úspešne zmenené.', life: 3000 })
+      toastService.add({ severity: 'success', summary: t('profile.updated'), detail: t('profile.updated_desc'), life: 3000 })
     } else {
-      toastService.add({ severity: 'error', summary: 'Chyba', detail: data.message || 'Nepodarilo sa aktualizovať profil.', life: 3000 })
+      toastService.add({ severity: 'error', summary: t('toast.error'), detail: data.message || t('profile.update_error_desc'), life: 3000 })
     }
   } catch (err) {
     console.error('Error updating profile:', err)
-    toastService.add({ severity: 'error', summary: 'Chyba', detail: 'Chyba pri aktualizácii profilu.', life: 3000 })
+    toastService.add({ severity: 'error', summary: t('toast.error'), detail: t('profile.update_error_desc'), life: 3000 })
   }
 }
 </script>
 
 <style scoped>
-/* Navigation Link */
-.nav-link {
-  @apply flex items-center gap-2 px-3 py-2 text-slate-300 font-medium rounded-lg transition-all duration-200;
+/* ═══════════════════════════════════════════════════════════
+   SINGLE UNIFIED NAVBAR
+   ═══════════════════════════════════════════════════════════ */
+.nav-bar {
+  background: var(--color-nav-bg);
+  border-bottom: 2px solid var(--color-border);
+  position: relative;
+  z-index: 100;
+  overflow: visible;
 }
-
-.nav-link:hover {
-  @apply text-white bg-slate-800/50;
+.nav-bar::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: -2px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, var(--color-accent) 50%, transparent 100%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
 }
-
-/* Admin Badge */
-.admin-badge {
-  @apply flex items-center gap-2 px-3 py-2 font-semibold text-sm rounded-xl transition-all duration-200;
-  background: linear-gradient(135deg, rgba(220, 38, 38, 0.2) 0%, rgba(185, 28, 28, 0.3) 100%);
-  border: 1px solid rgba(239, 68, 68, 0.4);
-  color: #fca5a5;
+.nav-bar.nav-glow::after {
+  opacity: 0.7;
 }
-
-.admin-badge:hover {
-  background: linear-gradient(135deg, rgba(220, 38, 38, 0.3) 0%, rgba(185, 28, 28, 0.4) 100%);
-  border-color: rgba(239, 68, 68, 0.6);
-  color: #fecaca;
-  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
+.nav-bar.nav-glow .nav-logo {
+  filter: drop-shadow(0 4px 18px rgba(0,0,0,0.5)) drop-shadow(0 2px 10px rgba(var(--color-accent-rgb), 0.3));
 }
-
-/* Ghost Nav Button */
-.btn-ghost-nav {
-  @apply flex items-center gap-2 px-3 py-2 text-slate-300 font-medium rounded-lg transition-all duration-200;
+.nav-bar.nav-shine .nav-logo {
+  animation: nav-logo-shine 0.7s ease-out;
 }
-
-.btn-ghost-nav:hover {
-  @apply text-white bg-slate-800/50;
+.nav-bar.nav-shine::after {
+  opacity: 0.95;
 }
-
-/* Primary Nav Button */
-.btn-primary-nav {
-  @apply flex items-center gap-2 px-4 py-2 font-semibold text-white rounded-xl transition-all duration-200;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+.nav-bar.nav-shine .nav-logo,
+.nav-bar.nav-glow .nav-logo {
+  will-change: filter;
 }
-
-.btn-primary-nav:hover {
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
-  transform: translateY(-1px);
+@keyframes nav-logo-shine {
+  0% {
+    filter: drop-shadow(0 4px 14px rgba(0,0,0,0.45)) drop-shadow(0 1px 4px rgba(var(--color-accent-rgb), 0.15));
+  }
+  45% {
+    filter: drop-shadow(0 8px 26px rgba(0,0,0,0.55)) drop-shadow(0 0 14px rgba(var(--color-accent-rgb), 0.55));
+  }
+  100% {
+    filter: drop-shadow(0 4px 14px rgba(0,0,0,0.45)) drop-shadow(0 1px 4px rgba(var(--color-accent-rgb), 0.15));
+  }
 }
-
-/* User Profile Button */
-.user-profile-btn {
-  @apply flex items-center gap-2.5 px-3 py-1.5 rounded-xl transition-all duration-200;
-  background: rgba(30, 41, 59, 0.6);
-  border: 1px solid rgba(71, 85, 105, 0.5);
-  backdrop-filter: blur(8px);
-}
-
-.user-profile-btn:hover {
-  background: rgba(51, 65, 85, 0.6);
-  border-color: rgba(99, 102, 241, 0.5);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-/* Logout Button */
-.btn-logout {
-  @apply flex items-center gap-2 px-3 py-2 text-slate-300 font-medium rounded-xl transition-all duration-200;
-  background: rgba(30, 41, 59, 0.6);
-  border: 1px solid rgba(71, 85, 105, 0.5);
-  backdrop-filter: blur(8px);
-}
-
-.btn-logout:hover {
-  @apply text-rose-300;
-  background: rgba(159, 18, 57, 0.2);
-  border-color: rgba(244, 63, 94, 0.4);
-}
-
-/* Dialog Buttons */
-.btn-primary-dialog {
-  @apply flex items-center justify-center gap-2 px-4 py-2.5 font-semibold text-white rounded-xl transition-all duration-200;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
-}
-
-.btn-primary-dialog:hover {
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
-}
-
-.btn-secondary-dialog {
-  @apply flex items-center justify-center gap-2 px-4 py-2.5 font-semibold text-slate-200 rounded-xl transition-all duration-200;
-  background: rgba(51, 65, 85, 0.5);
-  border: 1px solid rgba(100, 116, 139, 0.5);
-}
-
-.btn-secondary-dialog:hover {
-  @apply text-white;
-  background: rgba(71, 85, 105, 0.6);
-  border-color: rgba(148, 163, 184, 0.5);
-}
-
-.btn-ghost-dialog {
-  @apply flex items-center justify-center gap-2 px-4 py-2.5 font-medium text-slate-400 rounded-xl transition-all duration-200;
-  background: transparent;
-  border: 1px solid transparent;
-}
-
-.btn-ghost-dialog:hover {
-  @apply text-slate-200;
-  background: rgba(51, 65, 85, 0.3);
-  border-color: rgba(71, 85, 105, 0.3);
-}
-
-/* Profile Info Rows */
-.profile-info-row {
-  @apply flex justify-between items-center p-3 rounded-lg;
-  background: rgba(30, 41, 59, 0.5);
-  border: 1px solid rgba(51, 65, 85, 0.5);
-}
-
-.profile-label {
-  @apply flex items-center gap-2 text-slate-400 font-medium text-sm;
-}
-
-.profile-value {
-  @apply text-white font-semibold;
-}
-
-.profile-input {
-  @apply bg-slate-800/80 text-white px-3 py-1.5 rounded-lg border border-slate-600/50 transition-all duration-200;
-}
-
-.profile-input:focus {
-  @apply outline-none border-indigo-500/50;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
-}
-
-/* Password Input */
-.password-input {
-  @apply w-full bg-slate-800/50 text-white px-3 py-2.5 pl-10 rounded-xl border border-slate-700/50 transition-all duration-200;
-}
-
-.password-input:focus {
-  @apply outline-none border-indigo-500/50;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
-}
-
-.password-input::placeholder {
-  @apply text-slate-500;
-}
-
-/* Dialog Header - Custom centered layout with close button */
-.dialog-header-custom {
+.nav-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 32px;
+  height: 60px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 100%;
+  justify-content: space-between;
+  gap: 16px;
   position: relative;
 }
 
-.dialog-title-centered {
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: #f1f5f9;
-  text-align: center;
-}
-
-.dialog-close-btn {
-  position: absolute;
-  right: -0.5rem;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 2rem;
-  height: 2rem;
+/* ── Left: Links ── */
+.nav-left {
   display: flex;
   align-items: center;
+  gap: 2px;
+  flex: 1;
+}
+
+/* ── Center: Logo ── */
+.nav-brand {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  text-decoration: none;
+  z-index: 2;
+}
+.nav-logo {
+  height: 72px;
+  width: auto;
+  object-fit: contain;
+  position: relative;
+  top: 10px;
+  filter: drop-shadow(0 4px 14px rgba(0,0,0,0.45)) drop-shadow(0 1px 4px rgba(var(--color-accent-rgb), 0.15));
+  transition: filter 0.2s;
+}
+.nav-brand:hover .nav-logo {
+  filter: drop-shadow(0 6px 20px rgba(0,0,0,0.55)) drop-shadow(0 2px 8px rgba(var(--color-accent-rgb), 0.25));
+}
+.nav-brand-text-wrap {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+.nav-brand-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-text);
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+.nav-brand-accent { color: var(--color-accent); }
+.nav-brand-sub {
+  font-size: 0.65rem;
+  color: var(--color-text-subtle);
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+.nav-brand:hover .nav-brand-title { color: var(--color-text); }
+
+
+.nav-link {
+  padding: 8px 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  border-radius: 3px;
+  transition: color 0.12s, background 0.12s;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+.nav-link:hover { color: var(--color-text); background: var(--color-hover-bg); }
+.nav-link.router-link-active { color: var(--color-accent); }
+.nav-link-admin { color: var(--color-danger); }
+.nav-link-admin:hover { color: var(--color-danger-hover); background: rgba(var(--color-danger-rgb), 0.1); }
+
+/* ── Right: Auth ── */
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.nav-btn-ghost {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 12px; font-size: 0.82rem; font-weight: 600;
+  color: var(--color-text-muted); background: transparent; border: none;
+  border-radius: 3px; cursor: pointer; transition: color 0.12s, background 0.12s;
+}
+.nav-btn-ghost:hover { color: var(--color-text); background: var(--color-hover-bg-soft); }
+.nav-btn-logout:hover { color: var(--color-danger); background: rgba(var(--color-danger-rgb), 0.1); }
+
+.nav-btn-accent {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 14px; font-size: 0.82rem; font-weight: 600;
+  color: var(--color-accent-contrast); background: var(--color-accent); border: none;
+  border-radius: 3px; cursor: pointer; transition: background 0.12s;
+}
+.nav-btn-accent:hover { background: var(--color-accent-hover); }
+
+/* User button */
+.nav-user-btn {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 10px 4px 4px; background: var(--color-user-btn-bg);
+  border: 1px solid var(--color-border); border-radius: 3px;
+  cursor: pointer; transition: background 0.12s, border-color 0.12s;
+}
+.nav-user-btn:hover { background: var(--color-user-btn-bg-hover); border-color: var(--color-accent); }
+
+.nav-avatar { width: 28px; height: 28px; border-radius: 3px; object-fit: cover; }
+.nav-avatar-placeholder {
+  width: 28px; height: 28px; border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+  line-height: 1;
+  color: #fff; font-weight: 700; font-size: 0.8rem;
+}
+.nav-user-name {
+  font-size: 0.82rem; font-weight: 600; color: var(--color-text);
+  display: none;
+}
+@media (min-width: 640px) { .nav-user-name { display: inline; } }
+
+.nav-theme-toggle {
+  min-width: 120px;
   justify-content: center;
-  color: #94a3b8;
-  background: transparent;
-  border: none;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
+}
+.nav-theme-label {
+  letter-spacing: 0.01em;
 }
 
-.dialog-close-btn:hover {
-  color: #f1f5f9;
-  background: rgba(71, 85, 105, 0.5);
+/* ═══ Language Switcher ═══ */
+.nav-lang-switcher {
+  position: relative;
+}
+.nav-lang-btn {
+  display: flex; align-items: center; gap: 5px;
+  padding: 6px 10px; min-width: unset;
+}
+.nav-lang-flag { font-size: 1.1rem; line-height: 1; }
+.nav-lang-code { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.03em; }
+.nav-lang-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 9999;
+  background: var(--color-surface, #1e2535);
+  border: 1px solid var(--color-border, rgba(255,255,255,0.1));
+  border-radius: 8px;
+  padding: 6px;
+  min-width: 160px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.nav-lang-option {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 10px;
+  border: none; border-radius: 5px; cursor: pointer;
+  font-size: 0.82rem; font-weight: 500;
+  background: transparent; color: var(--color-text);
+  text-align: left; width: 100%;
+  transition: background 0.12s, color 0.12s;
+}
+.nav-lang-option:hover { background: var(--color-border, rgba(255,255,255,0.08)); }
+.nav-lang-option.active {
+  background: var(--color-accent, #00c896);
+  color: var(--color-accent-contrast, #000);
+  font-weight: 700;
 }
 
-.dialog-close-btn i {
-  font-size: 0.875rem;
+/* ═══════════════════════════════════════════════════════════
+   DIALOG STYLES (profile & password)
+   ═══════════════════════════════════════════════════════════ */
+.btn-primary-dialog {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 8px 16px; font-size: 0.85rem; font-weight: 600;
+  color: var(--color-accent-contrast); background: var(--color-accent); border: none; border-radius: 3px;
+  cursor: pointer; transition: background 0.12s;
+}
+.btn-primary-dialog:hover { background: var(--color-accent-hover); }
+
+.btn-secondary-dialog {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 8px 16px; font-size: 0.85rem; font-weight: 600;
+  color: var(--color-text); background: var(--color-border); border: none; border-radius: 3px;
+  cursor: pointer; transition: background 0.12s;
+}
+.btn-secondary-dialog:hover { background: var(--color-scrollbar-thumb-hover); color: var(--color-text); }
+
+.btn-ghost-dialog {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 8px 16px; font-size: 0.85rem; font-weight: 500;
+  color: var(--color-text-muted); background: transparent; border: none; border-radius: 3px;
+  cursor: pointer; transition: color 0.12s, background 0.12s;
+}
+.btn-ghost-dialog:hover { color: var(--color-text); background: var(--color-hover-bg-soft); }
+
+/* Profile Info Rows */
+.profile-info-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 14px; border-radius: 3px;
+  background: var(--color-surface); border: 1px solid var(--color-border);
+}
+.profile-label { font-size: 0.8rem; font-weight: 600; color: var(--color-text-muted); }
+.profile-value { font-size: 0.9rem; font-weight: 600; color: var(--color-text); }
+
+.profile-input {
+  background: var(--color-elevated); color: var(--color-text); padding: 6px 12px;
+  border-radius: 3px; border: 1px solid var(--color-border); font-size: 0.9rem;
+  outline: none; transition: border-color 0.12s;
+}
+.profile-input:focus { border-color: var(--color-accent); }
+
+/* Password Input */
+.password-input {
+  width: 100%; background: var(--color-elevated); color: var(--color-text);
+  padding: 10px 12px; border-radius: 3px;
+  border: 1px solid var(--color-border); font-size: 0.9rem;
+  outline: none; transition: border-color 0.12s;
+}
+.password-input:focus { border-color: var(--color-accent); }
+.password-input::placeholder { color: var(--color-text-subtle); }
+
+/* Dialog Header */
+.dialog-header-custom {
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; position: relative;
+}
+.dialog-title-centered {
+  font-size: 1rem; font-weight: 600; color: var(--color-text); text-align: center;
+}
+.dialog-close-btn {
+  position: absolute; right: -8px; top: 50%; transform: translateY(-50%);
+  width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+  color: var(--color-text-muted); background: transparent; border: none; border-radius: 3px;
+  cursor: pointer; transition: all 0.12s;
+}
+.dialog-close-btn:hover { color: var(--color-text); background: var(--color-hover-bg); }
+
+/* Responsive */
+@media (max-width: 1100px) {
+  .nav-inner {
+    padding: 0 18px;
+  }
+
+  .nav-brand {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .nav-inner {
+    height: auto;
+    min-height: 52px;
+    padding: 7px 10px;
+    gap: 8px;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: space-between;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .nav-inner::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-left {
+    order: 1;
+    flex: 0 0 auto;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    overflow: visible;
+    padding-bottom: 0;
+    min-height: 0;
+    gap: 6px;
+  }
+
+  .nav-right {
+    order: 2;
+    flex: 0 0 auto;
+    justify-content: flex-end;
+    gap: 6px;
+    flex-wrap: nowrap;
+    overflow: visible;
+    min-height: 0;
+  }
+
+  .nav-link {
+    padding: 6px 9px;
+    font-size: 0.74rem;
+    letter-spacing: 0.025em;
+  }
+
+  .nav-btn-ghost,
+  .nav-btn-accent {
+    padding: 6px 9px;
+    font-size: 0.74rem;
+    min-height: 30px;
+  }
+
+  .nav-theme-toggle {
+    display: none;
+  }
+
+  .nav-theme-label {
+    display: none;
+  }
+
+  .nav-user-btn {
+    min-height: 30px;
+    padding: 2px 7px 2px 2px;
+  }
+
+  .nav-lang-btn {
+    min-height: 30px;
+    padding: 5px 7px;
+  }
+
+  .nav-avatar,
+  .nav-avatar-placeholder {
+    width: 23px;
+    height: 23px;
+  }
+
+  .nav-avatar-placeholder {
+    display: grid;
+    place-items: center;
+    line-height: 1;
+  }
+}
+
+@media (max-width: 640px) {
+  .nav-inner {
+    min-height: 44px;
+    padding: 6px 8px;
+    gap: 6px;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .nav-inner::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-lang-code {
+    display: none;
+  }
+
+  .nav-theme-toggle {
+    display: none;
+  }
+
+  .nav-btn-ghost,
+  .nav-btn-accent {
+    padding: 5px 7px;
+    font-size: 0.7rem;
+    min-height: 28px;
+  }
+
+  .nav-left {
+    order: 1;
+    flex: 0 0 auto;
+    width: auto;
+    max-width: none;
+    margin: 0;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    gap: 4px;
+    overflow: visible;
+    padding-bottom: 0;
+    min-height: 0;
+  }
+
+  .nav-right {
+    order: 2;
+    flex: 0 0 auto;
+    width: auto;
+    max-width: none;
+    margin: 0;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+    gap: 4px;
+    overflow: visible;
+    padding-bottom: 0;
+    min-height: 0;
+  }
+
+  .nav-link {
+    padding: 5px 7px;
+    font-size: 0.7rem;
+    letter-spacing: 0.02em;
+  }
+
+  .nav-user-btn {
+    padding: 2px 6px 2px 2px;
+    min-height: 28px;
+  }
+
+  .nav-lang-btn {
+    min-height: 28px;
+    padding: 4px 6px;
+  }
+
+  .nav-avatar,
+  .nav-avatar-placeholder {
+    width: 22px;
+    height: 22px;
+  }
+
+  .nav-avatar-placeholder {
+    display: grid;
+    place-items: center;
+    font-size: 0.72rem;
+    line-height: 1;
+  }
 }
 </style>

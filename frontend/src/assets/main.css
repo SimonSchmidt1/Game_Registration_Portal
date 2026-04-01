@@ -2,18 +2,99 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Modern, elegant typography */
+/* ═══════════════════════════════════════════════════════════
+   THEME TOKENS (default: dark)
+   ═══════════════════════════════════════════════════════════ */
+:root {
+  --color-bg: #1b2838;
+  --color-bg-rgb: 27, 40, 56;
+  --color-surface: #16202d;
+  --color-surface-rgb: 22, 32, 45;
+  --color-elevated: #1e2d40;
+  --color-elevated-rgb: 30, 45, 64;
+  --color-surface-deep: #0e1824;
+  --color-surface-deep-rgb: 14, 24, 36;
+  --color-border: #2a475e;
+  --color-border-rgb: 42, 71, 94;
+  --color-border-strong: #3d6380;
+  --color-border-strong-rgb: 61, 99, 128;
+  --color-text: #c7d5e0;
+  --color-text-strong: #ffffff;
+  --color-text-muted: #8f98a0;
+  --color-text-muted-rgb: 143, 152, 160;
+  --color-text-subtle: #56697a;
+  --color-accent: #5bbd8a;
+  --color-accent-hover: #4fa578;
+  --color-accent-contrast: #1b2838;
+  --color-accent-strong: #469a6d;
+  --color-danger: #cd4c4c;
+  --color-danger-hover: #e06060;
+  --color-warning: #d4a94e;
+  --color-nav-bg: #171d25;
+  --color-hover-bg: rgba(255, 255, 255, 0.06);
+  --color-hover-bg-soft: rgba(255, 255, 255, 0.04);
+  --color-hover-bg-strong: rgba(255, 255, 255, 0.08);
+  --color-user-btn-bg: rgba(42, 71, 94, 0.4);
+  --color-user-btn-bg-hover: rgba(42, 71, 94, 0.7);
+  --color-scrollbar-track: #16202d;
+  --color-scrollbar-thumb: #2a475e;
+  --color-scrollbar-thumb-hover: #3d6380;
+  --color-accent-rgb: 91, 189, 138;
+  --color-danger-rgb: 205, 76, 76;
+  --color-warning-rgb: 212, 169, 78;
+}
+
+html[data-theme='light'] {
+  --color-bg: #f1f4f8;
+  --color-bg-rgb: 241, 244, 248;
+  --color-surface: #ffffff;
+  --color-surface-rgb: 255, 255, 255;
+  --color-elevated: #e8edf4;
+  --color-elevated-rgb: 232, 237, 244;
+  --color-surface-deep: #dbe3ee;
+  --color-surface-deep-rgb: 219, 227, 238;
+  --color-border: #c9d4e3;
+  --color-border-rgb: 201, 212, 227;
+  --color-border-strong: #a8b3c4;
+  --color-border-strong-rgb: 168, 179, 196;
+  --color-text: #1c2835;
+  --color-text-strong: #0f172a;
+  --color-text-muted: #566277;
+  --color-text-muted-rgb: 86, 98, 119;
+  --color-text-subtle: #77839a;
+  --color-accent: #2d8f6f;
+  --color-accent-hover: #277a60;
+  --color-accent-contrast: #ffffff;
+  --color-accent-strong: #226b55;
+  --color-danger: #b33a3a;
+  --color-danger-hover: #9f3232;
+  --color-warning: #b8892e;
+  --color-nav-bg: #f8fafc;
+  --color-hover-bg: rgba(0, 0, 0, 0.05);
+  --color-hover-bg-soft: rgba(0, 0, 0, 0.04);
+  --color-hover-bg-strong: rgba(0, 0, 0, 0.08);
+  --color-user-btn-bg: rgba(17, 24, 39, 0.06);
+  --color-user-btn-bg-hover: rgba(17, 24, 39, 0.1);
+  --color-scrollbar-track: #e6ebf2;
+  --color-scrollbar-thumb: #c0c8d6;
+  --color-scrollbar-thumb-hover: #a8b3c4;
+  --color-accent-rgb: 45, 143, 111;
+  --color-danger-rgb: 179, 58, 58;
+  --color-warning-rgb: 184, 137, 46;
+}
+
+/* Typography */
 * {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Seamless background for the entire app */
+/* App background – solid dark, no gradient */
 html {
-  background: linear-gradient(135deg, #020617 0%, #0f172a 50%, #1e1b4b 100%);
-  background-attachment: fixed;
+  background: var(--color-bg);
   min-height: 100%;
+  overflow-x: hidden;
 }
 
 body {
@@ -21,33 +102,584 @@ body {
   min-height: 100vh;
   margin: 0;
   padding: 0;
+  color: var(--color-text);
+  overflow-x: hidden;
 }
 
 #app {
   min-height: 100vh;
 }
 
-/* Smooth scrollbar that matches the theme */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+img,
+video {
+  max-width: 100%;
 }
 
-::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.5);
+/* Teleported dialogs (PrimeVue) should never exceed viewport width on small devices */
+.p-dialog {
+  max-width: calc(100vw - 20px);
 }
 
-::-webkit-scrollbar-thumb {
-  background: rgba(71, 85, 105, 0.6);
-  border-radius: 4px;
-}
+/* Scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--color-scrollbar-track); }
+::-webkit-scrollbar-thumb { background: var(--color-scrollbar-thumb); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-scrollbar-thumb-hover); }
 
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.7);
-}
-
-/* Firefox scrollbar */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(71, 85, 105, 0.6) rgba(15, 23, 42, 0.5);
+  scrollbar-color: var(--color-scrollbar-thumb) var(--color-scrollbar-track);
+}
+
+.app-footer {
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-subtle);
+  position: relative;
+}
+.app-footer::before {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; top: -1px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, var(--color-accent) 50%, transparent 100%);
+  opacity: 0;
+  box-shadow: 0 0 12px 2px rgba(var(--color-accent-rgb), 0.25);
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+.app-footer.footer-glow::before {
+  opacity: 0.7;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   GLOBAL LIGHT-MODE OVERRIDES FOR SLATE PALETTE
+   PrimeVue Dialogs and Dropdowns are teleported to <body>,
+   so they live outside any .steam-theme wrapper.  These
+   rules remap Tailwind slate-* colours in light mode only.
+   ═══════════════════════════════════════════════════════════ */
+html[data-theme='light'] .text-slate-100 { color: var(--color-text) !important; }
+html[data-theme='light'] .text-slate-200 { color: var(--color-text) !important; }
+html[data-theme='light'] .text-slate-300 { color: var(--color-text-muted) !important; }
+html[data-theme='light'] .text-slate-500 { color: var(--color-text-subtle) !important; }
+html[data-theme='light'] .text-slate-600 { color: var(--color-text-subtle) !important; }
+
+html[data-theme='light'] .from-slate-800\/50 { --tw-gradient-from: rgba(var(--color-surface-rgb), 0.5) !important; }
+html[data-theme='light'] .to-slate-900\/50   { --tw-gradient-to: rgba(var(--color-bg-rgb), 0.5) !important; }
+html[data-theme='light'] .bg-slate-900\/70   { background-color: rgba(var(--color-bg-rgb), 0.7) !important; }
+html[data-theme='light'] .border-slate-700\/30 { border-color: rgba(var(--color-border-rgb), 0.3) !important; }
+
+/* ═══════════════════════════════════════════════════════════
+   GLOBAL THEME OVERRIDES FOR TAILWIND UTILITY CLASSES
+   Applied inside any element with the .steam-theme class.
+   This ensures light-mode tokens replace hardcoded dark
+   Tailwind colour utilities across ALL components.
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Backgrounds (gray scale) ─────────────────────────── */
+.steam-theme .bg-gray-950 { background: var(--color-surface-deep) !important; }
+.steam-theme .bg-gray-900 { background: var(--color-bg) !important; }
+.steam-theme .bg-gray-800 { background: var(--color-surface) !important; }
+.steam-theme .bg-gray-700 { background: var(--color-elevated) !important; }
+.steam-theme .bg-gray-600 { background: var(--color-border) !important; }
+.steam-theme .bg-gray-500 { background: var(--color-border-strong) !important; }
+
+/* Backgrounds (gray scale with opacity) */
+.steam-theme .bg-gray-900\/50 { background: rgba(var(--color-bg-rgb), 0.5) !important; }
+.steam-theme .bg-gray-900\/30 { background: rgba(var(--color-bg-rgb), 0.3) !important; }
+.steam-theme .bg-gray-800\/50 { background: rgba(var(--color-surface-rgb), 0.5) !important; }
+.steam-theme .bg-gray-800\/30 { background: rgba(var(--color-surface-rgb), 0.3) !important; }
+.steam-theme .bg-gray-700\/50 { background: rgba(var(--color-elevated-rgb), 0.5) !important; }
+
+/* ── Backgrounds (accent / semantic) ──────────────────── */
+.steam-theme .bg-teal-700 { background: rgba(var(--color-accent-rgb), 0.15) !important; color: var(--color-accent) !important; }
+.steam-theme .bg-teal-600 { background: var(--color-accent) !important; color: var(--color-accent-contrast) !important; }
+.steam-theme .bg-teal-400 { background: var(--color-accent) !important; }
+.steam-theme .bg-blue-900\/50 { background: rgba(var(--color-accent-rgb), 0.10) !important; }
+.steam-theme .bg-blue-900\/30 { background: rgba(var(--color-accent-rgb), 0.06) !important; }
+.steam-theme .bg-indigo-600 { background: var(--color-accent) !important; color: var(--color-accent-contrast) !important; }
+.steam-theme .bg-indigo-900 { background: rgba(var(--color-accent-rgb), 0.15) !important; }
+.steam-theme .bg-emerald-900\/20 { background: rgba(var(--color-accent-rgb), 0.10) !important; }
+
+/* Backgrounds (warning / danger) */
+.steam-theme .bg-yellow-600 { background: var(--color-warning) !important; color: var(--color-text-strong) !important; }
+.steam-theme .bg-yellow-900\/30 { background: rgba(var(--color-warning-rgb), 0.10) !important; }
+.steam-theme .bg-green-900 { background: rgba(var(--color-accent-rgb), 0.15) !important; }
+.steam-theme .bg-red-900\/20 { background: rgba(var(--color-danger-rgb), 0.10) !important; }
+.steam-theme .bg-red-900\/30 { background: rgba(var(--color-danger-rgb), 0.15) !important; }
+.steam-theme .bg-rose-900\/20 { background: rgba(var(--color-danger-rgb), 0.10) !important; }
+
+/* ── Gradients ────────────────────────────────────────── */
+.steam-theme .bg-gradient-to-br.from-gray-800.to-gray-900 {
+  background-image: linear-gradient(to bottom right, var(--color-surface), var(--color-bg)) !important;
+}
+.steam-theme .bg-gradient-to-br.from-blue-800.to-blue-900 {
+  background-image: linear-gradient(to bottom right, rgba(var(--color-accent-rgb), 0.25), rgba(var(--color-accent-rgb), 0.12)) !important;
+}
+.steam-theme .bg-gradient-to-br.from-green-800.to-green-900 {
+  background-image: linear-gradient(to bottom right, rgba(var(--color-accent-rgb), 0.25), rgba(var(--color-accent-rgb), 0.12)) !important;
+}
+.steam-theme .bg-gradient-to-br.from-purple-800.to-purple-900 {
+  background-image: linear-gradient(to bottom right, rgba(var(--color-accent-rgb), 0.20), rgba(var(--color-accent-rgb), 0.10)) !important;
+}
+.steam-theme .bg-gradient-to-br.from-yellow-700.to-orange-800,
+.steam-theme .bg-gradient-to-br.from-yellow-800.to-yellow-900 {
+  background-image: linear-gradient(to bottom right, rgba(var(--color-warning-rgb), 0.25), rgba(var(--color-warning-rgb), 0.12)) !important;
+}
+.steam-theme .bg-gradient-to-br.from-yellow-900\/50.to-orange-900\/50 {
+  background-image: linear-gradient(to bottom right, rgba(var(--color-warning-rgb), 0.15), rgba(var(--color-warning-rgb), 0.08)) !important;
+}
+
+/* ── Borders ──────────────────────────────────────────── */
+.steam-theme .border-gray-800 { border-color: var(--color-border) !important; }
+.steam-theme .border-gray-700 { border-color: var(--color-border) !important; }
+.steam-theme .border-gray-600 { border-color: var(--color-border-strong) !important; }
+.steam-theme .border-gray-500 { border-color: var(--color-border-strong) !important; }
+
+.steam-theme .border-gray-600\/50 { border-color: rgba(var(--color-border-strong-rgb), 0.5) !important; }
+.steam-theme .border-gray-600\/30 { border-color: rgba(var(--color-border-strong-rgb), 0.3) !important; }
+
+.steam-theme .border-teal-600 { border-color: rgba(var(--color-accent-rgb), 0.4) !important; }
+.steam-theme .border-blue-700 { border-color: rgba(var(--color-accent-rgb), 0.3) !important; }
+.steam-theme .border-blue-700\/50 { border-color: rgba(var(--color-accent-rgb), 0.2) !important; }
+.steam-theme .border-green-700 { border-color: rgba(var(--color-accent-rgb), 0.3) !important; }
+.steam-theme .border-purple-700 { border-color: rgba(var(--color-accent-rgb), 0.3) !important; }
+.steam-theme .border-yellow-500 { border-color: rgba(var(--color-warning-rgb), 0.4) !important; }
+.steam-theme .border-yellow-700 { border-color: rgba(var(--color-warning-rgb), 0.3) !important; }
+.steam-theme .border-red-700 { border-color: rgba(var(--color-danger-rgb), 0.3) !important; }
+.steam-theme .border-red-800 { border-color: rgba(var(--color-danger-rgb), 0.3) !important; }
+.steam-theme .border-emerald-600\/50 { border-color: rgba(var(--color-accent-rgb), 0.3) !important; }
+.steam-theme .border-rose-600\/50 { border-color: rgba(var(--color-danger-rgb), 0.3) !important; }
+
+.steam-theme .divide-gray-700 > :not([hidden]) ~ :not([hidden]) { border-color: var(--color-border) !important; }
+
+/* ── Text colours ─────────────────────────────────────── */
+.steam-theme .text-white { color: var(--color-text-strong) !important; }
+.steam-theme .text-gray-100 { color: var(--color-text) !important; }
+.steam-theme .text-gray-200 { color: var(--color-text) !important; }
+.steam-theme .text-gray-300 { color: var(--color-text-muted) !important; }
+.steam-theme .text-gray-400 { color: var(--color-text-muted) !important; }
+.steam-theme .text-gray-500 { color: var(--color-text-subtle) !important; }
+.steam-theme .text-gray-600 { color: var(--color-text-subtle) !important; }
+.steam-theme .text-gray-900 { color: var(--color-text-strong) !important; }
+
+.steam-theme .text-teal-100 { color: var(--color-text) !important; }
+.steam-theme .text-teal-300 { color: var(--color-accent) !important; }
+.steam-theme .text-teal-400 { color: var(--color-accent) !important; }
+
+.steam-theme .text-blue-300,
+.steam-theme .text-blue-400,
+.steam-theme .text-blue-500 { color: var(--color-accent) !important; }
+
+.steam-theme .text-green-300,
+.steam-theme .text-green-400 { color: var(--color-accent) !important; }
+
+.steam-theme .text-yellow-300,
+.steam-theme .text-yellow-400 { color: var(--color-warning) !important; }
+
+.steam-theme .text-orange-400 { color: var(--color-warning) !important; }
+
+.steam-theme .text-red-200,
+.steam-theme .text-red-300,
+.steam-theme .text-red-400 { color: var(--color-danger) !important; }
+
+.steam-theme .text-purple-300 { color: var(--color-accent) !important; }
+.steam-theme .text-indigo-300 { color: var(--color-accent) !important; }
+.steam-theme .text-emerald-300 { color: var(--color-accent) !important; }
+.steam-theme .text-rose-300 { color: var(--color-danger) !important; }
+
+/* ── Hover states ─────────────────────────────────────── */
+.steam-theme .hover\:bg-gray-600:hover { background: var(--color-border) !important; }
+.steam-theme .hover\:bg-gray-800\/50:hover { background: rgba(var(--color-surface-rgb), 0.5) !important; }
+.steam-theme .hover\:bg-gray-750:hover { background: var(--color-elevated) !important; }
+.steam-theme .hover\:bg-teal-700:hover { background: var(--color-accent-hover) !important; }
+.steam-theme .hover\:bg-indigo-700:hover { background: var(--color-accent-hover) !important; }
+.steam-theme .hover\:bg-emerald-900\/30:hover { background: rgba(var(--color-accent-rgb), 0.12) !important; }
+.steam-theme .hover\:bg-rose-900\/30:hover { background: rgba(var(--color-danger-rgb), 0.12) !important; }
+
+.steam-theme .hover\:text-white:hover { color: var(--color-text-strong) !important; }
+.steam-theme .hover\:text-teal-400:hover { color: var(--color-accent) !important; }
+.steam-theme .hover\:text-teal-300:hover { color: var(--color-accent-hover) !important; }
+
+.steam-theme .hover\:border-gray-500:hover { border-color: var(--color-border-strong) !important; }
+.steam-theme .hover\:border-blue-500\/50:hover { border-color: rgba(var(--color-accent-rgb), 0.3) !important; }
+
+/* ── File input pseudo-element ────────────────────────── */
+.steam-theme .file\:bg-indigo-600::file-selector-button { background: var(--color-accent) !important; }
+.steam-theme .file\:text-white::file-selector-button { color: var(--color-accent-contrast) !important; }
+.steam-theme .hover\:file\:bg-indigo-700:hover::file-selector-button { background: var(--color-accent-hover) !important; }
+
+/* ── Shadow overrides ─────────────────────────────────── */
+.steam-theme .shadow-yellow-500\/50 { --tw-shadow-color: rgba(var(--color-warning-rgb), 0.5) !important; }
+
+/* ── PrimeVue component overrides inside .steam-theme ── */
+/* PrimeVue 4 renamed Dropdown → Select (.p-select), keep .p-dropdown for compat */
+.steam-theme .p-inputtext,
+.steam-theme .p-select,
+.steam-theme .p-dropdown,
+.steam-theme .p-multiselect,
+.steam-theme .p-calendar,
+.steam-theme .p-textarea {
+  background: var(--color-elevated) !important;
+  border: 1px solid var(--color-border) !important;
+  color: var(--color-text) !important;
+  border-radius: 3px !important;
+}
+
+.steam-theme .p-select-label,
+.steam-theme .p-dropdown-label,
+.steam-theme .p-multiselect-label {
+  color: var(--color-text) !important;
+}
+
+.steam-theme .p-inputtext:enabled:hover,
+.steam-theme .p-select:not(.p-disabled):hover,
+.steam-theme .p-dropdown:not(.p-disabled):hover,
+.steam-theme .p-multiselect:not(.p-disabled):hover,
+.steam-theme .p-calendar:not(.p-disabled):hover,
+.steam-theme .p-textarea:enabled:hover {
+  border-color: var(--color-border-strong) !important;
+}
+
+.steam-theme .p-inputtext:enabled:focus,
+.steam-theme .p-select.p-focus,
+.steam-theme .p-dropdown.p-focus,
+.steam-theme .p-multiselect.p-focus,
+.steam-theme .p-calendar.p-focus,
+.steam-theme .p-textarea:enabled:focus {
+  border-color: var(--color-accent) !important;
+  box-shadow: none !important;
+}
+
+.steam-theme .p-button {
+  background: var(--color-border);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+
+.steam-theme .p-button:hover {
+  background: var(--color-border-strong);
+  border-color: var(--color-border-strong);
+}
+
+.steam-theme .p-button.p-button-outlined {
+  background: transparent;
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+.steam-theme .p-button.p-button-outlined:hover {
+  background: var(--color-hover-bg-soft);
+  border-color: var(--color-border-strong);
+}
+
+.steam-theme .p-button.p-button-success {
+  background: rgb(114, 197, 147);
+  border-color: rgb(114, 197, 147);
+  color: var(--color-accent-contrast);
+}
+
+.steam-theme .p-button.p-button-success:hover {
+  background: rgb(106, 188, 139);
+  border-color: rgb(106, 188, 139);
+  color: var(--color-accent-contrast);
+}
+
+.steam-theme .p-button.p-button-warning:hover,
+.steam-theme .p-button.p-button-help:hover,
+.steam-theme .p-button.p-button-info:hover,
+.steam-theme .p-button.p-button-secondary:hover {
+  background: var(--color-border-strong);
+  border-color: var(--color-border-strong);
+  color: var(--color-text);
+}
+
+.steam-theme .p-button.p-button-danger {
+  background: rgba(var(--color-danger-rgb), 0.15);
+  border-color: rgba(var(--color-danger-rgb), 0.4);
+  color: var(--color-danger);
+}
+
+.steam-theme .p-button.p-button-danger:hover {
+  background: rgba(var(--color-danger-rgb), 0.26);
+  border-color: rgba(var(--color-danger-rgb), 0.6);
+  color: var(--color-danger-hover);
+}
+
+.steam-theme .p-button.p-button-warning,
+.steam-theme .p-button.p-button-help,
+.steam-theme .p-button.p-button-info,
+.steam-theme .p-button.p-button-secondary {
+  background: var(--color-border);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+.steam-theme .p-button.p-button-text:not(.p-button-danger):hover {
+  background: var(--color-hover-bg-soft) !important;
+  color: var(--color-text) !important;
+}
+
+.steam-theme .p-button.p-button-text.p-button-danger:hover {
+  background: var(--color-hover-bg-soft) !important;
+  color: var(--color-danger) !important;
+}
+
+.steam-theme .p-fileupload-choose {
+  background: var(--color-border) !important;
+  border: 1px solid var(--color-border) !important;
+  color: var(--color-text) !important;
+}
+
+.steam-theme .p-fileupload-choose:hover {
+  background: var(--color-border-strong) !important;
+  border-color: var(--color-border-strong) !important;
+}
+
+/* PrimeVue dropdown/select overlay panel (rendered at body level) */
+/* PrimeVue 4: .p-select-overlay / .p-select-list / .p-select-option */
+.p-select-overlay,
+.p-dropdown-panel,
+.p-multiselect-overlay,
+.p-multiselect-panel {
+  background: var(--color-surface) !important;
+  border: 1px solid var(--color-border) !important;
+}
+
+.p-select-list .p-select-option,
+.p-dropdown-items .p-dropdown-item,
+.p-multiselect-list .p-multiselect-option,
+.p-multiselect-items .p-multiselect-item {
+  color: var(--color-text) !important;
+}
+
+.p-select-list .p-select-option:hover,
+.p-select-list .p-select-option.p-focus,
+.p-dropdown-items .p-dropdown-item:hover,
+.p-multiselect-list .p-multiselect-option:hover,
+.p-multiselect-list .p-multiselect-option.p-focus,
+.p-multiselect-items .p-multiselect-item:hover {
+  background: var(--color-hover-bg) !important;
+}
+
+.p-select-list .p-select-option.p-selected,
+.p-select-list .p-select-option.p-highlight,
+.p-dropdown-items .p-dropdown-item.p-highlight,
+.p-multiselect-list .p-multiselect-option.p-selected,
+.p-multiselect-list .p-multiselect-option.p-highlight,
+.p-multiselect-items .p-multiselect-item.p-highlight {
+  background: rgba(var(--color-accent-rgb), 0.15) !important;
+  color: var(--color-accent) !important;
+}
+
+/* PrimeVue v4 selected option states (prevents bright/white selected row in dropdown menus) */
+.p-select-overlay .p-select-list .p-select-option.p-select-option-selected,
+.p-select-overlay .p-select-list .p-select-option[aria-selected='true'],
+.p-select-overlay .p-select-list .p-select-option.p-highlight,
+.p-dropdown-panel .p-dropdown-items .p-dropdown-item.p-highlight,
+.p-dropdown-panel .p-dropdown-items .p-dropdown-item[aria-selected='true'] {
+  background: rgba(var(--color-accent-rgb), 0.2) !important;
+  color: var(--color-text) !important;
+}
+
+.p-select-overlay .p-select-list .p-select-option.p-select-option-selected:hover,
+.p-select-overlay .p-select-list .p-select-option[aria-selected='true']:hover,
+.p-dropdown-panel .p-dropdown-items .p-dropdown-item.p-highlight:hover,
+.p-dropdown-panel .p-dropdown-items .p-dropdown-item[aria-selected='true']:hover {
+  background: rgba(var(--color-accent-rgb), 0.26) !important;
+  color: var(--color-text-strong) !important;
+}
+
+/* Keep collapsed dropdown label clean and consistent with theme */
+.p-select .p-select-label,
+.p-dropdown .p-dropdown-label {
+  background: transparent !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PRIMEVUE TELEPORTED COMPONENTS (Dialog, Toast, Overlay)
+   These render at <body> level outside any .steam-theme
+   wrapper, so they need global overrides.
+   ═══════════════════════════════════════════════════════════ */
+
+/* Dialog container */
+.p-dialog {
+  background: var(--color-bg) !important;
+  color: var(--color-text) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 4px !important;
+}
+
+.p-dialog .p-dialog-header {
+  background: var(--color-bg) !important;
+  color: var(--color-text) !important;
+  border-bottom: 1px solid var(--color-border) !important;
+}
+
+.p-dialog .p-dialog-header .p-dialog-title {
+  color: var(--color-text) !important;
+}
+
+.p-dialog .p-dialog-header .p-dialog-close-button,
+.p-dialog .p-dialog-header .p-dialog-header-close {
+  color: var(--color-text-muted) !important;
+}
+
+.p-dialog .p-dialog-header .p-dialog-close-button:hover,
+.p-dialog .p-dialog-header .p-dialog-header-close:hover {
+  color: var(--color-text) !important;
+  background: var(--color-hover-bg) !important;
+}
+
+.p-dialog .p-dialog-content {
+  background: var(--color-bg) !important;
+  color: var(--color-text) !important;
+}
+
+.p-dialog .p-dialog-footer {
+  background: var(--color-bg) !important;
+  border-top: 1px solid var(--color-border) !important;
+}
+
+.p-dialog.admin-dialog-shell .p-dialog-footer {
+  padding: 0.85rem 1.5rem 1rem !important;
+}
+
+/* Admin top-action dialogs: force centered custom titles and consistent dark controls */
+.p-dialog.admin-dialog-shell .p-dialog-header {
+  position: relative;
+  justify-content: center !important;
+}
+
+.p-dialog.admin-dialog-shell .p-dialog-header .p-dialog-title {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.p-dialog.admin-dialog-shell .p-dialog-header .p-dialog-title .admin-dlg-title {
+  color: var(--color-text-strong) !important;
+}
+
+/* Edit Team dialog keeps standard title + close icon layout */
+.p-dialog.admin-edit-team-dialog .p-dialog-header {
+  position: relative;
+  justify-content: center !important;
+}
+
+.p-dialog.admin-edit-team-dialog .p-dialog-header .p-dialog-title {
+  width: 100% !important;
+  display: flex !important;
+  justify-content: center;
+}
+
+.p-dialog.admin-edit-team-dialog .p-dialog-header .p-dialog-header-actions {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.p-dialog.admin-dialog-shell .p-dialog-content .p-inputtext,
+.p-dialog.admin-dialog-shell .p-dialog-content .p-select,
+.p-dialog.admin-dialog-shell .p-dialog-content .p-dropdown,
+.p-dialog.admin-dialog-shell .p-dialog-content .p-multiselect,
+.p-dialog.admin-dialog-shell .p-dialog-content .p-textarea,
+.p-dialog.admin-dialog-shell .p-dialog-content textarea,
+.p-dialog.admin-dialog-shell .p-dialog-content input[type='text'],
+.p-dialog.admin-dialog-shell .p-dialog-content input[type='email'],
+.p-dialog.admin-dialog-shell .p-dialog-content input[type='password'],
+.p-dialog.admin-dialog-shell .p-dialog-content input[type='number'] {
+  background: var(--color-elevated) !important;
+  border: 1px solid var(--color-border) !important;
+  color: var(--color-text) !important;
+}
+
+.p-dialog.admin-dialog-shell .p-dialog-content .p-select-label,
+.p-dialog.admin-dialog-shell .p-dialog-content .p-dropdown-label,
+.p-dialog.admin-dialog-shell .p-dialog-content .p-multiselect-label,
+.p-dialog.admin-dialog-shell .p-dialog-content .p-inputtext::placeholder,
+.p-dialog.admin-dialog-shell .p-dialog-content textarea::placeholder {
+  color: var(--color-text-muted) !important;
+}
+
+.p-dialog.admin-dialog-shell .p-dialog-content .p-inputtext:enabled:hover,
+.p-dialog.admin-dialog-shell .p-dialog-content .p-select:not(.p-disabled):hover,
+.p-dialog.admin-dialog-shell .p-dialog-content .p-dropdown:not(.p-disabled):hover,
+.p-dialog.admin-dialog-shell .p-dialog-content .p-multiselect:not(.p-disabled):hover,
+.p-dialog.admin-dialog-shell .p-dialog-content .p-textarea:enabled:hover,
+.p-dialog.admin-dialog-shell .p-dialog-content textarea:hover {
+  border-color: var(--color-border-strong) !important;
+}
+
+.p-dialog.admin-dialog-shell .p-dialog-content .p-inputtext:enabled:focus,
+.p-dialog.admin-dialog-shell .p-dialog-content .p-select.p-focus,
+.p-dialog.admin-dialog-shell .p-dialog-content .p-dropdown.p-focus,
+.p-dialog.admin-dialog-shell .p-dialog-content .p-multiselect.p-focus,
+.p-dialog.admin-dialog-shell .p-dialog-content .p-textarea:enabled:focus,
+.p-dialog.admin-dialog-shell .p-dialog-content textarea:focus {
+  border-color: var(--color-accent) !important;
+  box-shadow: none !important;
+}
+
+/* Toast */
+.p-toast .p-toast-message {
+  background: var(--color-surface) !important;
+  border: 1px solid var(--color-border) !important;
+  color: var(--color-text) !important;
+}
+
+/* Success – green */
+.p-toast .p-toast-message-success {
+  border-left: 4px solid #4ade80 !important;
+  background: rgba(74, 222, 128, 0.08) !important;
+}
+.p-toast .p-toast-message-success .p-toast-message-content .p-toast-summary {
+  color: #4ade80 !important;
+}
+
+/* Error – red */
+.p-toast .p-toast-message-error {
+  border-left: 4px solid #f87171 !important;
+  background: rgba(248, 113, 113, 0.08) !important;
+}
+.p-toast .p-toast-message-error .p-toast-message-content .p-toast-summary {
+  color: #f87171 !important;
+}
+
+/* Warning – red */
+.p-toast .p-toast-message-warn {
+  border-left: 4px solid #f87171 !important;
+  background: rgba(248, 113, 113, 0.08) !important;
+}
+.p-toast .p-toast-message-warn .p-toast-message-content .p-toast-summary {
+  color: #f87171 !important;
+}
+
+/* Info – light blue */
+.p-toast .p-toast-message-info {
+  border-left: 4px solid #60a5fa !important;
+  background: rgba(96, 165, 250, 0.08) !important;
+}
+.p-toast .p-toast-message-info .p-toast-message-content .p-toast-summary {
+  color: #60a5fa !important;
+}
+
+.p-toast .p-toast-message .p-toast-message-content .p-toast-summary {
+  color: var(--color-text) !important;
+}
+
+.p-toast .p-toast-message .p-toast-message-content .p-toast-detail {
+  color: var(--color-text-muted) !important;
+}
+
+/* Dialog overlay mask */
+.p-dialog-mask {
+  background: rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Confirm Dialog */
+.p-confirmdialog {
+  background: var(--color-bg) !important;
+  color: var(--color-text) !important;
 }

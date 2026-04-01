@@ -1,20 +1,17 @@
 <!-- DEPRECATED VIEW: AddGameView (use AddProjectView). Retained for rollback; do not modify. -->
 <template>
   <Toast />
-  <div class="max-w-2xl mx-auto mt-10 border rounded-xl p-6 shadow-sm bg-gray-900 text-gray-100 border-gray-700">
+  <div class="steam-page steam-theme max-w-2xl mx-auto mt-10 border rounded-xl p-6 shadow-sm bg-gray-900 text-gray-100 border-gray-700">
     <h2 class="text-2xl font-semibold mb-6 text-center text-teal-400">Pridať novú hru</h2>
 
     <!-- Ochranný blok pred ne-Scrum Mastermi -->
     <div v-if="loadingTeam" class="text-center p-8">
-        <i class="pi pi-spin pi-spinner text-4xl text-teal-400"></i>
         <p class="mt-4 text-gray-400">Načítavam stav tímu...</p>
     </div>
     <div v-else-if="!teamId" class="text-center p-8 bg-red-900/30 rounded-lg border border-red-800">
-        <i class="pi pi-users text-4xl text-red-400"></i>
         <p class="mt-4 font-semibold text-red-200">Musíte byť členom tímu, aby ste mohli pridávať hry.</p>
     </div>
     <div v-else-if="!isScrumMaster" class="text-center p-8 bg-red-900/30 rounded-lg border border-red-800">
-      <i class="pi pi-lock text-4xl text-red-400"></i>
       <p class="mt-4 font-semibold text-red-200">Iba Scrum Master (vedúci tímu) môže pridať hru.</p>
     </div>
 
@@ -43,7 +40,7 @@
       <!-- Dátum vydania -->
       <div>
         <label class="block mb-1 font-medium text-gray-300">Dátum vydania (plánovaný)</label>
-        <Calendar v-model="releaseDate" dateFormat="yy-mm-dd" showIcon class="w-full bg-gray-800 text-white border-gray-700" required />
+        <Calendar v-model="releaseDate" dateFormat="yy-mm-dd" class="w-full bg-gray-800 text-white border-gray-700" required />
       </div>
 
       <!-- Popis hry -->
@@ -97,8 +94,8 @@
             name="video"
             mode="basic"
             accept="video/*"
-            :maxFileSize="20971520"
-            chooseLabel="Vybrať video súbor (max. 20MB)"
+            :maxFileSize="104857600"
+            chooseLabel="Vybrať video súbor (max. 100MB)"
             @select="onFileSelect($event, 'trailer')"
             @clear="onFileClear('trailer')"
             class="w-full"
@@ -133,12 +130,12 @@
 
           <!-- Zdrojový kód -->
           <div>
-            <label class="block mb-1 font-medium text-gray-300">Zdrojový kód (.zip, max. 50MB)</label>
+            <label class="block mb-1 font-medium text-gray-300">Zdrojový kód (.zip, max. 100MB)</label>
             <FileUpload
                 name="source_code"
                 mode="basic"
                 accept=".zip,.rar,.7z"
-                :maxFileSize="52428800"
+                :maxFileSize="104857600"
                 chooseLabel="Vybrať archív"
                 @select="onFileSelect($event, 'source_code')"
                 @clear="onFileClear('source_code')"
@@ -150,12 +147,12 @@
 
           <!-- Export Hry -->
           <div>
-            <label class="block mb-1 font-medium text-gray-300">Export Hry (napr. .exe, .apk, .zip, max. 50MB)</label>
+            <label class="block mb-1 font-medium text-gray-300">Export Hry (napr. .exe, .apk, .zip, max. 100MB)</label>
             <FileUpload
                 name="export"
                 mode="basic"
                 accept=".exe,.apk,.zip"
-                :maxFileSize="52428800"
+                :maxFileSize="104857600"
                 chooseLabel="Vybrať export"
                 @select="onFileSelect($event, 'export')"
                 @clear="onFileClear('export')"
@@ -171,7 +168,6 @@
         <Button 
             type="submit" 
             label="Zverejniť hru" 
-            icon="pi pi-check" 
             class="w-full p-button-success p-button-lg" 
             :loading="loadingSubmit"
             :disabled="loadingSubmit"

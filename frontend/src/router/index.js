@@ -11,9 +11,11 @@ import VerifyEmail from '../views/VerifyEmail.vue'
 import ForgotPasswordView from '../views/ForgotPasswordView.vue'
 import ResetPasswordView from '../views/ResetPasswordView.vue'
 import AdminView from '../views/AdminView.vue'
+import GuestView from '../views/GuestView.vue'
 
 const routes = [
   { path: '/', name: 'Home', component: HomeView },
+  { path: '/guest', name: 'Guest', component: GuestView },
   { path: '/login', name: 'Login', component: LoginView },
   { path: '/register', name: 'Register', component: RegisterView },
   { path: '/verify-email', name: 'VerifyEmail', component: VerifyEmail },

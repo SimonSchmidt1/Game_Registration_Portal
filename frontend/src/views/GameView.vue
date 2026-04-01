@@ -1,21 +1,18 @@
 <!-- DEPRECATED VIEW: GameView (replaced by ProjectView). Retained for rollback; do not extend. -->
 <template>
-  <div class="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 bg-gray-900 min-h-screen">
+  <div class="steam-page steam-theme max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 bg-gray-900 min-h-screen">
     <Toast />
 
     <!-- Loading State -->
     <div v-if="loadingGame" class="text-center p-8">
-      <i class="pi pi-spin pi-spinner text-4xl text-blue-400"></i>
       <p class="mt-4 text-gray-300">Načítavam detail hry...</p>
     </div>
 
     <!-- Error State -->
     <div v-else-if="error" class="text-center p-8 bg-gray-800 rounded-xl border border-gray-700 shadow-lg">
-      <i class="pi pi-exclamation-triangle text-4xl text-red-400"></i>
       <p class="mt-4 text-gray-200 font-semibold">{{ error }}</p>
       <Button 
         label="Späť na zoznam hier" 
-        icon="pi pi-arrow-left"
         class="mt-4 p-button-outlined"
         @click="goBack"
       />
@@ -27,7 +24,6 @@
       <div class="flex items-center justify-between mb-6">
         <Button 
           label="Späť" 
-          icon="pi pi-arrow-left"
           class="p-button-text p-button-secondary"
           @click="goBack"
         />
@@ -47,14 +43,14 @@
           <!-- Star Rating -->
           <div class="flex flex-col">
             <div class="flex items-center gap-2">
-              <i 
+              <span 
                 v-for="star in 5" 
                 :key="star" 
                 @click="submitRating(star)"
                 :class="ratingStarClass(star)"
                 class="cursor-pointer transition-transform"
                 :title="'Hodnotiť ' + star + ' / 5'"
-              ></i>
+              >★</span>
               <span class="ml-2 text-gray-200 font-bold text-xl">{{ formatRating(game.rating) }} / 5</span>
             </div>
             <small class="text-gray-400 mt-1" v-if="userHasRated">Ďakujeme za hodnotenie (hlasov: {{ game.rating_count || 0 }}).</small>
@@ -62,7 +58,9 @@
           </div>
           <!-- Views Counter -->
           <div class="flex items-center gap-2 text-gray-300">
-            <span class="font-bold text-xl">{{ game.views || 0 }} zobrazení</span>
+            <i class="pi pi-eye text-sm" aria-hidden="true"></i>
+            <span class="font-bold text-xl">{{ game.views || 0 }}</span>
+            <span class="text-sm text-gray-400">zobrazení</span>
           </div>
         </div>
         
@@ -100,7 +98,7 @@
             <div class="absolute inset-0 bg-black bg-opacity-30 group-hover:bg-opacity-40 transition-all duration-300"></div>
             <div class="absolute inset-0 flex items-center justify-center">
               <div class="w-20 h-20 rounded-full bg-white bg-opacity-50 group-hover:bg-opacity-70 transition-all duration-300 flex items-center justify-center">
-                <i class="pi pi-play text-gray-900 text-3xl ml-1"></i>
+                <span class="text-gray-900 text-sm font-semibold">Play</span>
               </div>
             </div>
           </div>
@@ -140,7 +138,7 @@
           <!-- Center Play Indicator (when paused) -->
           <div v-if="!videoPlaying" class="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div class="w-20 h-20 rounded-full bg-black/50 flex items-center justify-center backdrop-blur-sm">
-              <i class="pi pi-play text-white text-3xl ml-1"></i>
+              <span class="text-white text-sm font-semibold">Play</span>
             </div>
           </div>
 
@@ -175,21 +173,21 @@
             <div class="flex items-center justify-between w-full mt-1">
               <div class="flex items-center gap-4">
                 <button @click.stop="togglePlay" class="text-white hover:text-teal-400 transition p-1" :title="videoPlaying ? 'Pause' : 'Play'">
-                  <i :class="videoPlaying ? 'pi pi-pause' : 'pi pi-play'" class="text-xl"></i>
+                  <span class="text-xs font-semibold">{{ videoPlaying ? 'Pause' : 'Play' }}</span>
                 </button>
                 <div class="flex items-center gap-2">
                   <button @click.stop="skip(-10)" class="text-gray-300 hover:text-white transition p-1" title="Dozadu 10s">
-                    <i class="pi pi-replay text-lg"></i> <span class="text-[10px]">-10s</span>
+                    <span class="text-[10px]">-10s</span>
                   </button>
                   <button @click.stop="skip(10)" class="text-gray-300 hover:text-white transition p-1" title="Dopredu 10s">
-                    <span class="text-[10px]">+10s</span> <i class="pi pi-refresh text-lg"></i>
+                    <span class="text-[10px]">+10s</span>
                   </button>
                 </div>
               </div>
               <div class="flex items-center gap-4">
                 <div class="flex items-center gap-2 group/vol">
                   <button @click.stop="toggleMute" class="text-white hover:text-teal-400 transition" :title="isMuted || volume===0 ? 'Zapnúť zvuk' : 'Stlmiť zvuk'">
-                    <i :class="(isMuted || volume===0) ? 'pi pi-volume-off' : 'pi pi-volume-up'" class="text-lg"></i>
+                    <span class="text-xs font-semibold">{{ (isMuted || volume===0) ? 'Muted' : 'Sound' }}</span>
                   </button>
                   <input
                     type="range"
@@ -203,7 +201,7 @@
                 </div>
                 <div class="w-px h-4 bg-gray-600 mx-1"></div>
                 <button @click.stop="toggleFullscreen" class="text-white hover:text-teal-400 transition" :title="isFullscreen ? 'Ukončiť celú obrazovku' : 'Celá obrazovka'">
-                  <i :class="isFullscreen ? 'pi pi-window-minimize' : 'pi pi-window-maximize'" class="text-lg"></i>
+                  <span class="text-xs font-semibold">{{ isFullscreen ? 'Exit' : 'Full' }}</span>
                 </button>
               </div>
             </div>
@@ -239,8 +237,12 @@
           >
             <div class="flex flex-col">
               <span class="text-gray-200 font-medium">{{ member.name }}</span>
-              <span v-if="member.pivot?.role_in_team === 'scrum_master'" class="text-xs text-teal-400">Scrum Master</span>
-              <span v-else class="text-xs text-gray-500">Člen</span>
+              <span v-if="member.pivot?.role_in_team === 'scrum_master'" class="text-xs text-teal-400">
+                SM • {{ formatOccupation(member.pivot?.occupation) || 'Neurčené' }}
+              </span>
+              <span v-else class="text-xs text-gray-400">
+                {{ formatOccupation(member.pivot?.occupation) || 'Neurčené' }}
+              </span>
             </div>
           </div>
         </div>
@@ -253,14 +255,12 @@
           <Button 
             v-if="game.export_path"
             label="Stiahnuť hru" 
-            icon="pi pi-download"
             class="p-button-outlined p-button-lg"
             @click="downloadFile(game.export_path, 'export')"
           />
           <Button 
             v-if="game.source_code_path"
             label="Stiahnuť zdrojový kód" 
-            icon="pi pi-file-code"
             class="p-button-outlined p-button-lg"
             @click="downloadFile(game.source_code_path, 'source_code')"
           />
@@ -391,12 +391,26 @@ function formatRating(val) {
   return Number(val || 0).toFixed(1)
 }
 
+function formatOccupation(occupation) {
+  if (!occupation) return null
+  const normalized = occupation.toLowerCase().trim()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  const occupationMap = {
+    'programator': 'Programátor',
+    'grafik 2d': 'Grafik 2D',
+    'grafik 3d': 'Grafik 3D',
+    'tester': 'Tester',
+    'animator': 'Animátor'
+  }
+  return occupationMap[normalized] || null
+}
+
 function ratingStarClass(star) {
   const currentAvgRounded = Math.round(Number(game.value?.rating) || 0)
   if (userHasRated.value) {
-    return star <= currentAvgRounded ? 'pi pi-star-fill text-yellow-400 text-2xl' : 'pi pi-star text-gray-300 text-2xl'
+    return star <= currentAvgRounded ? 'text-yellow-400 text-2xl' : 'text-gray-300 text-2xl'
   } else {
-    return star <= currentAvgRounded ? 'pi pi-star-fill text-yellow-400 text-2xl hover:scale-110' : 'pi pi-star text-gray-300 text-2xl hover:scale-110'
+  return star <= currentAvgRounded ? 'text-yellow-400 text-2xl hover:scale-110' : 'text-gray-300 text-2xl hover:scale-110'
   }
 }
 

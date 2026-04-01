@@ -1,655 +1,528 @@
 <template>
-  <div class="min-h-full p-4 sm:p-6 lg:p-8">
-    <div class="max-w-6xl mx-auto">
-
+  <div class="home-root">
+    <!-- Animated background layer -->
+    <div class="bg-canvas" aria-hidden="true">
+      <div class="bg-grid"></div>
+      <div class="bg-orb bg-orb-1"></div>
+      <div class="bg-orb bg-orb-2"></div>
+      <div class="bg-orb bg-orb-3"></div>
+      <div class="bg-particle bg-particle-1"></div>
+      <div class="bg-particle bg-particle-2"></div>
+      <div class="bg-particle bg-particle-3"></div>
+      <div class="bg-particle bg-particle-4"></div>
+      <div class="bg-particle bg-particle-5"></div>
+      <div class="bg-particle bg-particle-6"></div>
+    </div>
     <Toast />
 
-    <div class="flex flex-col gap-4 mb-8">
-      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h2 class="text-3xl font-bold bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
-          Zoznam Registrovaných Projektov 
-        </h2>
-        
-        <div v-if="token && !isAdmin" class="flex gap-3 flex-wrap items-center">
-          <!-- TLAČIDLO: Info o tíme (viditeľné len ak je používateľ v tíme) -->
-          <button 
-            v-if="hasTeam"
-            class="btn-secondary"
-            @click="showTeamStatusDialog = true" 
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- TEAM SELECTOR BAR (with team actions) -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <section v-if="hasTeam && teams.length > 0 && !isAdmin && token" class="team-bar-section">
+      <div class="team-bar">
+        <div class="team-bar-left">
+          <label class="team-bar-label">{{ t('team.active_team') }}</label>
+          <Dropdown
+            v-model="selectedTeam"
+            :options="teams"
+            optionLabel="name"
+            :placeholder="t('team.select_placeholder')"
+            class="team-dropdown"
           >
-            Moje Tímy
-          </button>
-          <!-- Tlačidlá -->
-          <button 
-            class="btn-secondary"
-            @click="showJoinTeam = true" 
-          >
-            Pripojiť sa k tímu
-          </button>
+            <template #value="slotProps">
+              <div v-if="slotProps.value" class="flex items-center gap-2">
+                <span class="font-medium text-slate-100">{{ slotProps.value.name }}</span>
+                <span v-if="slotProps.value.status === 'pending'" class="steam-badge badge-pending">{{ t('team.waiting') }}</span>
+                <span v-else-if="slotProps.value.status === 'suspended'" class="steam-badge badge-suspended">{{ t('team.suspended_short') }}</span>
+              </div>
+            </template>
+            <template #option="slotProps">
+              <div class="flex flex-col gap-0.5">
+                <div class="flex items-center gap-2">
+                  <span class="font-medium text-slate-100">{{ slotProps.option.name }}</span>
+                  <span v-if="slotProps.option.status === 'pending'" class="steam-badge badge-pending">{{ t('team.pending_full') }}</span>
+                  <span v-else-if="slotProps.option.status === 'suspended'" class="steam-badge badge-suspended">{{ t('team.suspended_full') }}</span>
+                </div>
+                <span v-if="slotProps.option.academic_year" class="text-xs text-slate-500">{{ slotProps.option.academic_year.name }}</span>
+              </div>
+            </template>
+          </Dropdown>
+        </div>
 
-          <button 
-            class="btn-primary"
-            @click="showCreateTeam = true" 
-          >
-            Vytvoriť Tím
+        <!-- Team meta chips -->
+        <div v-if="selectedTeam" class="team-bar-meta">
+          <span v-if="selectedTeam.is_scrum_master" class="meta-chip meta-chip-accent">{{ t('team.scrum_master') }}</span>
+          <span v-if="getCurrentUserOccupation(selectedTeam)" class="meta-chip">{{ getCurrentUserOccupation(selectedTeam) }}</span>
+        </div>
+
+        <!-- Team action buttons -->
+        <div class="team-bar-actions">
+          <button class="steam-btn steam-btn-dark steam-btn-sm" @click="showTeamStatusDialog = true">
+            {{ t('team.my_teams') }}
+          </button>
+          <button class="steam-btn steam-btn-dark steam-btn-sm" @click="showJoinTeam = true">
+            {{ t('team.join') }}
+          </button>
+          <button class="steam-btn steam-btn-accent steam-btn-sm" @click="showCreateTeam = true">
+            {{ t('team.create') }}
           </button>
         </div>
       </div>
 
-      <!-- Team Selector (minimalistic) -->
-      <div v-if="hasTeam && teams.length > 0 && !isAdmin" class="glass-card p-5">
-        <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-          <div class="flex items-center gap-3 flex-1">
-            <div class="flex-1">
-              <label class="text-sm font-semibold text-slate-300 mb-2 block">Aktívny Tím:</label>
-              <Dropdown
-                v-model="selectedTeam"
-                :options="teams"
-                optionLabel="name"
-                placeholder="Vyberte tím"
-                class="w-full sm:w-80 custom-dropdown"
+      <!-- Status warnings -->
+      <div v-if="selectedTeam && selectedTeam.status === 'pending'" class="team-warning team-warning-pending">
+        <div>
+          <strong>{{ t('team.pending_warning_title') }}</strong>
+          <p>{{ t('team.pending_warning_desc') }}</p>
+        </div>
+      </div>
+      <div v-if="selectedTeam && selectedTeam.status === 'suspended'" class="team-warning team-warning-suspended">
+        <div>
+          <strong>{{ t('team.suspended_warning_title') }}</strong>
+          <p>{{ t('team.suspended_warning_desc') }}</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- No-team action strip (logged in, no team yet, not admin) -->
+    <section v-if="token && !hasTeam && !isAdmin" class="team-bar-section">
+      <div class="team-bar" style="justify-content: center;">
+        <span class="team-bar-note">{{ t('team.no_team_yet') }}</span>
+        <div class="team-bar-actions">
+          <button class="steam-btn steam-btn-dark steam-btn-sm" @click="showJoinTeam = true">
+            {{ t('team.join_team') }}
+          </button>
+          <button class="steam-btn steam-btn-accent steam-btn-sm" @click="showCreateTeam = true">
+            {{ t('team.create') }}
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- MAIN CONTENT AREA -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <div class="content-wrap">
+
+      <!-- ── FILTER TOOLBAR ── -->
+      <section v-if="token" class="filter-toolbar">
+        <div class="filter-toolbar-top">
+          <h2 class="section-heading">
+            <span v-if="showingMyProjects">{{ t('filter.my_projects_title') }}</span>
+            <span v-else>{{ t('filter.title') }}</span>
+          </h2>
+          <div class="filter-toolbar-actions">
+            <button
+              v-if="hasTeam && selectedTeam && !showingMyProjects && !isAdmin"
+              class="steam-btn steam-btn-dark steam-btn-sm"
+              @click="loadMyProjects"
+            >
+              {{ t('filter.my_projects_btn') }}
+            </button>
+            <button
+              v-if="showingMyProjects && !isAdmin"
+              class="steam-btn steam-btn-dark steam-btn-sm"
+              @click="loadAllGames"
+            >
+              {{ t('filter.all_projects_btn') }}
+            </button>
+            <button
+              v-if="hasActiveFilters"
+              class="steam-btn steam-btn-ghost steam-btn-sm"
+              @click="resetFilters"
+            >
+              Reset
+            </button>
+          </div>
+        </div>
+
+        <!-- Search -->
+        <div class="search-row">
+          <div class="search-box">
+            <input
+              type="text"
+              v-model="search"
+              :placeholder="t('filter.search_placeholder')"
+              class="search-input"
+            />
+          </div>
+        </div>
+
+        <!-- Grid of filter dropdowns -->
+        <div class="filter-grid">
+          <div class="filter-item">
+            <label class="filter-label">{{ t('filter.school_type_label') }}</label>
+            <Dropdown
+              v-model="filterSchoolType"
+              :options="filterSchoolTypes"
+              optionLabel="label"
+              optionValue="value"
+              :placeholder="t('filter.all_types')"
+              class="filter-dropdown"
+              @change="applyFilters"
+            />
+          </div>
+          <div class="filter-item">
+            <label class="filter-label">{{ t('filter.year_label') }}</label>
+            <Dropdown
+              v-model="filterYearOfStudy"
+              :options="filterYears"
+              optionLabel="label"
+              optionValue="value"
+              :placeholder="t('filter.all_years')"
+              class="filter-dropdown"
+              @change="applyFilters"
+            />
+          </div>
+          <div class="filter-item">
+            <label class="filter-label">{{ t('filter.subject_label') }}</label>
+            <Dropdown
+              v-model="filterSubject"
+              :options="filterSubjects"
+              optionLabel="label"
+              optionValue="value"
+              :placeholder="t('filter.all_subjects')"
+              class="filter-dropdown"
+              @change="applyFilters"
+            />
+          </div>
+          <div class="filter-item">
+            <label class="filter-label">{{ t('filter.project_type_label') }}</label>
+            <Dropdown
+              v-model="selectedType"
+              :options="types"
+              optionLabel="label"
+              optionValue="value"
+              :placeholder="t('filter.all_types')"
+              class="filter-dropdown"
+              @change="applyFilters"
+            />
+          </div>
+        </div>
+      </section>
+
+      <section v-if="token && (topRatedProjects.length || loadingTopRated)" class="top-rated-section">
+        <TopRatedCarousel
+          v-if="topRatedProjects.length"
+          :projects="topRatedProjects"
+          @select="viewProjectDetail"
+        />
+        <div v-else-if="loadingTopRated" class="top-rated-loading">
+          <span>{{ t('common.loading_top') }}</span>
+        </div>
+      </section>
+
+      <!-- ── NOT LOGGED IN ── -->
+      <section v-if="!token" class="landing-section">
+        <div class="landing-card">
+          <img
+            src="@/assets/logo/ucm_logoNOBG.png"
+            alt="UCM Logo"
+            class="landing-logo"
+          />
+          <h2 class="landing-heading">{{ t('landing.title') }} <span class="landing-heading-accent">UCM</span></h2>
+          <p class="landing-text">{{ t('landing.desc') }}</p>
+          <div class="landing-actions">
+            <button class="steam-btn steam-btn-accent steam-btn-lg" @click="$router.push('/login')">
+              {{ t('landing.login_btn') }}
+            </button>
+            <button class="steam-btn steam-btn-dark steam-btn-lg" @click="$router.push('/guest')">
+              {{ t('landing.guest_btn') }}
+            </button>
+            <button class="steam-btn steam-btn-dark steam-btn-lg" @click="$router.push('/register')">
+              {{ t('landing.register_btn') }}
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── LOADING ── -->
+      <div v-else-if="loadingGames" class="state-message">
+        <span>{{ t('common.loading_projects') }}</span>
+      </div>
+
+      <!-- ── EMPTY STATE ── -->
+      <div v-else-if="filteredGames.length === 0" class="state-message">
+        <span>{{ t('common.no_projects') }}</span>
+      </div>
+
+      <!-- ── PROJECT GRID ── -->
+      <section v-else class="project-grid">
+        <div
+          v-for="game in filteredGames"
+          :key="game.id"
+          class="project-card"
+          @click="viewProjectDetail(game)"
+        >
+          <!-- Thumbnail -->
+          <div class="card-thumb">
+            <span v-if="!game.splash_screen_path" class="card-thumb-empty">{{ t('common.no_preview') }}</span>
+            <img
+              v-else
+              :src="getSplashUrl(game.splash_screen_path)"
+              :alt="game.title"
+              class="card-thumb-img"
+            />
+          </div>
+
+          <!-- Body -->
+          <div class="card-body">
+            <h3 class="card-title">{{ game.title }}</h3>
+
+            <!-- Tags row -->
+            <div class="card-tags">
+              <span
+                class="card-tag card-tag-accent"
+                @click.stop="filterByType(game.type)"
               >
-                <template #value="slotProps">
-                  <div v-if="slotProps.value" class="flex items-center gap-2">
-                    <span :class="['font-semibold', slotProps.value.status === 'pending' ? 'text-amber-400' : slotProps.value.status === 'suspended' ? 'text-rose-400' : 'text-white']">{{ slotProps.value.name }}</span>
-                    <span v-if="slotProps.value.status === 'pending'" class="status-badge status-pending">Čaká</span>
-                    <span v-else-if="slotProps.value.status === 'suspended'" class="status-badge status-suspended">Pozast.</span>
-                  </div>
-                </template>
-                <template #option="slotProps">
-                  <div class="flex flex-col">
-                    <div class="flex items-center gap-2">
-                      <span :class="['font-semibold', slotProps.option.status === 'pending' ? 'text-amber-400' : slotProps.option.status === 'suspended' ? 'text-rose-400' : 'text-white']">{{ slotProps.option.name }}</span>
-                      <span v-if="slotProps.option.status === 'pending'" class="status-badge status-pending">Čaká na schválenie</span>
-                      <span v-else-if="slotProps.option.status === 'suspended'" class="status-badge status-suspended">Pozastavený</span>
-                    </div>
-                    <div class="text-xs text-slate-400" v-if="slotProps.option.academic_year">
-                      {{ slotProps.option.academic_year.name }}
-                    </div>
-                  </div>
-                </template>
-              </Dropdown>
+                {{ formatProjectType(game.type) }}
+              </span>
+              <span
+                v-if="game.school_type"
+                class="card-tag"
+                @click.stop="filterBySchoolType(game.school_type)"
+              >
+                {{ getSchoolTypeLabel(game.school_type) }}
+              </span>
+              <span v-if="game.year_of_study" class="card-tag">
+                {{ game.year_of_study }}{{ t('common.year_suffix') }}
+              </span>
+              <span
+                v-if="game.subject"
+                class="card-tag"
+                @click.stop="filterBySubject(game.subject)"
+              >
+                {{ game.subject }}
+              </span>
             </div>
-          </div>
-          <div v-if="selectedTeam" class="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
-            <div class="info-chip">
-              <span class="font-medium text-slate-200">{{ selectedTeam.academic_year?.name || 'N/A' }}</span>
-            </div>
-            <div class="info-chip">
-              <span class="font-medium text-slate-200">{{ selectedTeam.members?.length || 0 }} členov</span>
-            </div>
-            <div v-if="selectedTeam.is_scrum_master" class="info-chip-accent">
-              <span class="font-semibold text-indigo-200">S</span>
-            </div>
-            <div v-if="getCurrentUserOccupation(selectedTeam)" class="info-chip-purple">
-              <span class="font-medium text-violet-200">{{ getCurrentUserOccupation(selectedTeam) }}</span>
-            </div>
-            <!-- Status badge -->
-            <div v-if="selectedTeam.status === 'pending'" class="info-chip-warning">
-              <span class="font-semibold text-amber-100">Čaká na schválenie</span>
-            </div>
-            <div v-else-if="selectedTeam.status === 'suspended'" class="info-chip-danger">
-              <span class="font-semibold text-rose-100">Pozastavený</span>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Pending team warning -->
-        <div v-if="selectedTeam && selectedTeam.status === 'pending'" class="mt-4 p-4 bg-amber-950/40 border border-amber-700/50 rounded-xl backdrop-blur-sm">
-          <div class="flex items-start gap-3">
-            <i class="pi pi-exclamation-triangle text-amber-400 text-xl mt-0.5"></i>
-            <div>
-              <h4 class="font-semibold text-amber-200">Tím čaká na schválenie</h4>
-              <p class="text-sm text-amber-300/80 mt-1">Váš tím bol vytvorený a čaká na schválenie administrátorom. Kód pre pripojenie je neaktívny a nie je možné spravovať tím ani publikovať projekty.</p>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Suspended team warning -->
-        <div v-if="selectedTeam && selectedTeam.status === 'suspended'" class="mt-4 p-4 bg-rose-950/40 border border-rose-700/50 rounded-xl backdrop-blur-sm">
-          <div class="flex items-start gap-3">
-            <i class="pi pi-ban text-rose-400 text-xl mt-0.5"></i>
-            <div>
-              <h4 class="font-semibold text-rose-200">Tím bol pozastavený</h4>
-              <p class="text-sm text-rose-300/80 mt-1">Váš tím bol pozastavený administrátorom. Kontaktujte administrátora pre viac informácií.</p>
+
+            <p class="card-desc">{{ game.description || t('common.no_description') }}</p>
+
+            <!-- Footer meta -->
+            <div class="card-footer">
+              <div class="card-meta-left">
+                <div class="card-rating">
+                  <span
+                    v-for="star in 5"
+                    :key="star"
+                    :class="star <= Math.round(Number(game.rating || 0)) ? 'star-filled' : 'star-empty'"
+                  >★</span>
+                  <span class="rating-num">{{ Number(game.rating || 0).toFixed(1) }}</span>
+                </div>
+                <div class="card-views">
+                  <i class="pi pi-eye view-icon" aria-hidden="true"></i>
+                  <span class="view-num">{{ game.views || 0 }}</span>
+                </div>
+              </div>
+              <div class="card-meta-right">
+                <span
+                  class="card-team-link"
+                  @click.stop="goToTeam(game.team?.id)"
+                >
+                  {{ game.team?.name || t('common.unknown_team') }}
+                </span>
+                <span v-if="game.academic_year" class="card-year" @click.stop="filterByAcademicYear(game.academic_year.id)">
+                  {{ game.academic_year.name }}
+                </span>
+              </div>
             </div>
           </div>
         </div>
+      </section>
+
+      <!-- ── PAGINATION ── -->
+      <div v-if="lastPage > 1" class="pagination-bar">
+        <button class="page-btn" :disabled="currentPage === 1" @click="goToPage(currentPage - 1)">
+          Prev
+        </button>
+        <template v-for="p in pageNumbers" :key="p">
+          <span v-if="p === '...'" class="page-ellipsis">…</span>
+          <button v-else class="page-btn" :class="{ 'page-btn-active': p === currentPage }" @click="goToPage(p)">{{ p }}</button>
+        </template>
+        <button class="page-btn" :disabled="currentPage === lastPage" @click="goToPage(currentPage + 1)">
+          Next
+        </button>
+        <span class="page-info">{{ (currentPage - 1) * 20 + 1 }}–{{ Math.min(currentPage * 20, totalProjects) }} / {{ totalProjects }}</span>
       </div>
     </div>
 
-
-
-    <div v-if="token" class="glass-card p-5 mb-8">
-      <!-- Vyhľadávanie -->
-      <div class="flex-grow mb-4">
-        <div class="relative">
-          <i class="pi pi-search absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
-          <input 
-            type="text"
-            v-model="search" 
-            placeholder="Vyhľadať podľa názvu projektu..."
-            class="search-input"
-          />
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- DIALOG: CREATE TEAM -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <Dialog v-model:visible="showCreateTeam" :modal="true" :closable="false" :draggable="false" class="dialog-shell" :contentStyle="dialogContentStyle" :headerStyle="dialogHeaderStyle" :style="dialogStyle">
+      <template #header>
+        <div class="dlg-header">
+          <span class="dlg-title">Vytvoriť Nový Tím</span>
+          <button class="dlg-close" @click="showCreateTeam = false">×</button>
         </div>
-      </div>
+      </template>
 
-      <!-- Nový multi-purpose filter systém -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-        <!-- Typ školy -->
-        <div>
-          <label class="block text-sm font-medium text-slate-300 mb-2">Typ školy</label>
-          <Dropdown
-            v-model="filterSchoolType"
-            :options="filterSchoolTypes"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="Všetky typy"
-            class="w-full custom-dropdown"
-            @change="applyFilters"
-          />
-        </div>
-
-        <!-- Ročník -->
-        <div>
-          <label class="block text-sm font-medium text-slate-300 mb-2">Ročník</label>
-          <Dropdown
-            v-model="filterYearOfStudy"
-            :options="filterYears"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="Všetky ročníky"
-            class="w-full custom-dropdown"
-            @change="applyFilters"
-          />
-        </div>
-
-        <!-- Predmet -->
-        <div>
-          <label class="block text-sm font-medium text-slate-300 mb-2">Predmet</label>
-          <Dropdown
-            v-model="filterSubject"
-            :options="filterSubjects"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="Všetky predmety"
-            class="w-full custom-dropdown"
-            @change="applyFilters"
-          />
-        </div>
-
-        <!-- Typ projektu -->
-        <div>
-          <label class="block text-sm font-medium text-slate-300 mb-2">Typ projektu</label>
-          <Dropdown
-            v-model="selectedType"
-            :options="types"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="Všetky typy"
-            class="w-full custom-dropdown"
-            @change="applyFilters"
-          />
-        </div>
-      </div>
-
-      <!-- Tlačidlá a reset -->
-      <div class="flex flex-wrap items-center gap-2">
-        <button 
-          v-if="hasTeam && selectedTeam && !showingMyProjects && !isAdmin" 
-          class="btn-secondary btn-sm"
-          @click="loadMyProjects" 
-        >
-          Moje Projekty
-        </button>
-        <button 
-          v-if="showingMyProjects && !isAdmin" 
-          class="btn-secondary btn-sm"
-          @click="loadAllGames" 
-        >
-          Všetky Projekty
-        </button>
-        <button 
-          v-if="hasActiveFilters"
-          class="btn-ghost btn-sm"
-          @click="resetFilters" 
-        >
-          Resetovať filtre
-        </button>
-      </div>
-    </div>
-
-    <!-- 🛑 SEKCIA: Dynamické Zobrazenie Hier z DB (s loadingom a prázdnym stavom) -->
-    <!-- Not logged in message -->
-    <div v-if="!token" class="glass-card text-center p-16">
-      <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center">
-        <i class="pi pi-lock text-4xl text-slate-400"></i>
-      </div>
-      <h3 class="text-2xl font-bold text-white mb-4">Prihláste sa aby ste videli projekty v systéme</h3>
-      <p class="text-slate-400 mb-8 max-w-md mx-auto">Pre zobrazenie projektov a funkcionalitu systému sa musíte prihlásiť.</p>
-      <div class="flex gap-3 justify-center">
-        <button 
-          class="btn-primary"
-          @click="$router.push('/login')"
-        >
-          Prihlásiť sa
-        </button>
-        <button 
-          class="btn-secondary"
-          @click="$router.push('/register')"
-        >
-          Registrovať sa
-        </button>
-      </div>
-    </div>
-
-    <!-- Logged in - show projects -->
-    <div v-else>
-      <div v-if="loadingGames" class="flex items-center justify-center p-20">
-        <div class="flex items-center gap-3 text-xl text-indigo-400">
-          <i class="pi pi-spin pi-spinner text-4xl"></i>
-          <span>Načítavam projekty...</span>
-        </div>
-      </div>
-      <div v-else-if="filteredGames.length === 0" class="glass-card text-center p-12">
-        <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center">
-          <i class="pi pi-inbox text-3xl text-slate-400"></i>
-        </div>
-        <p class="text-lg text-slate-300">Zatiaľ nebol pridaný žiadny projekt.</p>
-      </div>
-      <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-      <div
-        v-for="game in filteredGames"
-        :key="game.id"
-        class="project-card group"
-      >
-        <div class="aspect-video bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl mb-4 overflow-hidden flex items-center justify-center">
-          <span v-if="!game.splash_screen_path" class="text-xs text-slate-500">Bez náhľadu</span>
-          <img 
-            v-else 
-            :src="getSplashUrl(game.splash_screen_path)" 
-            :alt="game.title" 
-            class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105" 
-          />
-        </div>
-
-        <h3 class="text-lg font-semibold text-white mb-3 line-clamp-2 group-hover:text-indigo-300 transition-colors">{{ game.title }}</h3>
-        
-        <div class="flex flex-wrap gap-2 text-xs mb-3">
-          <span 
-            class="tag tag-primary cursor-pointer"
-            @click.stop="filterByType(game.type)"
-            title="Kliknite pre filtrovanie podľa typu projektu"
-          >
-            {{ game.type.replace('_', ' ') }}
-          </span>
-          <span 
-            v-if="game.school_type" 
-            class="tag tag-default cursor-pointer"
-            @click.stop="filterBySchoolType(game.school_type)"
-            title="Kliknite pre filtrovanie podľa typu školy"
-          >
-            {{ getSchoolTypeLabel(game.school_type) }}
-          </span>
-          <span 
-            v-if="game.year_of_study" 
-            class="tag tag-default"
-            title="Ročník nie je klikateľný"
-          >
-            {{ game.year_of_study }}. ročník
-          </span>
-          <span 
-            v-if="game.subject" 
-            class="tag tag-default cursor-pointer"
-            @click.stop="filterBySubject(game.subject)"
-            title="Kliknite pre filtrovanie podľa predmetu"
-          >
-            {{ game.subject }}
-          </span>
-          <span 
-            class="tag tag-default cursor-pointer"
-            @click.stop="goToTeam(game.team?.id)"
-            title="Kliknite pre zobrazenie tímu"
-          >
-            {{ game.team?.name || 'Neznámy' }}
-          </span>
-          <span 
-            v-if="game.academic_year" 
-            class="tag tag-default cursor-pointer"
-            @click.stop="filterByAcademicYear(game.academic_year.id)"
-            title="Kliknite pre filtrovanie podľa akademického roka"
-          >
-            {{ game.academic_year.name }}
-          </span>
-        </div>
-        
-        <p class="text-slate-400 text-sm leading-relaxed line-clamp-3 mb-4">{{ game.description || 'Popis nebol poskytnutý.' }}</p>
-
-        <div class="mt-auto">
-          <div class="flex items-center justify-between mb-4 text-xs text-slate-400 pb-3 border-b border-slate-700/50">
-            <div class="flex items-center gap-1">
-              <i 
-                v-for="star in 5" 
-                :key="star" 
-                :class="star <= Math.round(Number(game.rating || 0)) ? 'pi pi-star-fill text-amber-400' : 'pi pi-star text-slate-600'"
-                class="text-sm"
-              ></i>
-              <span class="font-semibold text-slate-300 ml-1">{{ Number(game.rating || 0).toFixed(1) }}</span>
-            </div>
-            <div class="flex items-center gap-1">Zobrazenia: <span class="font-semibold text-slate-300">{{ game.views || 0 }}</span></div>
+      <div v-if="!teamCreatedSuccess">
+        <form @submit.prevent="createTeam" class="dlg-form">
+          <div class="dlg-field">
+            <label>Názov tímu</label>
+            <InputText v-model="teamName" placeholder="Zadajte názov tímu" required class="dlg-input" />
           </div>
-
-          <button 
-            class="btn-secondary btn-sm w-full group-hover:bg-indigo-600 group-hover:border-indigo-500 group-hover:text-white transition-all"
-            @click="viewProjectDetail(game)" 
-          >
-            <span>Zobraziť detail</span>
-            <i class="pi pi-arrow-right transition-transform group-hover:translate-x-1"></i>
-          </button>
-        </div>
-      </div>
-      </div>
-    </div>
-  </div>
-  </div>
-
-  <!-- DIALÓG PRE VYTVORENIE TÍMU (Zostáva nezmenený) -->
-  <Dialog v-model:visible="showCreateTeam" :modal="true" :closable="false" :draggable="false" class="w-11/12 md:w-1/3" :contentStyle="{ backgroundColor: '#0f172a', color: '#f1f5f9', padding: '1.5rem', border: 'none' }" :headerStyle="{ backgroundColor: '#0f172a', color: '#f1f5f9', borderBottom: '1px solid rgba(71, 85, 105, 0.5)', padding: '1rem 1.5rem', position: 'relative' }">
-    <template #header>
-      <div class="dialog-header-custom">
-        <span class="dialog-title-centered">Vytvoriť Nový Tím</span>
-        <button class="dialog-close-btn" @click="showCreateTeam = false">
-          <i class="pi pi-times"></i>
-        </button>
-      </div>
-    </template>
-    <div v-if="!teamCreatedSuccess">
-        <form @submit.prevent="createTeam" class="flex flex-col gap-5">
-          <div>
-            <label class="block text-sm font-medium text-slate-300 mb-2">Názov tímu</label>
-            <InputText v-model="teamName" placeholder="Zadajte názov tímu" required class="w-full custom-input" />
+          <div class="dlg-field">
+            <label>Akademický rok</label>
+            <Dropdown v-model="academicYear" :options="academicYears" optionLabel="name" optionValue="id" placeholder="Vyber akademický rok" class="dlg-dropdown" />
           </div>
-          
-          <div>
-            <label class="block text-sm font-medium text-slate-300 mb-2">Akademický rok</label>
-            <Dropdown
-                v-model="academicYear"
-                :options="academicYears"
-                optionLabel="name"
-                optionValue="id"
-                placeholder="Vyber akademický rok"
-                class="w-full custom-dropdown"
-            />
+          <div class="dlg-field">
+            <label>Povolanie</label>
+            <Dropdown v-model="createTeamOccupation" :options="occupations" optionLabel="label" optionValue="value" placeholder="Vyber povolanie" class="dlg-dropdown" />
           </div>
-          
-          <div>
-            <label class="block text-sm font-medium text-slate-300 mb-2">Povolanie</label>
-            <Dropdown
-                v-model="createTeamOccupation"
-                :options="occupations"
-                optionLabel="label"
-                optionValue="value"
-                placeholder="Vyber povolanie"
-                class="w-full custom-dropdown"
-            />
-          </div>
-          
-          <button 
-              type="submit" 
-              class="btn-primary w-full mt-2"
-              :disabled="loadingCreate"
-          >
-            <i :class="loadingCreate ? 'pi pi-spin pi-spinner' : 'pi pi-check'"></i>
+          <button type="submit" class="steam-btn steam-btn-accent w-full mt-3" :disabled="loadingCreate">
             {{ loadingCreate ? 'Vytváram...' : 'Vytvoriť Tím' }}
           </button>
         </form>
-    </div>
-    <div v-else class="flex flex-col items-center gap-4 text-center">
-        <div class="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
-          <i class="pi pi-check text-4xl text-white"></i>
-        </div>
-        <h3 class="text-xl font-semibold text-white">Tím bol úspešne vytvorený!</h3>
-        
-        <div class="w-full p-4 rounded-xl bg-slate-800/50 border-2 border-dashed border-slate-600">
-          <p class="text-sm text-slate-400 mb-2">Váš unikátny kód pre pripojenie členov:</p>
-          <span class="text-3xl font-bold tracking-widest text-indigo-400 select-all">
-            {{ team.invite_code }}
-          </span>
-        </div>
-
-        <button 
-          class="btn-secondary w-full"
-          @click="copyTeamCode(team.invite_code)"
-        >
-          Kopírovať Kód
-        </button>
-        
-        <button 
-          class="btn-ghost w-full"
-          @click="closeCreateTeamDialog" 
-        >
-          Zavrieť a pokračovať
-        </button>
-    </div>
-    
-    <p v-if="teamMessage && !teamCreatedSuccess" :class="teamMessage.startsWith('✅') ? 'text-emerald-400 font-semibold' : 'text-rose-400 font-semibold'" class="mt-4 text-center text-sm">
-      {{ teamMessage }}
-    </p>
-  </Dialog>
-
-  <!-- DIALÓG PRE PRIPOJENIE K TÍMU (Zostáva nezmenený) -->
-  <Dialog 
-    v-model:visible="showJoinTeam" 
-    :modal="true" 
-    :closable="false" 
-    :draggable="false"
-    class="w-11/12 md:w-96"
-    :contentStyle="{ backgroundColor: '#0f172a', color: '#f1f5f9', padding: '1.5rem', border: 'none' }" 
-    :headerStyle="{ backgroundColor: '#0f172a', color: '#f1f5f9', borderBottom: '1px solid rgba(71, 85, 105, 0.5)', padding: '1rem 1.5rem', position: 'relative' }"
-    :style="{ borderRadius: '16px', overflow: 'hidden' }"
-  >
-    <template #header>
-      <div class="dialog-header-custom">
-        <span class="dialog-title-centered">Pripojiť sa k tímu</span>
-        <button class="dialog-close-btn" @click="showJoinTeam = false">
-          <i class="pi pi-times"></i>
-        </button>
       </div>
-    </template>
-    
-    <div class="flex flex-col items-center gap-5 text-center">
-        
-        <form @submit.prevent="joinTeam" class="flex flex-col gap-4 w-full">
-          <div>
-            <label class="block text-sm font-medium text-slate-300 mb-2">Kód tímu</label>
-            <InputText
-                v-model="joinTeamCode"
-                placeholder="Napr. A1B2C3"
-                required
-                :class="{ 'border-rose-500': joinTeamError }"
-                class="w-full custom-input text-center font-mono tracking-widest text-lg"
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-slate-300 mb-2">Povolanie</label>
-            <Dropdown
-                v-model="joinTeamOccupation"
-                :options="occupations"
-                optionLabel="label"
-                optionValue="value"
-                placeholder="Vyber povolanie"
-                class="w-full custom-dropdown"
-            />
-          </div>
-          <button
-              type="submit"
-              class="btn-primary w-full"
-              :disabled="loadingJoin"
-          >
-            <i :class="loadingJoin ? 'pi pi-spin pi-spinner' : 'pi pi-sign-in'"></i>
-            {{ loadingJoin ? 'Pripájam...' : 'Pripojiť sa' }}
-          </button>
-        </form>
 
-        <p v-if="joinTeamError" class="text-rose-400 font-semibold text-sm">{{ joinTeamError }}</p>
-    </div>
-</Dialog>
-
-
-  <!-- NOVÝ, MINIMALISTICKÝ DIALÓG PRE ZOBRAZENIE STAVU TÍMU -->
-  <Dialog 
-    v-model:visible="showTeamStatusDialog" 
-    :modal="true" 
-    :closable="false" 
-    :draggable="false"
-    class="w-11/12 md:w-[480px]"
-    :contentStyle="{ backgroundColor: '#0f172a', color: '#f1f5f9', padding: '1.5rem', border: 'none' }" 
-    :headerStyle="{ backgroundColor: '#0f172a', color: '#f1f5f9', borderBottom: '1px solid rgba(71, 85, 105, 0.5)', padding: '1rem 1.5rem', position: 'relative' }"
-    :style="{ borderRadius: '16px', overflow: 'hidden' }"
-  >
-    <template #header>
-      <div class="dialog-header-custom">
-        <span class="dialog-title-centered">Moje Tímy</span>
-        <button class="dialog-close-btn" @click="showTeamStatusDialog = false">
-          <i class="pi pi-times"></i>
-        </button>
+      <div v-else class="dlg-success">
+        <h3>Tím bol úspešne vytvorený!</h3>
+        <div class="dlg-code-box">
+          <p class="dlg-code-label">Kód pre pripojenie členov:</p>
+          <span class="dlg-code">{{ team.invite_code }}</span>
+        </div>
+        <button class="steam-btn steam-btn-dark w-full" @click="copyTeamCode(team.invite_code)">Kopírovať Kód</button>
+        <button class="steam-btn steam-btn-ghost w-full" @click="closeCreateTeamDialog">Zavrieť</button>
       </div>
-    </template>
-    <div v-if="teams.length > 0" class="flex flex-col gap-4 max-h-[70vh] overflow-y-auto custom-scrollbar">
-        <!-- Zobrazenie všetkých tímov -->
-        <div v-for="team in teams" :key="team.id" :class="['rounded-xl p-4 border backdrop-blur-sm', team.status === 'pending' ? 'bg-amber-950/20 border-amber-700/50' : team.status === 'suspended' ? 'bg-rose-950/20 border-rose-700/50' : 'bg-slate-800/50 border-slate-700/50']">
-          <!-- Hlavička tímu -->
-          <div class="flex justify-between items-start mb-3 pb-3 border-b border-slate-700/50">
+
+      <p v-if="teamMessage && !teamCreatedSuccess" :class="teamMessage.startsWith('✅') ? 'msg-ok' : 'msg-err'" class="dlg-msg">{{ teamMessage }}</p>
+    </Dialog>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- DIALOG: JOIN TEAM -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <Dialog v-model:visible="showJoinTeam" :modal="true" :closable="false" :draggable="false" class="dialog-shell dialog-sm" :contentStyle="dialogContentStyle" :headerStyle="dialogHeaderStyle" :style="dialogStyle">
+      <template #header>
+        <div class="dlg-header">
+          <span class="dlg-title">Pripojiť sa k tímu</span>
+          <button class="dlg-close" @click="showJoinTeam = false">×</button>
+        </div>
+      </template>
+
+      <form @submit.prevent="joinTeam" class="dlg-form">
+        <div class="dlg-field">
+          <label>Kód tímu</label>
+          <InputText v-model="joinTeamCode" placeholder="Napr. A1B2C3" required class="dlg-input text-center font-mono tracking-widest text-lg" :class="{ 'border-red-500': joinTeamError }" />
+        </div>
+        <div class="dlg-field">
+          <label>Povolanie</label>
+          <Dropdown v-model="joinTeamOccupation" :options="occupations" optionLabel="label" optionValue="value" placeholder="Vyber povolanie" class="dlg-dropdown" />
+        </div>
+        <button type="submit" class="steam-btn steam-btn-accent w-full" :disabled="loadingJoin">
+          {{ loadingJoin ? 'Pripájam...' : 'Pripojiť sa' }}
+        </button>
+      </form>
+      <p v-if="joinTeamError" class="msg-err dlg-msg">{{ joinTeamError }}</p>
+    </Dialog>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- DIALOG: MY TEAMS -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <Dialog v-model:visible="showTeamStatusDialog" :modal="true" :closable="false" :draggable="false" class="dialog-shell dialog-md" :contentStyle="dialogContentStyle" :headerStyle="dialogHeaderStyle" :style="dialogStyle">
+      <template #header>
+        <div class="dlg-header">
+          <span class="dlg-title">Moje Tímy</span>
+          <button class="dlg-close" @click="showTeamStatusDialog = false">×</button>
+        </div>
+      </template>
+
+      <div v-if="teams.length > 0" class="dlg-teams-list">
+        <div v-for="t in teams" :key="t.id" :class="['dlg-team-card', t.status === 'pending' ? 'dlg-team-pending' : t.status === 'suspended' ? 'dlg-team-suspended' : '']">
+          <!-- Header -->
+          <div class="dlg-team-head">
             <div>
-              <h3 :class="['text-lg font-semibold', team.status === 'pending' ? 'text-amber-400' : team.status === 'suspended' ? 'text-rose-400' : 'text-white']">{{ team.name }}</h3>
-              <div class="mt-1 flex flex-wrap items-center gap-2">
-                <span v-if="team.academic_year" class="text-xs text-slate-400">
-                  {{ team.academic_year.name }}
-                </span>
-                <!-- Status badge -->
-                <span v-if="team.status === 'pending'" class="status-badge status-pending">
-                  Čaká na schválenie
-                </span>
-                <span v-else-if="team.status === 'suspended'" class="status-badge status-suspended">
-                  Pozastavený
-                </span>
-                <span v-else-if="team.status === 'active'" class="status-badge status-active">
-                  Aktívny
-                </span>
+              <h3 class="dlg-team-name">{{ t.name }}</h3>
+              <div class="flex flex-wrap items-center gap-2 mt-1">
+                <span v-if="t.academic_year" class="text-xs text-slate-500">{{ t.academic_year.name }}</span>
+                <span v-if="t.status === 'pending'" class="steam-badge badge-pending">Čaká na schválenie</span>
+                <span v-else-if="t.status === 'suspended'" class="steam-badge badge-suspended">Pozastavený</span>
+                <span v-else-if="t.status === 'active'" class="steam-badge badge-active">Aktívny</span>
               </div>
             </div>
-            <div v-if="team.is_scrum_master" class="px-2 py-1 bg-indigo-900/50 text-indigo-300 rounded-lg text-xs font-semibold border border-indigo-700/50">
-              S
-            </div>
+            <span v-if="t.is_scrum_master" class="steam-badge badge-sm">SM</span>
           </div>
 
-          <!-- Pending team warning -->
-          <div v-if="team.status === 'pending'" class="mb-3 p-3 bg-amber-950/30 border border-amber-700/30 rounded-lg">
-            <p class="text-xs text-amber-300/80">Tím čaká na schválenie. Kód pre pripojenie je zatiaľ neaktívny a nie je možné spravovať členov ani vytvárať projekty.</p>
+          <!-- Pending warning -->
+          <div v-if="t.status === 'pending'" class="dlg-team-notice notice-pending">
+            Tím čaká na schválenie. Kód pre pripojenie je zatiaľ neaktívny.
           </div>
 
-          <!-- Kód pre pripojenie - disabled for pending teams -->
-          <div :class="['flex flex-col items-center p-3 rounded-lg mb-3', team.status === 'pending' ? 'bg-slate-900/30 opacity-50' : 'bg-slate-900/50']">
-            <p class="text-xs text-slate-400 mb-1">Kód pre pripojenie{{ team.status === 'pending' ? ' (neaktívny)' : '' }}:</p>
+          <!-- Invite code -->
+          <div :class="['dlg-invite-row', t.status === 'pending' ? 'opacity-40' : '']">
+            <span class="text-xs text-slate-500">Kód{{ t.status === 'pending' ? ' (neaktívny)' : '' }}:</span>
             <div class="flex items-center gap-2">
-              <span :class="['text-xl font-mono tracking-widest select-all', team.status === 'pending' ? 'text-slate-500 line-through' : 'text-indigo-400']">
-                {{ team.invite_code }}
-              </span>
-              <button 
-                v-if="team.status === 'active'"
-                class="btn-ghost btn-sm"
-                @click="copyTeamCode(team.invite_code)" 
-                v-tooltip.top="'Kopírovať kód'"
-              >
-                Kopírovať
-              </button>
+              <span :class="['dlg-invite-code', t.status === 'pending' ? 'line-through text-slate-600' : '']">{{ t.invite_code }}</span>
+              <button v-if="t.status === 'active'" class="steam-btn steam-btn-ghost steam-btn-xs" @click="copyTeamCode(t.invite_code)">Kopírovať</button>
             </div>
           </div>
 
-          <!-- Zoznam členov -->
-          <div>
-            <p class="text-xs text-slate-400 mb-2">Členovia ({{ team.members?.length || 0 }}/10):</p>
-            <div class="grid grid-cols-1 gap-2">
-              <div v-for="member in team.members" :key="member.id" class="flex items-center justify-between gap-2 text-slate-200 text-sm bg-slate-900/50 rounded-lg px-3 py-2">
-                <div class="flex flex-col truncate flex-1">
-                  <div class="flex items-center gap-2">
-                    <span class="truncate">{{ member.name }}</span>
-                    <span 
-                      v-if="getRoleLabel(team, member) === 'S'"
-                      class="px-2 py-0.5 bg-indigo-900/50 border border-indigo-700/50 text-indigo-300 rounded text-xs font-semibold flex-shrink-0"
-                    >
-                      S
-                    </span>
-                  </div>
-                  <span v-if="member.pivot?.occupation" class="text-xs text-slate-500 truncate mt-0.5">{{ formatOccupation(member.pivot.occupation) }}</span>
+          <!-- Members -->
+          <div class="dlg-members">
+            <span class="text-xs text-slate-500 mb-1 block">Členovia ({{ t.members?.length || 0 }}/10):</span>
+            <div v-for="member in t.members" :key="member.id" class="dlg-member-row">
+              <div class="flex flex-col truncate flex-1">
+                <div class="flex items-center gap-2">
+                  <span :class="member.is_absolvent ? 'text-slate-600' : 'text-slate-200'" class="truncate text-sm">{{ member.name }}</span>
+                  <span v-if="member.is_absolvent" class="steam-badge badge-muted">Absolvent</span>
+                  <span v-if="getRoleLabel(t, member) === 'SM'" class="steam-badge badge-sm">SM</span>
                 </div>
-                <!-- Only show remove button for active teams -->
-                <button
-                  v-if="team.is_scrum_master && member.id !== currentUserId && team.status === 'active'"
-                  class="btn-danger-ghost btn-sm"
-                  @click="confirmRemoveMember(team, member)"
-                >
-                  Odstrániť
-                </button>
-                <!-- Only show leave button for active teams -->
-                <button
-                  v-if="!team.is_scrum_master && member.id === currentUserId && team.status === 'active'"
-                  class="btn-warning-ghost btn-sm"
-                  @click="confirmLeaveTeam(team)"
-                >
-                  Opustiť
-                </button>
+                <span class="text-xs text-slate-600 truncate">{{ member.pivot?.occupation ? formatOccupation(member.pivot.occupation) : 'Neurčené' }}</span>
               </div>
+              <button v-if="t.is_scrum_master && member.id !== currentUserId && t.status === 'active'" class="steam-btn steam-btn-danger steam-btn-xs" @click="confirmRemoveMember(t, member)">Odstrániť</button>
+              <button v-if="!t.is_scrum_master && member.id === currentUserId && t.status === 'active'" class="steam-btn steam-btn-warn steam-btn-xs" @click="confirmLeaveTeam(t)">Opustiť</button>
             </div>
           </div>
         </div>
 
-        <button 
-            class="btn-ghost w-full mt-2"
-            @click="showTeamStatusDialog = false" 
-        >
-          Zavrieť
-        </button>
-    </div>
-    <div v-else class="text-center text-slate-400 py-8">
-        <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-800/50 flex items-center justify-center">
-          <i class="pi pi-users text-3xl text-slate-500"></i>
-        </div>
-        <p class="text-sm">Nie ste členom žiadneho tímu</p>
-    </div>
-</Dialog>
+        <button class="steam-btn steam-btn-ghost w-full mt-3" @click="showTeamStatusDialog = false">Zavrieť</button>
+      </div>
 
+      <div v-else class="dlg-empty">
+        <p>Nie ste členom žiadneho tímu</p>
+      </div>
+    </Dialog>
+  </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
 import InputText from 'primevue/inputtext'
 import Dropdown from 'primevue/dropdown'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
-import Tooltip from 'primevue/tooltip'; 
+import Tooltip from 'primevue/tooltip'
+import TopRatedCarousel from '@/components/TopRatedCarousel.vue'
 
-const vTooltip = Tooltip; 
+const vTooltip = Tooltip
 
 const API_URL = import.meta.env.VITE_API_URL
+const { t } = useI18n()
 const toast = useToast()
 const router = useRouter()
 
+// ── shared dialog styles (passed as props) ──
+const dialogContentStyle = { backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', padding: '1.5rem', border: 'none' }
+const dialogHeaderStyle  = { backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', borderBottom: '1px solid var(--color-border)', padding: '1rem 1.5rem', position: 'relative' }
+const dialogStyle         = { borderRadius: '4px', overflow: 'hidden' }
+
 // -------------------------
-// Global/User Status
+// Global / User Status
 // -------------------------
 const token = ref(localStorage.getItem('access_token') || '')
-const hasTeam = ref(false) 
-const teams = ref([]) // All teams user is part of
-const selectedTeam = ref(null) // Currently selected team
+const hasTeam = ref(false)
+const teams = ref([])
+const selectedTeam = ref(null)
 const isAdmin = computed(() => {
   const user = JSON.parse(localStorage.getItem('user') || '{}')
   return user.role === 'admin'
 })
-// Persist active team selection for cross-view authorization (AddGameView, Navbar)
+
 function setActiveTeam(team) {
   if (!team) {
     localStorage.removeItem('active_team_id')
@@ -659,23 +532,18 @@ function setActiveTeam(team) {
     localStorage.setItem('active_team_id', String(team.id))
     localStorage.setItem('active_team_is_scrum_master', team.is_scrum_master ? '1' : '0')
     localStorage.setItem('active_team_status', team.status || 'active')
-    // Broadcast change so Navbar / other views can react without reload
     window.dispatchEvent(new CustomEvent('team-changed', { detail: { id: team.id, isScrumMaster: team.is_scrum_master, status: team.status || 'active' } }))
   }
 }
-const showTeamStatusDialog = ref(false) 
+
+const showTeamStatusDialog = ref(false)
 const currentUserId = ref(null)
 const removingMember = ref(false)
 
-// Helper: derive role label and class even if pivot missing
 function getRoleLabel(team, member) {
   const pivotRole = member.pivot?.role_in_team
-  if (pivotRole === 'scrum_master' || team.scrum_master_id === member.id) return 'S'
-  return 'Člen'
-}
-function getRoleClass(team, member) {
-  const isScrum = (member.pivot?.role_in_team === 'scrum_master') || (team.scrum_master_id === member.id)
-  return isScrum ? 'text-teal-400' : 'text-gray-500'
+  if (pivotRole === 'scrum_master' || team.scrum_master_id === member.id) return 'SM'
+  return ''
 }
 
 function getCurrentUserOccupation(team) {
@@ -685,13 +553,9 @@ function getCurrentUserOccupation(team) {
   return occupation ? formatOccupation(occupation) : null
 }
 
-// Helper function to format occupation with proper diacritics
 function formatOccupation(occupation) {
   if (!occupation) return null
-  // Normalize: lowercase, trim, and remove diacritics for comparison
-  const normalized = occupation.toLowerCase().trim()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // Remove diacritics for matching
-  
+  const normalized = occupation.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
   const occupationMap = {
     'programator': 'Programátor',
     'grafik 2d': 'Grafik 2D',
@@ -699,11 +563,11 @@ function formatOccupation(occupation) {
     'tester': 'Tester',
     'animator': 'Animátor'
   }
-  return occupationMap[normalized] || occupation
+  return occupationMap[normalized] || null
 }
 
 // -------------------------
-// Logika Pripojenia k Tímu
+// Join Team
 // -------------------------
 const showJoinTeam = ref(false)
 const joinTeamCode = ref('')
@@ -712,87 +576,49 @@ const joinTeamError = ref('')
 const loadingJoin = ref(false)
 
 async function joinTeam() {
-    joinTeamError.value = ''
-    
-    if (!joinTeamCode.value) {
-        joinTeamError.value = 'Kód tímu nemôže byť prázdny.'
-        return
+  joinTeamError.value = ''
+  if (!joinTeamCode.value) { joinTeamError.value = 'Kód tímu nemôže byť prázdny.'; return }
+  if (!joinTeamOccupation.value) { joinTeamError.value = 'Povolanie je povinné.'; return }
+  loadingJoin.value = true
+  const cleanCode = joinTeamCode.value.trim()
+  try {
+    const res = await fetch(`${API_URL}/api/teams/join`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' },
+      body: JSON.stringify({ invite_code: cleanCode, occupation: joinTeamOccupation.value })
+    })
+    const data = await res.json()
+    if (res.ok && data.team) {
+      toast.add({ severity: 'success', summary: 'Úspech', detail: `Pripojili ste sa k tímu "${data.team.name}".`, life: 5000 })
+      hasTeam.value = true
+      showJoinTeam.value = false
+      joinTeamCode.value = ''
+      joinTeamOccupation.value = null
+      await loadTeamStatus()
+      loadAllGames()
+    } else {
+      let errorMessage = data.message || 'Chyba pri pripájaní.'
+      if (data.errors?.invite_code) joinTeamError.value = data.errors.invite_code.join(' ')
+      else joinTeamError.value = errorMessage
+      toast.add({ severity: 'error', summary: 'Chyba', detail: errorMessage, life: 6000 })
     }
-    
-    if (!joinTeamOccupation.value) {
-        joinTeamError.value = 'Povolanie je povinné.'
-        return
-    }
-    
-    loadingJoin.value = true
-    
-    // Očistíme kód pre prípad, že ho používateľ skopíroval s bielymi znakmi
-    const cleanCode = joinTeamCode.value.trim() 
-    const payload = JSON.stringify({ 
-      invite_code: cleanCode,
-      occupation: joinTeamOccupation.value
-    });
-
-    try {
-        const res = await fetch(`${API_URL}/api/teams/join`, { 
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json', 
-                'Authorization': 'Bearer ' + token.value,
-                'Accept': 'application/json'
-            },
-            body: payload
-        })
-
-        const data = await res.json()
-        
-        if (res.ok && data.team) {
-            toast.add({ severity: 'success', summary: 'Pripojenie Úspešné', detail: `Úspešne ste sa pripojili k tímu "${data.team.name}".`, life: 5000 })
-            hasTeam.value = true
-            showJoinTeam.value = false 
-            joinTeamCode.value = ''
-            joinTeamOccupation.value = null
-            await loadTeamStatus() // Reload all teams
-            loadAllGames() 
-        } else {
-            let errorMessage = data.message || 'Chyba pri pripájaní.'
-            
-            if (data.message && data.message.includes('Tím') && data.message.includes('dosiahol maximálny')) {
-                // Konkrétna chyba z backendu pre max členov
-                 toast.add({ severity: 'error', summary: 'Chyba Kapacity', detail: errorMessage, life: 6000 })
-            }
-            else if (errorMessage.includes('Už si v tíme') || errorMessage.includes('Už si členom tímu')) {
-                 toast.add({ severity: 'warn', summary: 'Už ste v tíme', detail: errorMessage, life: 6000 })
-            } else {
-                 toast.add({ severity: 'error', summary: 'Chyba Pripojenia', detail: errorMessage, life: 6000 })
-            }
-            
-            if (data.errors && data.errors.invite_code) {
-                 joinTeamError.value = data.errors.invite_code.join(' ')
-            } else {
-                 joinTeamError.value = errorMessage
-            }
-        }
-    } catch (err) {
-        joinTeamError.value = 'Chyba siete/servera. (Server nedostupný)'
-        toast.add({ severity: 'fatal', summary: 'Chyba Siete', detail: 'Server je nedostupný (Connection refused). Overte, či beží na porte 8000.', life: 10000 })
-    } finally {
-        loadingJoin.value = false
-    }
+  } catch (err) {
+    joinTeamError.value = 'Server nedostupný.'
+    toast.add({ severity: 'error', summary: 'Chyba Siete', detail: 'Server je nedostupný.', life: 10000 })
+  } finally { loadingJoin.value = false }
 }
 
-
 // -------------------------
-// Logika Vytvorenia Tímu
+// Create Team
 // -------------------------
 const showCreateTeam = ref(false)
 const teamName = ref('')
 const academicYear = ref(null)
 const createTeamOccupation = ref(null)
-const academicYears = ref([]) 
-const teamMessage = ref('') 
-const team = ref(null) 
-const teamCreatedSuccess = ref(false) 
+const academicYears = ref([])
+const teamMessage = ref('')
+const team = ref(null)
+const teamCreatedSuccess = ref(false)
 const loadingCreate = ref(false)
 
 const occupations = ref([
@@ -805,103 +631,57 @@ const occupations = ref([
 
 async function createTeam() {
   teamMessage.value = ''
-  // Extra validation and user feedback
-  if (!teamName.value && !academicYear.value) {
-    teamMessage.value = '❌ Vyplňte názov tímu a vyberte akademický rok.';
-    toast.add({ severity: 'warn', summary: 'Upozornenie', detail: 'Vyplňte, prosím, názov tímu a akademický rok.', life: 4000 });
-    return;
-  }
-  if (!teamName.value) {
-    teamMessage.value = '❌ Názov tímu je povinný.';
-    toast.add({ severity: 'warn', summary: 'Upozornenie', detail: 'Názov tímu je povinný.', life: 4000 });
-    return;
-  }
-  if (!academicYear.value) {
-    teamMessage.value = '❌ Akademický rok je povinný.';
-    toast.add({ severity: 'warn', summary: 'Upozornenie', detail: 'Akademický rok je povinný.', life: 4000 });
-    return;
-  }
-  if (!createTeamOccupation.value) {
-    teamMessage.value = '❌ Povolanie je povinné.';
-    toast.add({ severity: 'warn', summary: 'Upozornenie', detail: 'Povolanie je povinné.', life: 4000 });
-    return;
-  }
-  loadingCreate.value = true;
+  if (!teamName.value && !academicYear.value) { teamMessage.value = '❌ Vyplňte názov tímu a vyberte akademický rok.'; return }
+  if (!teamName.value) { teamMessage.value = '❌ Názov tímu je povinný.'; return }
+  if (!academicYear.value) { teamMessage.value = '❌ Akademický rok je povinný.'; return }
+  if (!createTeamOccupation.value) { teamMessage.value = '❌ Povolanie je povinné.'; return }
+  loadingCreate.value = true
   try {
-    const formData = new FormData();
-    formData.append('name', teamName.value);
-    formData.append('academic_year_id', academicYear.value);
-    formData.append('occupation', createTeamOccupation.value);
-
+    const formData = new FormData()
+    formData.append('name', teamName.value)
+    formData.append('academic_year_id', academicYear.value)
+    formData.append('occupation', createTeamOccupation.value)
     const res = await fetch(`${API_URL}/api/teams`, {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' },
-      body: formData,
-    });
-
-    const data = await res.json();
-
+      body: formData
+    })
+    const data = await res.json()
     if (res.ok && data.team) {
-      team.value = data.team;
-      teamCreatedSuccess.value = true;
-      hasTeam.value = true;
-      
-      // Show appropriate message based on approval status
-      if (data.requires_approval) {
-        toast.add({ 
-          severity: 'info', 
-          summary: 'Tím Vytvorený', 
-          detail: data.message || `Tím "${team.value.name}" bol vytvorený a čaká na schválenie administrátorom.`, 
-          life: 8000 
-        });
-      } else {
-        toast.add({ 
-          severity: 'success', 
-          summary: 'Tím Vytvorený', 
-          detail: data.message || `Tím "${team.value.name}" bol úspešne vytvorený.`, 
-          life: 5000 
-        });
-      }
-      
-      await loadTeamStatus(); // Reload all teams
-      loadAllGames();
+      team.value = data.team
+      teamCreatedSuccess.value = true
+      hasTeam.value = true
+      toast.add({ severity: data.requires_approval ? 'info' : 'success', summary: 'Tím Vytvorený', detail: data.message || `Tím "${data.team.name}" bol vytvorený.`, life: 6000 })
+      await loadTeamStatus()
+      loadAllGames()
     } else {
-      let errorMessage = data.message || 'Chyba pri vytváraní tímu.';
-      if (data.errors) {
-        errorMessage += ' ' + Object.values(data.errors).map(e => e.join(', ')).join('. ');
-      }
-      teamMessage.value = '❌ ' + errorMessage;
-      toast.add({ severity: 'error', summary: 'Chyba Registrácie', detail: errorMessage, life: 8000 });
+      let msg = data.message || 'Chyba pri vytváraní tímu.'
+      if (data.errors) msg += ' ' + Object.values(data.errors).map(e => e.join(', ')).join('. ')
+      teamMessage.value = '❌ ' + msg
+      toast.add({ severity: 'error', summary: 'Chyba', detail: msg, life: 8000 })
     }
   } catch (err) {
-    teamMessage.value = 'Chyba pri spojení s backendom. Server nedostupný.';
-    toast.add({ severity: 'fatal', summary: 'Chyba Pripojenia', detail: 'Server je nedostupný (Connection refused). Overte, či beží na porte 8000.', life: 10000 });
-  } finally {
-    loadingCreate.value = false;
-  }
+    teamMessage.value = 'Server nedostupný.'
+    toast.add({ severity: 'error', summary: 'Chyba', detail: 'Server je nedostupný.', life: 10000 })
+  } finally { loadingCreate.value = false }
 }
 
 const copyTeamCode = async (code) => {
-  try {
-    // Používame moderné asynchrónne Clipboard API
-    await navigator.clipboard.writeText(code);
-    toast.add({ severity: 'info', summary: 'Kód skopírovaný', detail: 'Kód bol skopírovaný do schránky.', life: 3000 });
-  } catch (err) {
-    toast.add({ severity: 'warn', summary: 'Kopírovanie zlyhalo', detail: 'Nepodarilo sa skopírovať kód. Prosím, skopírujte ho ručne.', life: 3000 });
-  }
+  try { await navigator.clipboard.writeText(code); toast.add({ severity: 'info', summary: 'Skopírované', detail: 'Kód skopírovaný.', life: 3000 }) }
+  catch { toast.add({ severity: 'warn', summary: 'Chyba', detail: 'Skopírujte kód ručne.', life: 3000 }) }
 }
 
 const closeCreateTeamDialog = () => {
-    showCreateTeam.value = false
-    teamCreatedSuccess.value = false
-    team.value = null 
-    teamName.value = ''
-    academicYear.value = null
-    createTeamOccupation.value = null
+  showCreateTeam.value = false
+  teamCreatedSuccess.value = false
+  team.value = null
+  teamName.value = ''
+  academicYear.value = null
+  createTeamOccupation.value = null
 }
 
 // -------------------------
-// Statické Dáta a Filtrovanie
+// Filters
 // -------------------------
 const search = ref('')
 const types = ref([
@@ -913,11 +693,16 @@ const types = ref([
   { label: 'Iné', value: 'other' }
 ])
 const selectedType = ref('all')
-const games = ref([]) 
+const games = ref([])
+const topRatedProjects = ref([])
 const loadingGames = ref(true)
+const loadingTopRated = ref(false)
 const showingMyProjects = ref(false)
+const currentPage = ref(1)
+const lastPage = ref(1)
+const totalProjects = ref(0)
+const searchDebounce = ref(null)
 
-// Nový filter systém
 const filterSchoolType = ref(null)
 const filterYearOfStudy = ref(null)
 const filterSubject = ref(null)
@@ -929,7 +714,6 @@ const filterSchoolTypes = ref([
   { label: 'Stredná škola (SŠ)', value: 'ss' },
   { label: 'Vysoká Škola (VŠ)', value: 'vs' }
 ])
-
 const filterSubjects = ref([
   { label: 'Všetky predmety', value: null },
   { label: 'Slovenský jazyk', value: 'Slovenský jazyk' },
@@ -941,614 +725,994 @@ const filterSubjects = ref([
   { label: 'Chémia', value: 'Chémia' },
   { label: 'Fyzika', value: 'Fyzika' }
 ])
-
 const filterYears = ref([
   { label: 'Všetky ročníky', value: null },
-  ...Array.from({ length: 9 }, (_, i) => ({
-    label: `${i + 1}. ročník`,
-    value: i + 1
-  }))
+  ...Array.from({ length: 9 }, (_, i) => ({ label: `${i + 1}. ročník`, value: i + 1 }))
 ])
 
-const hasActiveFilters = computed(() => {
-  return filterSchoolType.value !== null || 
-         filterYearOfStudy.value !== null || 
-         filterSubject.value !== null ||
-         filterAcademicYear.value !== null ||
-         selectedType.value !== 'all' ||
-         search.value !== ''
+const hasActiveFilters = computed(() =>
+  filterSchoolType.value !== null || filterYearOfStudy.value !== null || filterSubject.value !== null || filterAcademicYear.value !== null || selectedType.value !== 'all' || search.value !== ''
+)
+
+const filteredGames = computed(() => games.value)
+
+const pageNumbers = computed(() => {
+  const total = lastPage.value
+  const current = currentPage.value
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
+  const pages = []
+  pages.push(1)
+  if (current > 3) pages.push('...')
+  for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) pages.push(i)
+  if (current < total - 2) pages.push('...')
+  pages.push(total)
+  return pages
 })
 
-const filteredGames = computed(() => {
-  return games.value.filter(
-    (g) => {
-      const matchesSearch = !search.value || g.title.toLowerCase().includes(search.value.toLowerCase())
-      const matchesSchoolType = !filterSchoolType.value || g.school_type === filterSchoolType.value
-      const matchesYear = !filterYearOfStudy.value || g.year_of_study === filterYearOfStudy.value
-      const matchesSubject = !filterSubject.value || g.subject === filterSubject.value
-      const matchesAcademicYear = !filterAcademicYear.value || g.academic_year?.id === filterAcademicYear.value
-      return matchesSearch && matchesSchoolType && matchesYear && matchesSubject && matchesAcademicYear
-    }
-  )
-})
-
-function resetFilters() {
-  filterSchoolType.value = null
-  filterYearOfStudy.value = null
-  filterSubject.value = null
-  filterAcademicYear.value = null
-  selectedType.value = 'all'
-  search.value = ''
+function goToPage(page) {
+  if (page < 1 || page > lastPage.value || page === currentPage.value) return
+  currentPage.value = page
   loadAllGames()
+  document.querySelector('.project-grid, .state-message')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
-// Click handlers for filtering by attribute
-function filterByType(type) {
-  selectedType.value = type
-  loadAllGames()
-}
-
-function filterBySchoolType(schoolType) {
-  filterSchoolType.value = schoolType
-  loadAllGames()
-}
-
-function filterBySubject(subject) {
-  filterSubject.value = subject
-  loadAllGames()
-}
-
-function filterByAcademicYear(academicYearId) {
-  filterAcademicYear.value = academicYearId
-  loadAllGames()
-}
-
-function applyFilters() {
-  loadAllGames()
-}
-const viewProjectDetail = (project) => {
-  router.push({ name: 'ProjectDetail', params: { id: project.id } })
-}
+function resetFilters() { filterSchoolType.value = null; filterYearOfStudy.value = null; filterSubject.value = null; filterAcademicYear.value = null; selectedType.value = 'all'; search.value = ''; currentPage.value = 1; loadAllGames() }
+function filterByType(type) { selectedType.value = type; currentPage.value = 1; loadAllGames() }
+function filterBySchoolType(st) { filterSchoolType.value = st; currentPage.value = 1; loadAllGames() }
+function filterBySubject(sub) { filterSubject.value = sub; currentPage.value = 1; loadAllGames() }
+function filterByAcademicYear(id) { filterAcademicYear.value = id; currentPage.value = 1; loadAllGames() }
+function applyFilters() { currentPage.value = 1; loadAllGames() }
+const viewProjectDetail = (project) => { router.push({ name: 'ProjectDetail', params: { id: project.id } }) }
 
 // -------------------------
-// Načítanie dát
+// Data loading
 // -------------------------
 async function loadAcademicYears() {
-    if (!token.value) return
-    try {
-        const res = await fetch(`${API_URL}/api/academic-years`, {
-        headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' }
-        })
-        if (!res.ok) return
-        academicYears.value = await res.json()
-    } catch (err) {
-        // Silent fail - academic years are optional for display
-    }
+  if (!token.value) return
+  try { const res = await fetch(`${API_URL}/api/academic-years`, { headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' } }); if (res.ok) academicYears.value = await res.json() }
+  catch {}
 }
 
-// Načítanie aktuálneho používateľa (pre skrytie tlačidla odstránenia pri sebe)
 async function loadCurrentUser() {
   if (!token.value) return
-  try {
-    const res = await fetch(`${API_URL}/api/user`, {
-      headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' }
-    })
-    if (res.ok) {
-      const data = await res.json()
-      currentUserId.value = data.id
-    }
-  } catch (_) {}
+  try { const res = await fetch(`${API_URL}/api/user`, { headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' } }); if (res.ok) { const data = await res.json(); currentUserId.value = data.id } }
+  catch {}
 }
 
-// 🛑 NOVÁ FUNKCIA pre /api/user/team
 async function loadTeamStatus() {
-    if (!token.value) return; 
-    try {
-        const res = await fetch(`${API_URL}/api/user/team`, { 
-            headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' }
-        })
-        
-        // Pokúsime sa načítať JSON aj pri chybovom stave (pre správy)
-        let data = {};
-        if (res.headers.get('content-type')?.includes('application/json')) {
-            data = await res.json();
-        }
-
-        if (res.ok) {
-            if (data.teams && data.teams.length > 0) {
-                hasTeam.value = true
-                teams.value = data.teams
-                // Try restore previously selected team
-                const storedId = localStorage.getItem('active_team_id')
-                const found = storedId ? teams.value.find(t => String(t.id) === storedId) : null
-                selectedTeam.value = found || teams.value[0] // Select restored or first team
-                setActiveTeam(selectedTeam.value)
-                console.log('✅ Používateľ je v tímoch:', data.teams.map(t => t.name).join(', '));
-            } else {
-                hasTeam.value = false;
-                teams.value = [];
-                selectedTeam.value = null;
-                setActiveTeam(null); // Clear localStorage and notify Navbar
-            }
-        } else if (res.status === 404) {
-            console.warn(`⚠️ Chyba 404: Endpoint /api/user/team nebol nájdený. Skontrolujte routes/api.php.`)
-            hasTeam.value = false;
-        } else if (res.status === 401) {
-             console.warn(`⚠️ Chyba 401: Neautorizovaný prístup k stavu tímu. Token neplatný/vypršal.`)
-             hasTeam.value = false;
-        } else {
-             console.error(`❌ Chyba ${res.status} pri načítaní stavu tímu.`, res)
-        }
-    } catch (err) {
-        console.error('❌ FATÁLNA CHYBA SIETE pri načítaní stavu tímu. Server pravdepodobne nie je spustený alebo je nedostupný.', err)
-        toast.add({ severity: 'fatal', summary: 'Chyba Siete', detail: 'Server je nedostupný (Connection refused). Overte, či beží na porte 8000.', life: 10000 })
-    }
-}
-
-// Načítanie všetkých hier z DB s novými filtrami
-async function loadAllGames() {
-    showingMyProjects.value = false
-    if (!token.value) {
-        loadingGames.value = false
-        return
-    }
-    loadingGames.value = true
-    try {
-        const params = new URLSearchParams()
-        
-        if (selectedType.value && selectedType.value !== 'all') {
-            params.append('type', selectedType.value)
-        }
-        
-        if (filterSchoolType.value) {
-            params.append('school_type', filterSchoolType.value)
-        }
-        
-        if (filterYearOfStudy.value) {
-            params.append('year_of_study', filterYearOfStudy.value)
-        }
-        
-        if (filterSubject.value) {
-            params.append('subject', filterSubject.value)
-        }
-        
-        if (filterAcademicYear.value) {
-            params.append('academic_year_id', filterAcademicYear.value)
-        }
-        
-        const query = params.toString() ? `?${params.toString()}` : ''
-        const res = await fetch(`${API_URL}/api/projects${query}`, {
-            headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' }
-        })
-        
-        if (res.ok) {
-            const data = await res.json()
-            games.value = data
-        } else if (res.status === 404) {
-            toast.add({ severity: 'error', summary: 'Chyba Načítania Projektov (404)', detail: 'Chýba routa GET /api/projects. Pridajte ju, prosím, do routes/api.php.', life: 10000 })
-        }
-         else {
-            toast.add({ severity: 'error', summary: 'Chyba Načítania Projektov', detail: `Nepodarilo sa načítať zoznam projektov zo servera. Status: ${res.status}`, life: 5000 })
-        }
-    } catch (err) {
-        console.error('❌ FATÁLNA CHYBA SIETE pri načítaní všetkých projektov. Server pravdepodobne nie je spustený alebo je nedostupný.', err)
-        toast.add({ severity: 'fatal', summary: 'Chyba Pripojenia', detail: 'Server je nedostupný (Connection refused). Problém s komunikáciou pri načítaní projektov.', life: 10000 })
-    } finally {
-        loadingGames.value = false
-    }
-}
-
-function confirmRemoveMember(team, member) {
-  if (removingMember.value) return
-  const ok = window.confirm(`Odstrániť člena "${member.name}" z tímu "${team.name}"?`)
-  if (ok) removeMember(team, member)
-}
-
-function confirmLeaveTeam(team) {
-  if (removingMember.value) return
-  const ok = window.confirm(`Naozaj chcete opustiť tím "${team.name}"?`)
-  if (ok) leaveTeam(team)
-}
-
-// Load only projects for active team
-async function loadMyProjects(){
-  if(!token.value || !selectedTeam.value) return
-  showingMyProjects.value = true
-  loadingGames.value = true
+  if (!token.value) return
   try {
-    const res = await fetch(`${API_URL}/api/projects/my?team_id=${selectedTeam.value.id}`, { headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' } })
-    if(res.ok){
-      const data = await res.json()
-      games.value = data.projects || []
-      const count = data.count || games.value.length
-      if(count === 0){
-        toast.add({ severity: 'info', summary: 'Žiadne projekty', detail: 'Váš tím zatiaľ nemá žiadne projekty.', life: 3000 })
-      } else {
-        toast.add({ severity: 'success', summary: 'Filtrované', detail: `Zobrazených ${count} projektov vášho tímu.`, life: 3000 })
-      }
-    } else {
-      const errorData = await res.json().catch(() => ({}))
-      toast.add({ severity: 'warn', summary: 'Chyba', detail: errorData.message || 'Nepodarilo sa načítať projekty tímu.', life: 4000 })
-    }
-  } catch(_) {
-    toast.add({ severity: 'error', summary: 'Chyba siete', detail: 'Server je nedostupný.', life: 5000 })
-  } finally {
-    loadingGames.value = false
+    const res = await fetch(`${API_URL}/api/user/team`, { headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' } })
+    let data = {}
+    if (res.headers.get('content-type')?.includes('application/json')) data = await res.json()
+    if (res.ok && data.teams?.length > 0) {
+      hasTeam.value = true; teams.value = data.teams
+      const storedId = localStorage.getItem('active_team_id')
+      const found = storedId ? teams.value.find(t => String(t.id) === storedId) : null
+      selectedTeam.value = found || teams.value[0]
+      setActiveTeam(selectedTeam.value)
+    } else { hasTeam.value = false; teams.value = []; selectedTeam.value = null; setActiveTeam(null) }
+  } catch (err) {
+    console.error('Team status load error', err)
+    toast.add({ severity: 'error', summary: 'Chyba Siete', detail: 'Server je nedostupný.', life: 10000 })
   }
 }
+
+async function loadTopRatedProjects() {
+  if (!token.value) return
+  loadingTopRated.value = true
+  try {
+    const res = await fetch(`${API_URL}/api/projects/top-rated`, { headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' } })
+    if (res.ok) topRatedProjects.value = await res.json()
+    else toast.add({ severity: 'warn', summary: 'Chyba', detail: `Nepodarilo sa načítať top projekty (${res.status}).`, life: 5000 })
+  } catch (err) {
+    toast.add({ severity: 'error', summary: 'Chyba Siete', detail: 'Server je nedostupný.', life: 10000 })
+  } finally { loadingTopRated.value = false }
+}
+
+async function loadAllGames() {
+  showingMyProjects.value = false
+  if (!token.value) { loadingGames.value = false; return }
+  loadingGames.value = true
+  try {
+    const params = new URLSearchParams()
+    if (selectedType.value && selectedType.value !== 'all') params.append('type', selectedType.value)
+    if (search.value) params.append('search', search.value)
+    if (filterSchoolType.value) params.append('school_type', filterSchoolType.value)
+    if (filterYearOfStudy.value) params.append('year_of_study', filterYearOfStudy.value)
+    if (filterSubject.value) params.append('subject', filterSubject.value)
+    if (filterAcademicYear.value) params.append('academic_year_id', filterAcademicYear.value)
+    params.append('page', currentPage.value)
+    const query = params.toString() ? `?${params.toString()}` : ''
+    const res = await fetch(`${API_URL}/api/projects${query}`, { headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' } })
+    if (res.ok) {
+      const data = await res.json()
+      games.value = data.data ?? data
+      lastPage.value = data.last_page ?? 1
+      totalProjects.value = data.total ?? games.value.length
+    } else toast.add({ severity: 'error', summary: 'Chyba', detail: `Nepodarilo sa načítať projekty (${res.status}).`, life: 5000 })
+  } catch (err) {
+    toast.add({ severity: 'error', summary: 'Chyba Siete', detail: 'Server je nedostupný.', life: 10000 })
+  } finally { loadingGames.value = false }
+}
+
+async function loadMyProjects() {
+  if (!token.value || !selectedTeam.value) return
+  showingMyProjects.value = true; loadingGames.value = true
+  try {
+    const res = await fetch(`${API_URL}/api/projects/my?team_id=${selectedTeam.value.id}`, { headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' } })
+    if (res.ok) { const data = await res.json(); games.value = data.projects || []; toast.add({ severity: 'success', summary: 'Filtrované', detail: `${games.value.length} projektov vášho tímu.`, life: 3000 }) }
+    else { const ed = await res.json().catch(() => ({})); toast.add({ severity: 'warn', summary: 'Chyba', detail: ed.message || 'Nepodarilo sa načítať projekty.', life: 4000 }) }
+  } catch { toast.add({ severity: 'error', summary: 'Chyba siete', detail: 'Server je nedostupný.', life: 5000 }) }
+  finally { loadingGames.value = false }
+}
+
+function confirmRemoveMember(team, member) { if (removingMember.value) return; if (window.confirm(`Odstrániť "${member.name}" z "${team.name}"?`)) removeMember(team, member) }
+function confirmLeaveTeam(team) { if (removingMember.value) return; if (window.confirm(`Opustiť tím "${team.name}"?`)) leaveTeam(team) }
 
 async function removeMember(team, member) {
   removingMember.value = true
   try {
-    const res = await fetch(`${API_URL}/api/teams/${team.id}/members/${member.id}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' }
-    })
-    let msg = 'Nepodarilo sa odstrániť člena.'
-    try { const data = await res.clone().json(); if (data?.message) msg = data.message; if (data?.team?.members) team.members = data.team.members } catch (_) {}
-    if (res.ok) {
-      toast.add({ severity: 'success', summary: 'Člen odstránený', detail: `${member.name} bol odstránený.`, life: 4000 })
-    } else {
-      toast.add({ severity: 'warn', summary: 'Operácia zlyhala', detail: msg, life: 6000 })
-    }
-  } catch (e) {
-    toast.add({ severity: 'error', summary: 'Chyba siete', detail: 'Server je nedostupný.', life: 6000 })
-  } finally {
-    removingMember.value = false
-  }
+    const res = await fetch(`${API_URL}/api/teams/${team.id}/members/${member.id}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' } })
+    try { const data = await res.clone().json(); if (data?.team?.members) team.members = data.team.members } catch {}
+    if (res.ok) toast.add({ severity: 'success', summary: 'Člen odstránený', detail: `${member.name} bol odstránený.`, life: 4000 })
+    else toast.add({ severity: 'warn', summary: 'Zlyhalo', detail: 'Nepodarilo sa odstrániť člena.', life: 6000 })
+  } catch { toast.add({ severity: 'error', summary: 'Chyba siete', life: 6000 }) }
+  finally { removingMember.value = false }
 }
 
 async function leaveTeam(team) {
   removingMember.value = true
   try {
-    const res = await fetch(`${API_URL}/api/teams/${team.id}/leave`, {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' }
-    })
-    let msg = 'Nepodarilo sa opustiť tím.'
-    try { const data = await res.clone().json(); if (data?.message) msg = data.message } catch (_) {}
-    if (res.ok) {
-      toast.add({ severity: 'success', summary: 'Tím opustený', detail: `Úspešne ste opustili tím ${team.name}.`, life: 4000 })
-      await loadTeamStatus()
-      setActiveTeam(teams.value[0] || null)
-      showTeamStatusDialog.value = false
-    } else {
-      toast.add({ severity: 'warn', summary: 'Operácia zlyhala', detail: msg, life: 6000 })
-    }
-  } catch (e) {
-    toast.add({ severity: 'error', summary: 'Chyba siete', detail: 'Server je nedostupný.', life: 6000 })
-  } finally {
-    removingMember.value = false
-  }
+    const res = await fetch(`${API_URL}/api/teams/${team.id}/leave`, { method: 'POST', headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' } })
+    if (res.ok) { toast.add({ severity: 'success', summary: 'Tím opustený', life: 4000 }); await loadTeamStatus(); setActiveTeam(teams.value[0] || null); showTeamStatusDialog.value = false }
+    else toast.add({ severity: 'warn', summary: 'Zlyhalo', life: 6000 })
+  } catch { toast.add({ severity: 'error', summary: 'Chyba siete', life: 6000 }) }
+  finally { removingMember.value = false }
 }
 
+onMounted(() => { loadAcademicYears(); loadTeamStatus(); loadAllGames(); loadTopRatedProjects(); loadCurrentUser() })
+watch(selectedTeam, (val) => { setActiveTeam(val) })
+watch(selectedType, () => { currentPage.value = 1; loadAllGames() })
+watch([filterSchoolType, filterYearOfStudy, filterSubject, filterAcademicYear], () => { currentPage.value = 1; loadAllGames() })
+watch(search, () => { clearTimeout(searchDebounce.value); searchDebounce.value = setTimeout(() => { currentPage.value = 1; loadAllGames() }, 400) })
 
-onMounted(() => {
-  loadAcademicYears()
-  loadTeamStatus() 
-  loadAllGames() 
-  loadCurrentUser()
-})
-
-// React to user changing selected team via dropdown
-watch(selectedTeam, (val) => {
-  setActiveTeam(val)
-})
-watch(selectedType, () => { loadAllGames() })
-watch([filterSchoolType, filterYearOfStudy, filterSubject, filterAcademicYear], () => { loadAllGames() })
-
-// Helper function to get school type label
-function getSchoolTypeLabel(type) {
-  const map = {
-    'zs': 'ZŠ',
-    'ss': 'SŠ',
-    'vs': 'VŠ'
-  }
-  return map[type] || type
-}
-
-// Helper to resolve splash image path (local storage or absolute URL)
-function getSplashUrl(path) {
-  if (!path) return ''
-  if (path.startsWith('http')) return path
-  return `${API_URL}/storage/${path}`
-}
-
-function formatProjectType(type) {
-  const typeMap = {
-    game: 'Hra',
-    web_app: 'Web App',
-    mobile_app: 'Mobile App',
-    library: 'Knižnica',
-    other: 'Iné'
-  }
-  return typeMap[type] || type
-}
-
-function goToTeam(teamId) {
-  if (teamId) {
-    router.push(`/team/${teamId}`)
-  }
-}
+// ── Helpers ──
+function getSchoolTypeLabel(type) { return { 'zs': 'ZŠ', 'ss': 'SŠ', 'vs': 'VŠ' }[type] || type }
+function getSplashUrl(path) { if (!path) return ''; if (path.startsWith('http')) return path; return `${API_URL}/storage/${path}` }
+function formatProjectType(type) { return { game: 'Hra', web_app: 'Web App', mobile_app: 'Mobile App', library: 'Knižnica', other: 'Iné' }[type] || type }
+function goToTeam(teamId) { if (teamId) router.push(`/team/${teamId}`) }
 </script>
 
 <style scoped>
-/* Glass Card Effect */
-.glass-card {
-  @apply bg-slate-900/60 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl;
-  box-shadow: 
-    0 4px 6px -1px rgba(0, 0, 0, 0.3),
-    0 2px 4px -2px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+/* ═══════════════════════════════════════════════════════════ */
+/* DESIGN TOKENS                                              */
+/* ═══════════════════════════════════════════════════════════ */
+/* Theme colors are driven by CSS variables in main.css. */
+
+.home-root {
+  min-height: 100%;
+  position: relative;
+  overflow-x: hidden;
 }
 
-/* Project Card */
-.project-card {
-  @apply bg-slate-900/60 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-5 shadow-xl flex flex-col;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 
-    0 4px 6px -1px rgba(0, 0, 0, 0.3),
-    0 2px 4px -2px rgba(0, 0, 0, 0.2);
+/* ═══════════════════════════════════════════════════════════ */
+/* ANIMATED BACKGROUND                                        */
+/* ═══════════════════════════════════════════════════════════ */
+.bg-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
 }
 
-.project-card:hover {
-  @apply border-indigo-500/50;
-  transform: translateY(-4px);
-  box-shadow: 
-    0 20px 25px -5px rgba(0, 0, 0, 0.4),
-    0 8px 10px -6px rgba(0, 0, 0, 0.3),
-    0 0 0 1px rgba(99, 102, 241, 0.2);
+/* Subtle dot grid */
+.bg-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle, rgba(var(--color-accent-rgb), 0.06) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, black 30%, transparent 70%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, black 30%, transparent 70%);
 }
 
-/* Primary Button */
-.btn-primary {
-  @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 font-semibold text-white rounded-xl transition-all duration-200;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  box-shadow: 0 4px 14px 0 rgba(99, 102, 241, 0.4);
+/* Floating gradient orbs */
+.bg-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.12;
+  will-change: transform;
+}
+.bg-orb-1 {
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(var(--color-accent-rgb), 0.5), transparent 70%);
+  top: -10%;
+  left: -5%;
+  animation: orb-drift-1 25s ease-in-out infinite;
+}
+.bg-orb-2 {
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(91, 139, 230, 0.4), transparent 70%);
+  top: 40%;
+  right: -8%;
+  animation: orb-drift-2 30s ease-in-out infinite;
+}
+.bg-orb-3 {
+  width: 350px;
+  height: 350px;
+  background: radial-gradient(circle, rgba(var(--color-accent-rgb), 0.35), transparent 70%);
+  bottom: -5%;
+  left: 30%;
+  animation: orb-drift-3 22s ease-in-out infinite;
 }
 
-.btn-primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-  box-shadow: 0 6px 20px 0 rgba(99, 102, 241, 0.5);
-  transform: translateY(-1px);
+@keyframes orb-drift-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%      { transform: translate(60px, 40px) scale(1.05); }
+  66%      { transform: translate(-30px, 70px) scale(0.95); }
+}
+@keyframes orb-drift-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  40%      { transform: translate(-50px, -60px) scale(1.1); }
+  70%      { transform: translate(30px, 30px) scale(0.9); }
+}
+@keyframes orb-drift-3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%      { transform: translate(70px, -50px) scale(1.08); }
 }
 
-.btn-primary:active:not(:disabled) {
-  transform: translateY(0);
-  box-shadow: 0 2px 8px 0 rgba(99, 102, 241, 0.4);
+/* Small floating particles */
+.bg-particle {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(var(--color-accent-rgb), 0.25);
+  will-change: transform, opacity;
+}
+.bg-particle-1 {
+  width: 4px; height: 4px;
+  top: 15%; left: 20%;
+  animation: particle-float 18s ease-in-out infinite;
+}
+.bg-particle-2 {
+  width: 6px; height: 6px;
+  top: 35%; left: 75%;
+  animation: particle-float 22s ease-in-out infinite 3s;
+}
+.bg-particle-3 {
+  width: 3px; height: 3px;
+  top: 60%; left: 40%;
+  animation: particle-float 15s ease-in-out infinite 6s;
+}
+.bg-particle-4 {
+  width: 5px; height: 5px;
+  top: 80%; left: 65%;
+  animation: particle-float 20s ease-in-out infinite 2s;
+}
+.bg-particle-5 {
+  width: 3px; height: 3px;
+  top: 25%; left: 55%;
+  animation: particle-float 17s ease-in-out infinite 8s;
+}
+.bg-particle-6 {
+  width: 4px; height: 4px;
+  top: 70%; left: 15%;
+  animation: particle-float 24s ease-in-out infinite 5s;
 }
 
-.btn-primary:disabled {
-  @apply opacity-50 cursor-not-allowed;
+@keyframes particle-float {
+  0%, 100% { transform: translate(0, 0); opacity: 0.2; }
+  25%      { transform: translate(30px, -40px); opacity: 0.6; }
+  50%      { transform: translate(-20px, -80px); opacity: 0.3; }
+  75%      { transform: translate(40px, -30px); opacity: 0.5; }
 }
 
-/* Secondary Button */
-.btn-secondary {
-  @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 font-semibold text-slate-200 rounded-xl transition-all duration-200;
-  background: rgba(51, 65, 85, 0.5);
-  border: 1px solid rgba(100, 116, 139, 0.5);
-  backdrop-filter: blur(8px);
+/* Make all real content sit above the background */
+.home-root > :not(.bg-canvas) {
+  position: relative;
+  z-index: 1;
 }
 
-.btn-secondary:hover:not(:disabled) {
-  @apply text-white;
-  background: rgba(71, 85, 105, 0.6);
-  border-color: rgba(148, 163, 184, 0.5);
-  box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.2);
-  transform: translateY(-1px);
+/* ═══════════════════════════════════════════════════════════ */
+/* TEAM BAR                                                   */
+/* ═══════════════════════════════════════════════════════════ */
+.team-bar-section {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 16px 32px 0;
+}
+.team-bar {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.team-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.team-bar-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+.team-bar-note {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  margin-right: 8px;
+}
+.team-bar-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.team-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-left: auto;
 }
 
-.btn-secondary:active:not(:disabled) {
-  transform: translateY(0);
+/* Meta chips */
+.meta-chip {
+  font-size: 0.75rem;
+  padding: 3px 10px;
+  background: var(--color-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+.meta-chip-accent {
+  background: rgba(var(--color-accent-rgb), 0.1);
+  border-color: rgba(var(--color-accent-rgb), 0.25);
+  color: var(--color-accent);
 }
 
-.btn-secondary:disabled {
-  @apply opacity-50 cursor-not-allowed;
+/* Team warnings */
+.team-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 4px;
+  margin-top: 12px;
+  font-size: 0.85rem;
+}
+.team-warning strong { display: block; margin-bottom: 2px; }
+.team-warning p { margin: 0; font-size: 0.8rem; opacity: 0.8; }
+.team-warning-pending { background: rgba(var(--color-warning-rgb), 0.08); border: 1px solid rgba(var(--color-warning-rgb), 0.25); color: var(--color-warning); }
+.team-warning-pending i { margin-top: 2px; }
+.team-warning-suspended { background: rgba(var(--color-danger-rgb), 0.08); border: 1px solid rgba(var(--color-danger-rgb), 0.25); color: var(--color-danger); }
+.team-warning-suspended i { margin-top: 2px; }
+
+/* ═══════════════════════════════════════════════════════════ */
+/* CONTENT WRAPPER                                            */
+/* ═══════════════════════════════════════════════════════════ */
+.content-wrap {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 24px 32px 48px;
 }
 
-/* Ghost Button */
-.btn-ghost {
-  @apply inline-flex items-center justify-center gap-2 px-4 py-2 font-medium text-slate-400 rounded-xl transition-all duration-200;
-  background: transparent;
+/* ═══════════════════════════════════════════════════════════ */
+/* FILTER TOOLBAR                                             */
+/* ═══════════════════════════════════════════════════════════ */
+.filter-toolbar {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 20px 24px;
+  margin-bottom: 24px;
+}
+.filter-toolbar-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.section-heading {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-text);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.filter-toolbar-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
-.btn-ghost:hover:not(:disabled) {
-  @apply text-slate-200;
-  background: rgba(51, 65, 85, 0.3);
-}
-
-/* Danger Ghost Button */
-.btn-danger-ghost {
-  @apply inline-flex items-center justify-center gap-1.5 px-3 py-1.5 font-medium text-rose-400 rounded-lg transition-all duration-200;
-  background: transparent;
-}
-
-.btn-danger-ghost:hover:not(:disabled) {
-  @apply text-rose-300;
-  background: rgba(244, 63, 94, 0.15);
-}
-
-/* Warning Ghost Button */
-.btn-warning-ghost {
-  @apply inline-flex items-center justify-center gap-1.5 px-3 py-1.5 font-medium text-amber-400 rounded-lg transition-all duration-200;
-  background: transparent;
-}
-
-.btn-warning-ghost:hover:not(:disabled) {
-  @apply text-amber-300;
-  background: rgba(251, 191, 36, 0.15);
-}
-
-/* Small Button Variant */
-.btn-sm {
-  @apply px-3.5 py-2 text-sm;
-}
-
-/* Search Input */
+/* Search */
+.search-row { margin-bottom: 16px; }
+.search-box { position: relative; }
 .search-input {
-  @apply w-full bg-slate-800/50 text-white placeholder-slate-400 px-4 py-3 pl-11 rounded-xl border border-slate-700/50 transition-all duration-200;
-  backdrop-filter: blur(8px);
+  width: 100%;
+  background: var(--color-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  color: var(--color-text);
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.search-input::placeholder { color: var(--color-text-subtle); }
+.search-input:focus { border-color: var(--color-accent); }
+
+/* Filter grid */
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+@media (max-width: 900px) {
+  .filter-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 540px) {
+  .filter-grid { grid-template-columns: 1fr; }
+}
+.filter-item { display: flex; flex-direction: column; gap: 4px; }
+.filter-label { font-size: 0.75rem; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+
+/* ═══════════════════════════════════════════════════════════ */
+/* TOP RATED CAROUSEL                                         */
+/* ═══════════════════════════════════════════════════════════ */
+.top-rated-loading {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 18px 20px;
+  margin-bottom: 24px;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
 }
 
-.search-input:focus {
-  @apply outline-none border-indigo-500/50;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+/* ═══════════════════════════════════════════════════════════ */
+/* LANDING (not logged in)                                    */
+/* ═══════════════════════════════════════════════════════════ */
+.landing-section {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 100px 32px;
+}
+.landing-card {
+  text-align: center;
+  max-width: 480px;
+}
+.landing-logo {
+  height: 100px;
+  width: auto;
+  margin: 0 auto 32px;
+  filter: drop-shadow(0 4px 20px rgba(var(--color-accent-rgb), 0.2));
+}
+.landing-heading {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--color-text);
+  margin-bottom: 14px;
+  letter-spacing: -0.02em;
+}
+.landing-heading-accent {
+  color: var(--color-accent);
+}
+.landing-text {
+  color: var(--color-text-muted);
+  font-size: 0.95rem;
+  margin-bottom: 32px;
+  line-height: 1.6;
+}
+.landing-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
 }
 
-/* Info Chips */
-.info-chip {
-  @apply px-3.5 py-1.5 bg-slate-800/70 rounded-lg border border-slate-700/50 shadow-sm;
+/* ═══════════════════════════════════════════════════════════ */
+/* STATE MESSAGES (loading / empty)                           */
+/* ═══════════════════════════════════════════════════════════ */
+.state-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 80px 24px;
+  color: var(--color-text-muted);
+  font-size: 1rem;
 }
 
-.info-chip-accent {
-  @apply px-3.5 py-1.5 bg-indigo-900/50 rounded-lg border border-indigo-600/50 shadow-sm;
+/* ═══════════════════════════════════════════════════════════ */
+/* PROJECT GRID  (Steam-style)                                */
+/* ═══════════════════════════════════════════════════════════ */
+.project-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+@media (max-width: 1100px) {
+  .project-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 640px) {
+  .project-grid { grid-template-columns: 1fr; }
 }
 
-.info-chip-purple {
-  @apply px-3.5 py-1.5 bg-violet-900/50 rounded-lg border border-violet-600/50 shadow-sm;
+/* ── Pagination ── */
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 24px 0 8px;
+  flex-wrap: wrap;
+}
+.page-btn {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 10px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  color: var(--color-text);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.page-btn:hover:not(:disabled) {
+  background: var(--color-elevated);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+.page-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.page-btn-active {
+  background: var(--color-accent) !important;
+  border-color: var(--color-accent) !important;
+  color: #fff !important;
+  font-weight: 600;
+}
+.page-ellipsis {
+  color: var(--color-text-muted);
+  padding: 0 4px;
+  user-select: none;
+}
+.page-info {
+  margin-left: 12px;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
 }
 
-.info-chip-warning {
-  @apply px-3.5 py-1.5 bg-amber-900/50 rounded-lg border border-amber-600/50 shadow-sm;
+/* ── Card ── */
+.project-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+}
+.project-card:hover {
+  background: var(--color-elevated);
+  border-color: var(--color-accent);
+  transform: translateY(-2px);
 }
 
-.info-chip-danger {
-  @apply px-3.5 py-1.5 bg-rose-900/50 rounded-lg border border-rose-600/50 shadow-sm;
+/* Thumbnail */
+.card-thumb {
+  width: 100%;
+  aspect-ratio: 16/9;
+  background: var(--color-surface-deep);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.card-thumb-empty { font-size: 0.75rem; color: var(--color-text-subtle); }
+.card-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s;
+}
+.project-card:hover .card-thumb-img {
+  transform: scale(1.03);
 }
 
-/* Status Badges */
-.status-badge {
-  @apply px-2 py-0.5 rounded text-xs font-medium;
+/* Body */
+.card-body {
+  padding: 14px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
 }
-
-.status-pending {
-  @apply bg-amber-900/60 text-amber-200 border border-amber-700/50;
+.card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text);
+  line-height: 1.3;
+  margin-bottom: 8px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
-
-.status-suspended {
-  @apply bg-rose-900/60 text-rose-200 border border-rose-700/50;
-}
-
-.status-active {
-  @apply bg-emerald-900/60 text-emerald-200 border border-emerald-700/50;
-}
+.project-card:hover .card-title { color: var(--color-text-strong); }
 
 /* Tags */
-.tag {
-  @apply px-3 py-1 rounded-lg font-medium shadow-sm transition-all duration-200 uppercase text-xs;
+.card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.card-tag {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 2px;
+  background: var(--color-elevated);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-weight: 500;
+}
+.card-tag:hover { background: var(--color-border); color: var(--color-text); }
+.card-tag-accent {
+  background: rgba(var(--color-accent-rgb), 0.12);
+  border-color: rgba(var(--color-accent-rgb), 0.3);
+  color: var(--color-accent);
+}
+.card-tag-accent:hover {
+  background: rgba(var(--color-accent-rgb), 0.22);
 }
 
-.tag-primary {
-  @apply bg-indigo-900/60 text-indigo-200 border border-indigo-600/50;
+.card-desc {
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 12px;
+  flex: 1;
 }
 
-.tag-primary:hover {
-  @apply bg-indigo-800/70 border-indigo-500/60;
-}
-
-.tag-default {
-  @apply bg-slate-800/60 text-slate-300 border border-slate-600/50;
-}
-
-.tag-default:hover {
-  @apply bg-slate-700/70 border-slate-500/60;
-}
-
-/* Custom Scrollbar */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(30, 41, 59, 0.5);
-  border-radius: 3px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(100, 116, 139, 0.5);
-  border-radius: 3px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.5);
-}
-
-/* Dialog Header - Custom centered layout with close button */
-.dialog-header-custom {
+/* Card footer */
+.card-footer {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 100%;
-  position: relative;
+  justify-content: space-between;
+  border-top: 1px solid var(--color-border);
+  padding-top: 10px;
+  gap: 8px;
 }
+.card-meta-left { display: flex; align-items: center; gap: 12px; }
+.card-rating { display: flex; align-items: center; gap: 2px; }
+.card-views { display: flex; align-items: center; gap: 4px; }
+.view-icon { font-size: 0.8rem; color: var(--color-text-muted); position: relative; top: 1px; }
+.view-num { font-size: 0.8rem; color: var(--color-text-muted); font-weight: 600; }
+.star-filled { color: var(--color-warning); font-size: 0.75rem; }
+.star-empty  { color: var(--color-border); font-size: 0.75rem; }
+.rating-num  { font-size: 0.8rem; color: var(--color-text-muted); margin-left: 4px; font-weight: 600; }
 
-.dialog-title-centered {
-  font-size: 1.125rem;
+.card-meta-right { display: flex; align-items: center; gap: 8px; }
+.card-team-link {
+  font-size: 0.75rem;
+  color: var(--color-accent);
+  cursor: pointer;
+  transition: color 0.12s;
+}
+.card-team-link:hover { color: var(--color-accent-hover); text-decoration: underline; }
+.card-year {
+  font-size: 0.7rem;
+  color: var(--color-text-subtle);
+  cursor: pointer;
+}
+.card-year:hover { color: var(--color-text-muted); }
+
+/* ═══════════════════════════════════════════════════════════ */
+/* BUTTONS  (Steam-flat style)                                */
+/* ═══════════════════════════════════════════════════════════ */
+.steam-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 0.85rem;
   font-weight: 600;
-  color: #f1f5f9;
+  border-radius: 3px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, opacity 0.12s;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+.steam-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Accent (green CTA) */
+.steam-btn-accent {
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+}
+.steam-btn-accent:hover:not(:disabled) { background: var(--color-accent-hover); }
+.steam-btn-accent:active:not(:disabled) { background: var(--color-accent-strong); }
+
+/* Dark */
+.steam-btn-dark {
+  background: var(--color-border);
+  color: var(--color-text);
+}
+.steam-btn-dark:hover:not(:disabled) { background: var(--color-border-strong); color: var(--color-text-strong); }
+.steam-btn-dark:active:not(:disabled) { background: var(--color-border-strong); }
+
+/* Ghost */
+.steam-btn-ghost {
+  background: transparent;
+  color: var(--color-text-muted);
+}
+.steam-btn-ghost:hover:not(:disabled) { color: var(--color-text); background: var(--color-hover-bg-soft); }
+
+/* Danger */
+.steam-btn-danger {
+  background: rgba(var(--color-danger-rgb), 0.15);
+  color: var(--color-danger);
+}
+.steam-btn-danger:hover:not(:disabled) { background: rgba(var(--color-danger-rgb), 0.25); }
+
+/* Warning */
+.steam-btn-warn {
+  background: rgba(var(--color-warning-rgb), 0.15);
+  color: var(--color-warning);
+}
+.steam-btn-warn:hover:not(:disabled) { background: rgba(var(--color-warning-rgb), 0.25); }
+
+/* Sizes */
+.steam-btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+.steam-btn-xs { padding: 4px 10px; font-size: 0.72rem; }
+.steam-btn-lg { padding: 10px 22px; font-size: 0.95rem; }
+
+/* ═══════════════════════════════════════════════════════════ */
+/* BADGES                                                     */
+/* ═══════════════════════════════════════════════════════════ */
+.steam-badge {
+  display: inline-block;
+  padding: 2px 7px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  border-radius: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.badge-pending  { background: rgba(var(--color-warning-rgb), 0.15); color: var(--color-warning); }
+.badge-suspended{ background: rgba(var(--color-danger-rgb), 0.15); color: var(--color-danger); }
+.badge-active   { background: rgba(var(--color-accent-rgb), 0.15); color: var(--color-accent); }
+.badge-sm       { background: rgba(var(--color-accent-rgb), 0.12); color: var(--color-accent); }
+.badge-muted    { background: rgba(var(--color-text-muted-rgb), 0.12); color: var(--color-text-muted); }
+
+/* ═══════════════════════════════════════════════════════════ */
+/* DIALOGS                                                    */
+/* ═══════════════════════════════════════════════════════════ */
+.dialog-shell { width: 92%; max-width: 460px; }
+.dialog-sm    { max-width: 400px; }
+.dialog-md    { max-width: 520px; }
+
+.dlg-header {
+  display: flex; align-items: center; justify-content: center; width: 100%; position: relative;
+}
+.dlg-title {
+  font-size: 1rem; font-weight: 600; color: var(--color-text);
+}
+.dlg-close {
+  position: absolute; right: -8px; top: 50%; transform: translateY(-50%);
+  width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+  color: var(--color-text-muted); background: transparent; border: none; border-radius: 3px; cursor: pointer; transition: all 0.15s;
+}
+.dlg-close:hover { color: var(--color-text); background: var(--color-hover-bg); }
+.dlg-close i { font-size: 0.8rem; }
+
+.dlg-form { display: flex; flex-direction: column; gap: 16px; }
+.dlg-field { display: flex; flex-direction: column; gap: 6px; }
+.dlg-field label { font-size: 0.8rem; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+
+.dlg-msg { margin-top: 14px; text-align: center; font-size: 0.85rem; }
+.msg-ok { color: var(--color-accent); }
+.msg-err { color: var(--color-danger); }
+
+/* Success state */
+.dlg-success { display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center; }
+.dlg-success h3 { font-size: 1.1rem; color: var(--color-text); }
+.dlg-code-box {
+  width: 100%; padding: 16px; border-radius: 4px;
+  background: var(--color-surface-deep); border: 1px dashed var(--color-border);
   text-align: center;
 }
+.dlg-code-label { font-size: 0.8rem; color: var(--color-text-muted); margin-bottom: 6px; }
+.dlg-code { font-size: 1.6rem; font-weight: 700; letter-spacing: 0.15em; color: var(--color-accent); font-family: monospace; }
 
-.dialog-close-btn {
-  position: absolute;
-  right: -0.5rem;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 2rem;
-  height: 2rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #94a3b8;
-  background: transparent;
-  border: none;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
+/* My Teams dialog */
+.dlg-teams-list { display: flex; flex-direction: column; gap: 14px; max-height: 70vh; overflow-y: auto; }
+.dlg-team-card { border-radius: 4px; padding: 14px; border: 1px solid var(--color-border); background: var(--color-elevated); }
+.dlg-team-pending { border-color: rgba(var(--color-warning-rgb), 0.3); background: rgba(var(--color-warning-rgb), 0.04); }
+.dlg-team-suspended { border-color: rgba(var(--color-danger-rgb), 0.3); background: rgba(var(--color-danger-rgb), 0.04); }
+.dlg-team-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--color-border); }
+.dlg-team-name { font-size: 1rem; font-weight: 600; color: var(--color-text); }
+.dlg-team-notice { font-size: 0.78rem; padding: 8px 12px; border-radius: 3px; margin-bottom: 10px; }
+.notice-pending { background: rgba(var(--color-warning-rgb), 0.06); border: 1px solid rgba(var(--color-warning-rgb), 0.2); color: var(--color-warning); }
+.dlg-invite-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; background: var(--color-surface-deep); border-radius: 3px; margin-bottom: 10px; }
+.dlg-invite-code { font-family: monospace; font-size: 1.05rem; font-weight: 600; letter-spacing: 0.1em; color: var(--color-accent); }
+.dlg-members { margin-top: 4px; }
+.dlg-member-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; background: var(--color-surface-deep); border-radius: 3px; margin-top: 4px; }
+.dlg-empty { text-align: center; padding: 40px 0; color: var(--color-text-subtle); }
+
+/* ═══════════════════════════════════════════════════════════ */
+/* DROPDOWN OVERRIDES (PrimeVue)                              */
+/* ═══════════════════════════════════════════════════════════ */
+:deep(.team-dropdown),
+:deep(.filter-dropdown),
+:deep(.dlg-dropdown) {
+  background: var(--color-elevated) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 3px !important;
+  min-width: 200px;
+}
+:deep(.team-dropdown .p-select-label),
+:deep(.team-dropdown .p-dropdown-label),
+:deep(.filter-dropdown .p-select-label),
+:deep(.filter-dropdown .p-dropdown-label),
+:deep(.dlg-dropdown .p-select-label),
+:deep(.dlg-dropdown .p-dropdown-label) {
+  color: var(--color-text) !important;
+  font-size: 0.85rem;
+}
+:deep(.team-dropdown:not(.p-disabled):hover),
+:deep(.filter-dropdown:not(.p-disabled):hover),
+:deep(.dlg-dropdown:not(.p-disabled):hover) {
+  border-color: var(--color-border-strong) !important;
+}
+:deep(.team-dropdown:not(.p-disabled).p-focus),
+:deep(.filter-dropdown:not(.p-disabled).p-focus),
+:deep(.dlg-dropdown:not(.p-disabled).p-focus) {
+  border-color: var(--color-accent) !important;
+  box-shadow: none !important;
 }
 
-.dialog-close-btn:hover {
-  color: #f1f5f9;
-  background: rgba(71, 85, 105, 0.5);
+/* Input overrides */
+:deep(.dlg-input) {
+  background: var(--color-elevated) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 3px !important;
+  color: var(--color-text) !important;
+}
+:deep(.dlg-input::placeholder) { color: var(--color-text-subtle) !important; }
+:deep(.dlg-input:enabled:hover) { border-color: var(--color-border-strong) !important; }
+:deep(.dlg-input:enabled:focus) { border-color: var(--color-accent) !important; box-shadow: none !important; }
+
+/* ═══════════════════════════════════════════════════════════ */
+/* RESPONSIVE TWEAKS                                          */
+/* ═══════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .hero-banner-inner { padding: 24px 16px 20px; }
+  .hero-logo-main { height: 52px; }
+  .hero-heading { font-size: 1.2rem; }
+  .hero-actions { width: 100%; justify-content: flex-start; }
+  .content-wrap { padding: 16px 16px 40px; }
+  .team-bar-section { padding: 12px 16px 0; }
+  .filter-toolbar { padding: 16px; }
+  .team-bar { flex-direction: column; align-items: flex-start; }
+  .landing-logo { height: 72px; }
+  .landing-heading { font-size: 1.4rem; }
 }
 
-.dialog-close-btn i {
-  font-size: 0.875rem;
-}
+@media (max-width: 640px) {
+  .content-wrap {
+    padding: 14px 12px 36px;
+  }
 
-/* Custom Dropdown Styling */
-:deep(.custom-dropdown) {
-  @apply bg-slate-800/50 border-slate-700/50 rounded-xl;
-}
+  .team-bar-section {
+    padding: 10px 12px 0;
+  }
 
-:deep(.custom-dropdown .p-dropdown-label) {
-  @apply text-white;
-}
+  .team-bar {
+    padding: 12px;
+    gap: 10px;
+  }
 
-:deep(.custom-dropdown:not(.p-disabled):hover) {
-  @apply border-slate-600;
-}
+  .team-bar-left,
+  .team-bar-meta,
+  .team-bar-actions {
+    width: 100%;
+  }
 
-:deep(.custom-dropdown:not(.p-disabled).p-focus) {
-  @apply border-indigo-500/50;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
-}
+  .team-bar-left {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
 
-/* Custom Input Styling */
-:deep(.custom-input) {
-  @apply bg-slate-800/50 border-slate-700/50 rounded-xl text-white;
-}
+  .team-bar-actions {
+    margin-left: 0;
+    justify-content: stretch;
+  }
 
-:deep(.custom-input:enabled:hover) {
-  @apply border-slate-600;
-}
+  .team-bar-actions .steam-btn {
+    flex: 1 1 calc(50% - 4px);
+  }
 
-:deep(.custom-input:enabled:focus) {
-  @apply border-indigo-500/50;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
-}
+  .landing-section {
+    padding: 48px 16px;
+  }
 
-:deep(.custom-input::placeholder) {
-  @apply text-slate-400;
+  .landing-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .landing-actions .steam-btn {
+    width: 100%;
+  }
+
+  .card-footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .card-meta-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .page-info {
+    width: 100%;
+    margin-left: 0;
+    text-align: center;
+  }
+
+  .dlg-invite-row,
+  .dlg-member-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  :deep(.team-dropdown),
+  :deep(.filter-dropdown),
+  :deep(.dlg-dropdown) {
+    min-width: 0;
+    width: 100%;
+  }
 }
 </style>

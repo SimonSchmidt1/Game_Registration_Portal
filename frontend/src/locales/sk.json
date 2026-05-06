@@ -8,7 +8,8 @@
     "logout": "Odhlásiť",
     "dark_mode": "Tmavý režim",
     "light_mode": "Svetlý režim",
-    "my_profile": "Môj Profil"
+    "my_profile": "Môj Profil",
+    "guide": "Návod"
   },
   "common": {
     "loading": "Načítavam...",
@@ -43,24 +44,24 @@
     "login_title": "Prihlásenie",
     "admin_login_title": "Admin Prihlásenie",
     "temp_login_title": "Prihlásenie s dočasným heslom",
-    "subtitle": "Vitaj späť. Prihlás sa do portálu.",
+    "subtitle": "Vitajte späť. Prihláste sa do portálu.",
     "email_label": "Email",
     "password_label": "Heslo",
     "temp_password_label": "Dočasné heslo",
     "sign_in_btn": "Prihlásiť sa",
     "forgot_password": "Zabudnuté heslo?",
-    "no_account": "Nemáš účet?",
-    "register_link": "Zaregistruj sa",
+    "no_account": "Nemáte účet?",
+    "register_link": "Zaregistrujte sa",
     "admin_detected": "Admin prihlásenie detekované",
     "too_many_attempts_title": "Príliš veľa neúspešných pokusov",
-    "too_many_attempts_desc": "Skontroluj svoj e-mail a použi dočasné heslo, ktoré sme ti poslali.",
+    "too_many_attempts_desc": "Skontrolujte si e-mail a použite dočasné heslo, ktoré sme vám poslali.",
     "temp_format_hint": "Formát: XXXX-XXXX-XXXX (z e-mailu)",
     "register_title": "Registrovať sa",
     "name_label": "Meno",
     "student_type_label": "Typ študenta",
     "full_time": "Denný",
     "part_time": "Externý",
-    "already_account": "Máš účet?",
+    "already_account": "Máte účet?",
     "login_link": "Prihlásiť sa",
     "register_btn": "Zaregistrovať sa",
     "verification_required": "Overenie požadované",
@@ -79,11 +80,11 @@
     "email_sent": "Email odoslaný",
     "resend_btn": "Poslať znovu",
     "back_to_login_btn": "Späť na prihlásenie",
-    "cooldown_hint": "Môžeš znovu požiadať o odoslanie o {n}s.",
+    "cooldown_hint": "Môžete znovu požiadať o odoslanie o {n}s.",
     "password_changed_title": "Heslo zmenené",
-    "reset_subtitle": "Zadaj nové heslo pre svoj účet.",
+    "reset_subtitle": "Zadajte nové heslo pre svoj účet.",
     "verifying_token": "Overujem token...",
-    "password_changed_long": "Heslo bolo úspešne zmenené. Môžeš sa prihlásiť.",
+    "password_changed_long": "Heslo bolo úspešne zmenené. Môžete sa prihlásiť.",
     "token_failed_title": "Overenie zlyhalo",
     "recovery_email_label": "Email pre obnovenie",
     "go_to_request_btn": "Prejsť na žiadosť"
@@ -110,7 +111,9 @@
     "current_password_label": "Aktuálne heslo",
     "new_password_label": "Nové heslo",
     "confirm_password_label": "Potvrdenie nového hesla",
-    "save_password_btn": "Zmeniť heslo"
+    "save_password_btn": "Zmeniť heslo",
+    "remove_avatar_btn": "Odstrániť avatar",
+    "remove_avatar_success": "Avatar bol odstránený. Znovu sa zobrazujú iniciály."
   },
   "filter": {
     "title": "Filter projektov",
@@ -125,7 +128,8 @@
     "all_subjects": "Všetky predmety",
     "all": "Všetky",
     "my_projects_btn": "Moje Projekty",
-    "all_projects_btn": "Všetky Projekty"
+    "all_projects_btn": "Všetky Projekty",
+    "select_school_type_first": "Najprv vyberte typ školy"
   },
   "school_types": {
     "zs": "Základná Škola (ZŠ)",
@@ -138,6 +142,7 @@
     "web_app": "Web App",
     "mobile_app": "Mobile App",
     "library": "Knižnica",
+    "webgl": "WebGL",
     "other": "Iné"
   },
   "subjects": {
@@ -180,8 +185,8 @@
     "scrum_master": "Scrum Master",
     "absolvent": "Absolvent",
     "basic_info_section": "Základné Informácie",
-    "members_count_label": "Počet členov:",
-    "projects_count_label": "Počet projektov:",
+    "members_count_label": "Členovia",
+    "projects_count_label": "Projekty",
     "invite_code_section": "Kód pre pripojenie",
     "projects_section": "Projekty Tímu",
     "no_projects": "Tento tím zatiaľ nemá žiadne projekty.",
@@ -202,9 +207,9 @@
     "name_label": "Názov tímu",
     "name_placeholder": "Zadajte názov tímu",
     "academic_year_label": "Akademický rok",
-    "academic_year_placeholder": "Vyber akademický rok",
+    "academic_year_placeholder": "Vyberte akademický rok",
     "occupation_label": "Povolanie",
-    "occupation_placeholder": "Vyber povolanie",
+    "occupation_placeholder": "Vyberte povolanie",
     "creating_btn": "Vytváram...",
     "create_btn": "Vytvoriť Tím",
     "created_success": "Tím bol úspešne vytvorený!",
@@ -220,7 +225,7 @@
     "code_label": "Kód tímu",
     "code_placeholder": "Napr. A1B2C3",
     "occupation_label": "Povolanie",
-    "occupation_placeholder": "Vyber povolanie",
+    "occupation_placeholder": "Vyberte povolanie",
     "joining_btn": "Pripájam...",
     "join_btn": "Pripojiť sa",
     "validation_code": "Kód tímu nemôže byť prázdny.",
@@ -237,7 +242,7 @@
   },
   "landing": {
     "title": "Portál Projektov",
-    "desc": "Pre zobrazenie projektov a funkcionalitu systému sa musíte prihlásiť.",
+    "desc": "Prezerajte, filtrujte a sťahujte študentské projekty bez prihlásenia.",
     "login_btn": "Prihlásiť sa",
     "guest_btn": "Pokračovať ako hosť",
     "register_btn": "Registrovať sa"
@@ -256,12 +261,17 @@
     "rate_title": "Hodnotiť {n} / 5",
     "views_label": "zobrazení",
     "video_section": "Video",
+    "no_video_label": "Bez videa",
+    "no_video_hint": "Pre tento projekt nie je dostupné video — zobrazený je úvodný obrázok.",
+    "webgl_section": "WebGL Hra",
+    "webgl_play": "Hrať v prehliadači",
+    "webgl_open": "Otvoriť v novom okne",
     "description_section": "Popis",
     "project_section": "Projekt",
     "team_members_section": "Členovia tímu",
     "downloads_section": "Na stiahnutie",
     "no_files": "Žiadne súbory na stiahnutie.",
-    "no_metadata": "Žiadne metadata.",
+    "no_metadata": "Žiadne metadáta.",
     "no_description": "Popis nebol poskytnutý.",
     "download_doc": "Stiahnuť dokumentáciu",
     "download_pres": "Stiahnuť prezentáciu",
@@ -287,7 +297,12 @@
   },
   "add_project": {
     "add_title": "Pridať nový projekt",
+    "add_subtitle": "Vyplňte informácie o vašom novom projekte a publikujte ho na portáli.",
     "edit_title": "Upraviť projekt",
+    "edit_subtitle": "Upravte informácie o vašom projekte.",
+    "basic_section": "Základné informácie",
+    "media_section": "Médiá",
+    "required_note": "Polia označené * sú povinné.",
     "loading_team": "Načítavam stav tímu...",
     "no_team_title": "Nemáte tím",
     "no_team_desc": "Musíte byť členom tímu, aby ste mohli pridávať projekt.",
@@ -320,7 +335,7 @@
     "upload_file_btn": "Nahrať súbor",
     "youtube_link_btn": "YouTube link",
     "youtube_placeholder": "https://www.youtube.com/watch?v=...",
-    "splash_section": "Poster / Náhľad",
+    "splash_section": "Splash Screen",
     "splash_recommended": "Odporúčané: FullHD (1920x1080) • Max. veľkosť: 8MB",
     "files_section": "Súbory projektu",
     "doc_label": "Dokumentácia (voliteľné)",
@@ -336,13 +351,21 @@
     "submit_btn": "Publikovať projekt",
     "update_btn": "Aktualizovať projekt",
     "submitting_btn": "Publikujem...",
-    "metadata_section": "Metadata projektu",
+    "metadata_section": "Metadáta projektu",
     "live_url_label": "Live URL",
     "github_url_label": "GitHub URL",
     "npm_url_label": "NPM URL",
     "package_name_label": "Názov balíka",
     "platform_label": "Platforma",
     "tech_stack_label": "Tech Stack",
+    "webgl_source_label": "Spôsob zobrazenia hry",
+    "webgl_mode_build": "Nahrať build",
+    "webgl_mode_url": "Externá URL",
+    "webgl_build_label": "WebGL build (ZIP archív)",
+    "webgl_build_btn": "Vybrať súbor",
+    "webgl_build_hint": "Nahrajte ZIP archív s exportovaným WebGL buildom z Unity alebo iného nástroja. Archív musí obsahovať súbor index.html. Max. veľkosť: 100 MB.",
+    "webgl_url_label": "URL adresa WebGL hry",
+    "webgl_url_hint": "Adresa, kde je hra hosťovaná (napr. itch.io, GitHub Pages, vlastný server). Hra sa zobrazí priamo na portáli.",
     "submit_success": "Projekt bol úspešne publikovaný.",
     "update_success": "Projekt bol aktualizovaný.",
     "submit_error": "Chyba pri publikovaní projektu.",
@@ -362,26 +385,30 @@
     "missing_uni_subject_desc": "Vyberte univerzitný predmet.",
     "missing_name_title": "Chýba názov",
     "missing_name_desc": "Zadajte názov projektu.",
+    "missing_desc_title": "Popis je príliš krátky",
+    "missing_desc_desc": "Popis musí obsahovať aspoň 10 slov.",
+    "missing_splash_title": "Chýba náhľad projektu",
+    "missing_splash_desc": "Nahrajte obrázok (poster) projektu. Zobrazuje sa na karte projektu.",
     "team_not_active_title": "Tím nie je aktívny",
     "validation_errors_title": "Chyby validácie",
     "created_title": "Projekt vytvorený",
     "updated_title": "Projekt aktualizovaný",
     "choose_video_btn": "Vybrať video (max. 100MB)",
     "choose_image_btn": "Vybrať obrázok",
-    "choose_doc_btn": "Vybrať documentáciu (max. 10MB)",
+    "choose_doc_btn": "Vybrať dokumentáciu (max. 10MB)",
     "choose_pres_btn": "Vybrať prezentáciu (max. 15MB)",
     "choose_src_btn": "Vybrať zdrojový kód (max. 200MB)",
-    "choose_export_btn": "Vybrať export (max. 500MB)",
+    "choose_export_btn": "Vybrať export (max. 256MB)",
     "choose_folder_btn": "Vybrať priečinok (max. 20MB)",
     "choose_apk_btn": "Vybrať APK",
     "choose_ios_btn": "Vybrať iOS build",
-    "export_hint": "ZIP, RAR, EXE, APK alebo IPA • Max. veľkosť: 500MB",
+    "export_hint": "ZIP, RAR, EXE, APK alebo IPA • Max. veľkosť: 256MB",
     "apk_label": "APK súbor",
     "ios_label": "iOS build",
     "tech_stack_hint": "(čiarkou oddelené)",
     "tech_stack_hint_semi": "(čiarkou alebo ; oddelené)",
     "response_error": "Chyba odpovede",
-    "response_error_desc": "Server vrátil nepltnú odpoveď. Skúste znova."
+    "response_error_desc": "Server vrátil neplatnú odpoveď. Skúste znova."
   },
   "admin": {
     "title": "Admin Panel",
@@ -401,7 +428,7 @@
     "team_deleted": "Tím vymazaný",
     "project_deleted": "Projekt vymazaný",
     "user_deleted": "Používateľ vymazaný",
-    "loading": "Načítíam dáta...",
+    "loading": "Načítavam dáta...",
     "refresh_btn": "Obnoviť",
     "register_user_btn": "Registrovať používateľa",
     "create_team_btn": "Vytvoriť tím",
@@ -414,13 +441,13 @@
     "total_projects": "Celkom projektov",
     "total_users": "Používatelia",
     "pending_teams_stat": "Čakajúce tímy",
-    "pending_approval_header": "Čakajúce na schrálenie",
+    "pending_approval_header": "Čakajúce na schválenie",
     "unknown": "Neznámy",
     "teams_overview": "Prehľad tímov",
     "no_teams_found": "Žiadne tímy nenájdené",
     "search_placeholder": "Hľadať tím podľa názvu...",
     "filter_by_status": "Filter podľa stavu",
-    "loading_team_projects": "Načítêvam projekty...",
+    "loading_team_projects": "Načítavam projekty...",
     "no_team_projects": "Tento tím nemá žiadne projekty",
     "table_team": "Tím",
     "table_year": "Akademický rok",
@@ -450,5 +477,50 @@
     "next": "Nasledujúca stránka",
     "page_of": "Stránka {current} z {total}",
     "rating_aria": "Hodnotenie"
+  },
+  "guide": {
+    "guest_title": "Návod pre hostí",
+    "user_title": "Návod pre používateľov",
+    "guest_steps": [
+      "Prechádzaj projekty na domovskej stránke. Použi filtre na vyhľadanie podľa typu, školy alebo predmetu.",
+      "Klikni na kartu projektu a prezri si detail, popis, video a súbory na stiahnutie.",
+      "Ohodnoť projekt kliknutím na hviezdu (1 hodnotenie na projekt).",
+      "Prihlás sa alebo zaregistruj pre plný prístup."
+    ],
+    "user_steps": [
+      {
+        "title": "Vytvor tím alebo sa pridaj k existujúcemu tímu",
+        "lines": [
+          "Chceš byť Scrum Master? Vytvor si vlastný tím a počkaj na schválenie adminom. Po jeho vytvorení v sekcii Moje tímy nájdeš Pozývací kód — pošli ho kolegom, aby sa k tebe mohli pridať.",
+          "Máš pridelený tím? Vypýtaj si pozývací kód od Scrum Mastera a zadaj ho pri možnosti \"Pripojiť sa do tímu\", alebo ho nájdi v detaile tímu priamo z domovskej obrazovky."
+        ]
+      },
+      {
+        "title": "Správa tímu a odchod z neho",
+        "lines": [
+          "Úplnú správu tímu (odstraňovanie členov, úpravu názvu) má výhradne Scrum Master v sekcii Moje Tímy.",
+          "Bežný člen môže tím kedykoľvek opustiť — tlačidlo \"Opustiť\" nájdeš v prehľade svojho aktuálneho tímu."
+        ]
+      },
+      {
+        "title": "Nahratie a zverejnenie projektu",
+        "lines": [
+          "Projekt môže vytvoriť, upravovať a zverejniť iba Scrum Master.",
+          "Klikni na \"Pridať projekt\" v navigácii, vyplň údaje o projekte, pridaj súbory a zverejni."
+        ]
+      },
+      {
+        "title": "Hodnotenie projektov ostatných tímov",
+        "lines": [
+          "Prechádzaj projekty ostatných tímov, inšpiruj sa ich prácou a zanechaj spravodlivé bodové hodnotenie."
+        ]
+      },
+      {
+        "title": "Nastavenia účtu",
+        "lines": [
+          "Zmena údajov, hesla alebo odhlásenie — všetko nájdeš po kliknutí na avatara v pravom hornom rohu."
+        ]
+      }
+    ]
   }
 }

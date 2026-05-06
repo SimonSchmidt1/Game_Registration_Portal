@@ -13,6 +13,7 @@ class GameRating extends Model
         'game_id',
         'project_id',
         'user_id',
+        'guest_fingerprint',
         'rating'
     ];
 

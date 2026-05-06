@@ -8,7 +8,8 @@
     "logout": "Log out",
     "dark_mode": "Dark mode",
     "light_mode": "Light mode",
-    "my_profile": "My Profile"
+    "my_profile": "My Profile",
+    "guide": "Guide"
   },
   "common": {
     "loading": "Loading...",
@@ -94,6 +95,8 @@
     "role_label": "Role",
     "student_type_label": "Student type",
     "change_btn": "Change",
+    "remove_avatar_btn": "Remove avatar",
+    "remove_avatar_success": "Avatar removed. Initials are shown again.",
     "save_btn": "Save",
     "cancel_btn": "Cancel",
     "change_password_btn": "Change password",
@@ -125,7 +128,8 @@
     "all_subjects": "All subjects",
     "all": "All",
     "my_projects_btn": "My Projects",
-    "all_projects_btn": "All Projects"
+    "all_projects_btn": "All Projects",
+    "select_school_type_first": "Select school type first"
   },
   "school_types": {
     "zs": "Primary School",
@@ -138,6 +142,7 @@
     "web_app": "Web App",
     "mobile_app": "Mobile App",
     "library": "Library",
+    "webgl": "WebGL Game",
     "other": "Other"
   },
   "subjects": {
@@ -180,8 +185,8 @@
     "scrum_master": "Scrum Master",
     "absolvent": "Graduate",
     "basic_info_section": "Basic Information",
-    "members_count_label": "Members:",
-    "projects_count_label": "Projects:",
+    "members_count_label": "Members",
+    "projects_count_label": "Projects",
     "invite_code_section": "Invite Code",
     "projects_section": "Team Projects",
     "no_projects": "This team has no projects yet.",
@@ -237,7 +242,7 @@
   },
   "landing": {
     "title": "Project Portal",
-    "desc": "You must log in to view projects and use portal features.",
+    "desc": "Browse, filter and download student projects without logging in.",
     "login_btn": "Log in",
     "guest_btn": "Continue as guest",
     "register_btn": "Register"
@@ -256,6 +261,11 @@
     "rate_title": "Rate {n} / 5",
     "views_label": "views",
     "video_section": "Video",
+    "no_video_label": "No video",
+    "no_video_hint": "No video is available for this project — showing the splash image instead.",
+    "webgl_section": "WebGL Game",
+    "webgl_play": "Play in browser",
+    "webgl_open": "Open in new tab",
     "description_section": "Description",
     "project_section": "Project",
     "team_members_section": "Team members",
@@ -287,7 +297,12 @@
   },
   "add_project": {
     "add_title": "Add new project",
+    "add_subtitle": "Fill in your project details and publish it to the portal.",
     "edit_title": "Edit project",
+    "edit_subtitle": "Update your project information.",
+    "basic_section": "Basic information",
+    "media_section": "Media",
+    "required_note": "Fields marked with * are required.",
     "loading_team": "Loading team status...",
     "no_team_title": "No team",
     "no_team_desc": "You must be a member of a team to add a project.",
@@ -320,7 +335,7 @@
     "upload_file_btn": "Upload file",
     "youtube_link_btn": "YouTube link",
     "youtube_placeholder": "https://www.youtube.com/watch?v=...",
-    "splash_section": "Poster / Preview",
+    "splash_section": "Splash Screen",
     "splash_recommended": "Recommended: FullHD (1920x1080) • Max size: 8MB",
     "files_section": "Project files",
     "doc_label": "Documentation (optional)",
@@ -343,6 +358,14 @@
     "package_name_label": "Package name",
     "platform_label": "Platform",
     "tech_stack_label": "Tech Stack",
+    "webgl_source_label": "How to display the game",
+    "webgl_mode_build": "Upload build",
+    "webgl_mode_url": "External URL",
+    "webgl_build_label": "WebGL build (ZIP archive)",
+    "webgl_build_btn": "Choose file",
+    "webgl_build_hint": "Upload a ZIP archive containing your exported WebGL build from Unity or another tool. The archive must include an index.html file. Max size: 100 MB.",
+    "webgl_url_label": "WebGL game URL",
+    "webgl_url_hint": "The URL where the game is hosted (e.g. itch.io, GitHub Pages, your own server). The game will be embedded directly on the portal.",
     "submit_success": "Project was successfully published.",
     "update_success": "Project was updated.",
     "submit_error": "Error while publishing project.",
@@ -362,6 +385,10 @@
     "missing_uni_subject_desc": "Select university subject.",
     "missing_name_title": "Missing name",
     "missing_name_desc": "Enter project name.",
+    "missing_desc_title": "Description too short",
+    "missing_desc_desc": "Description must contain at least 10 words.",
+    "missing_splash_title": "Missing project thumbnail",
+    "missing_splash_desc": "Upload a poster/thumbnail image for the project. It is displayed on the project card.",
     "team_not_active_title": "Team not active",
     "validation_errors_title": "Validation errors",
     "created_title": "Project created",
@@ -371,11 +398,11 @@
     "choose_doc_btn": "Choose documentation (max. 10MB)",
     "choose_pres_btn": "Choose presentation (max. 15MB)",
     "choose_src_btn": "Choose source code (max. 200MB)",
-    "choose_export_btn": "Choose export (max. 500MB)",
+    "choose_export_btn": "Choose export (max. 256MB)",
     "choose_folder_btn": "Choose folder (max. 20MB)",
     "choose_apk_btn": "Choose APK",
     "choose_ios_btn": "Choose iOS build",
-    "export_hint": "ZIP, RAR, EXE, APK or IPA \u2022 Max. size: 500MB",
+    "export_hint": "ZIP, RAR, EXE, APK or IPA • Max. size: 256MB",
     "apk_label": "APK file",
     "ios_label": "iOS build",
     "tech_stack_hint": "(comma-separated)",
@@ -450,5 +477,22 @@
     "next": "Next page",
     "page_of": "Page {current} of {total}",
     "rating_aria": "Rating"
+  },
+  "guide": {
+    "guest_title": "Guest Guide",
+    "user_title": "User Guide",
+    "guest_steps": [
+      "Browse projects on the home page. Use filters to narrow by type, school or subject.",
+      "Click any project card to view its detail, description, video and downloadable files.",
+      "Rate a project by clicking a star (1 rating per project allowed).",
+      "Log in or register for full access."
+    ],
+    "user_steps": [
+      "Register, verify your email and log in.",
+      "Create a team (as Scrum Master) or join an existing one with an invite code.",
+      "As Scrum Master: click \"Add Project\" to publish your team's project.",
+      "Browse and rate other teams' projects.",
+      "Manage your account by clicking the avatar in the top right."
+    ]
   }
 }

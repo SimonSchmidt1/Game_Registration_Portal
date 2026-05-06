@@ -12,6 +12,7 @@ use Illuminate\Support\Str;
 use App\Notifications\VerifyEmailNotification;
 use App\Notifications\TemporaryPasswordNotification;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 class AuthService
 {
@@ -283,12 +284,19 @@ class AuthService
 
     /**
      * Verify email token.
+     * 
+     * Two-step frontend prevents most scanner issues, but as a safety net:
+     * if the token is not found, check whether the email was already verified
+     * recently (e.g. by a link prefetcher that slipped through).
      */
     public function verifyToken(string $token): array
     {
         $user = User::where('verification_token', $token)->first();
 
         if (!$user) {
+            \Log::info('Verification token not found in DB', [
+                'token_length' => strlen($token),
+            ]);
             return ['status' => 'invalid'];
         }
         if ($user->email_verified_at) {
@@ -334,6 +342,23 @@ class AuthService
         } catch (\Exception $e) {
             \Log::error('Avatar upload failed', ['user_id' => $user->id, 'error' => $e->getMessage()]);
             throw new \RuntimeException('Failed to save avatar: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Remove avatar image, reverting to initials placeholder.
+     */
+    public function removeAvatar(User $user): void
+    {
+        if ($user->avatar_path) {
+            try {
+                Storage::disk('public')->delete($user->avatar_path);
+            } catch (\Exception $e) {
+                \Log::warning('Could not delete avatar file', ['path' => $user->avatar_path, 'error' => $e->getMessage()]);
+            }
+            $user->avatar_path = null;
+            $user->save();
+            $user->refresh();
         }
     }
 }

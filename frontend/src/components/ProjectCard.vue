@@ -66,9 +66,9 @@ const splashUrl = computed(() => {
 })
 
 const typeLabel = computed(() => {
-  const valid = ['game', 'web_app', 'mobile_app', 'library', 'other']
-  const type = props.project.type
-  return valid.includes(type) ? t(`project_types.${type}`) : t('project_types.other')
+  const valid = ['game', 'web_app', 'mobile_app', 'library', 'webgl', 'other']
+  const normalizedType = String(props.project.type || '').trim().toLowerCase()
+  return valid.includes(normalizedType) ? t(`project_types.${normalizedType}`) : t('project_types.other')
 })
 
 function handleSelect() {

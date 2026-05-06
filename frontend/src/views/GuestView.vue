@@ -1,15 +1,30 @@
 <template>
   <div class="guest-root">
+    <!-- Animated background layer -->
+    <div class="bg-canvas" aria-hidden="true">
+      <div class="bg-grid"></div>
+      <div class="bg-orb bg-orb-1"></div>
+      <div class="bg-orb bg-orb-2"></div>
+      <div class="bg-orb bg-orb-3"></div>
+      <div class="bg-particle bg-particle-1"></div>
+      <div class="bg-particle bg-particle-2"></div>
+      <div class="bg-particle bg-particle-3"></div>
+      <div class="bg-particle bg-particle-4"></div>
+      <div class="bg-particle bg-particle-5"></div>
+      <div class="bg-particle bg-particle-6"></div>
+    </div>
+
     <Toast />
 
     <div class="content-wrap">
-      <section class="guest-hero">
-        <div>
-          <h1 class="guest-title">{{ t('guest.hero_title') }}</h1>
-          <p class="guest-sub">{{ t('guest.hero_subtitle') }}</p>
-        </div>
-        <div class="guest-actions">
-          <button class="steam-btn steam-btn-dark steam-btn-sm" @click="$router.push('/login')">{{ t('guest.login_btn') }}</button>
+      <section v-if="topRatedProjects.length || loadingTopRated" class="top-rated-section">
+        <TopRatedCarousel
+          v-if="topRatedProjects.length"
+          :projects="topRatedProjects"
+          @select="viewProjectDetail"
+        />
+        <div v-else-if="loadingTopRated" class="top-rated-loading">
+          <span>{{ t('common.loading_top') }}</span>
         </div>
       </section>
 
@@ -44,20 +59,20 @@
               optionValue="value"
               :placeholder="t('filter.all_types')"
               class="filter-dropdown"
-              @change="applyFilters"
             />
           </div>
           <div class="filter-item">
             <label class="filter-label">{{ t('filter.year_label') }}</label>
             <Dropdown
               v-model="filterYearOfStudy"
-              :options="filterYears"
+              :options="availableFilterYears"
               optionLabel="label"
               optionValue="value"
               :placeholder="t('filter.all_years')"
               class="filter-dropdown"
-              @change="applyFilters"
+              :disabled="!filterSchoolType"
             />
+            <small v-if="!filterSchoolType" class="filter-help-warning">{{ t('filter.select_school_type_first') }}</small>
           </div>
           <div class="filter-item">
             <label class="filter-label">{{ t('filter.subject_label') }}</label>
@@ -68,7 +83,6 @@
               optionValue="value"
               :placeholder="t('filter.all_subjects')"
               class="filter-dropdown"
-              @change="applyFilters"
             />
           </div>
           <div class="filter-item">
@@ -80,20 +94,8 @@
               optionValue="value"
               :placeholder="t('filter.all_types')"
               class="filter-dropdown"
-              @change="applyFilters"
             />
           </div>
-        </div>
-      </section>
-
-      <section v-if="topRatedProjects.length || loadingTopRated" class="top-rated-section">
-        <TopRatedCarousel
-          v-if="topRatedProjects.length"
-          :projects="topRatedProjects"
-          @select="viewProjectDetail"
-        />
-        <div v-else-if="loadingTopRated" class="top-rated-loading">
-          <span>{{ t('common.loading_top') }}</span>
         </div>
       </section>
 
@@ -132,7 +134,13 @@
               <span v-if="game.school_type" class="card-tag" @click.stop="filterBySchoolType(game.school_type)">
                 {{ getSchoolTypeLabel(game.school_type) }}
               </span>
-              <span v-if="game.year_of_study" class="card-tag">{{ game.year_of_study }}{{ t('common.year_suffix') }}</span>
+              <span
+                v-if="game.year_of_study"
+                class="card-tag card-tag-static"
+                @click.stop
+                @keydown.enter.stop
+                @keydown.space.stop
+              >{{ game.year_of_study }}{{ t('common.year_suffix') }}</span>
               <span v-if="game.subject" class="card-tag" @click.stop="filterBySubject(game.subject)">
                 {{ game.subject }}
               </span>
@@ -166,17 +174,26 @@
 
       <!-- ── PAGINATION ── -->
       <div v-if="lastPage > 1" class="pagination-bar">
-        <button class="page-btn" :disabled="currentPage === 1" @click="goToPage(currentPage - 1)">
-          Prev
+        <button class="page-btn page-btn-nav" :disabled="currentPage === 1" @click="goToPage(currentPage - 1)">
+          <i class="pi pi-arrow-left"></i>
         </button>
         <template v-for="p in pageNumbers" :key="p">
           <span v-if="p === '...'" class="page-ellipsis">…</span>
           <button v-else class="page-btn" :class="{ 'page-btn-active': p === currentPage }" @click="goToPage(p)">{{ p }}</button>
         </template>
-        <button class="page-btn" :disabled="currentPage === lastPage" @click="goToPage(currentPage + 1)">
-          Next
+        <button class="page-btn page-btn-nav" :disabled="currentPage === lastPage" @click="goToPage(currentPage + 1)">
+          <i class="pi pi-arrow-right"></i>
         </button>
-        <span class="page-info">{{ (currentPage - 1) * 20 + 1 }}–{{ Math.min(currentPage * 20, totalProjects) }} / {{ totalProjects }}</span>
+        <input
+          v-model="pageJumpInput"
+          type="number"
+          class="page-jump-input"
+          :placeholder="String(currentPage)"
+          :min="1"
+          :max="lastPage"
+          @keyup.enter="jumpToPage"
+        />
+        <span class="page-info">{{ (currentPage - 1) * 21 + 1 }}–{{ Math.min(currentPage * 21, totalProjects) }} / {{ totalProjects }}</span>
       </div>
     </div>
   </div>
@@ -209,6 +226,7 @@ const loadingGames = ref(true)
 const topRatedProjects = ref([])
 const loadingTopRated = ref(false)
 const currentPage = ref(1)
+const pageJumpInput = ref('')
 const lastPage = ref(1)
 const totalProjects = ref(0)
 const searchDebounce = ref(null)
@@ -235,10 +253,14 @@ const filterSubjects = computed(() => [
   { label: t('subjects.chemistry'), value: 'Chémia' },
   { label: t('subjects.physics'), value: 'Fyzika' }
 ])
-const filterYears = computed(() => [
-  { label: t('filter.all_years'), value: null },
-  ...Array.from({ length: 9 }, (_, i) => ({ label: `${i + 1}${t('common.year_suffix')}`, value: i + 1 }))
-])
+const availableFilterYears = computed(() => {
+  if (!filterSchoolType.value) return [{ label: t('filter.all_years'), value: null }]
+  const maxYear = filterSchoolType.value === 'zs' ? 9 : 5
+  return [
+    { label: t('filter.all_years'), value: null },
+    ...Array.from({ length: maxYear }, (_, i) => ({ label: `${i + 1}${t('common.year_suffix')}`, value: i + 1 }))
+  ]
+})
 
 const hasActiveFilters = computed(() =>
   filterSchoolType.value !== null ||
@@ -271,6 +293,12 @@ function goToPage(page) {
   document.querySelector('.project-grid, .state-message')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
+function jumpToPage() {
+  const p = parseInt(pageJumpInput.value)
+  if (!isNaN(p)) goToPage(Math.max(1, Math.min(p, lastPage.value)))
+  pageJumpInput.value = ''
+}
+
 function resetFilters() {
   filterSchoolType.value = null
   filterYearOfStudy.value = null
@@ -284,7 +312,6 @@ function resetFilters() {
 function filterByType(type) { selectedType.value = type; currentPage.value = 1; loadAllGames() }
 function filterBySchoolType(st) { filterSchoolType.value = st; currentPage.value = 1; loadAllGames() }
 function filterBySubject(sub) { filterSubject.value = sub; currentPage.value = 1; loadAllGames() }
-function applyFilters() { currentPage.value = 1; loadAllGames() }
 function viewProjectDetail(project) { router.push({ name: 'ProjectDetail', params: { id: project.id } }) }
 
 async function loadAllGames() {
@@ -297,6 +324,7 @@ async function loadAllGames() {
     if (filterYearOfStudy.value) params.append('year_of_study', filterYearOfStudy.value)
     if (filterSubject.value) params.append('subject', filterSubject.value)
     if (filterAcademicYear.value) params.append('academic_year_id', filterAcademicYear.value)
+    params.append('per_page', '21')
     params.append('page', currentPage.value)
     const query = params.toString() ? `?${params.toString()}` : ''
     const res = await fetch(`${API_URL}/api/public/projects${query}`, { headers: { 'Accept': 'application/json' } })
@@ -321,13 +349,18 @@ async function loadTopRatedProjects() {
 
 function getSchoolTypeLabel(type) { return { 'zs': 'ZŠ', 'ss': 'SŠ', 'vs': 'VŠ' }[type] || type }
 function getSplashUrl(path) { if (!path) return ''; if (path.startsWith('http')) return path; return `${API_URL}/storage/${path}` }
-function formatProjectType(type) { return { game: t('project_types.game'), web_app: 'Web App', mobile_app: 'Mobile App', library: t('project_types.library'), other: t('project_types.other') }[type] || type }
+function formatProjectType(type) {
+  const normalizedType = String(type || '').trim().toLowerCase()
+  const valid = ['game', 'web_app', 'mobile_app', 'library', 'webgl', 'other']
+  return valid.includes(normalizedType) ? t(`project_types.${normalizedType}`) : t('project_types.other')
+}
 
 onMounted(() => {
   loadAllGames()
   loadTopRatedProjects()
 })
 watch(selectedType, () => { currentPage.value = 1; loadAllGames() })
+watch(filterSchoolType, () => { filterYearOfStudy.value = null })
 watch([filterSchoolType, filterYearOfStudy, filterSubject, filterAcademicYear], () => { currentPage.value = 1; loadAllGames() })
 watch(search, () => { clearTimeout(searchDebounce.value); searchDebounce.value = setTimeout(() => { currentPage.value = 1; loadAllGames() }, 400) })
 </script>
@@ -335,6 +368,145 @@ watch(search, () => { clearTimeout(searchDebounce.value); searchDebounce.value =
 <style scoped>
 .guest-root {
   min-height: 100%;
+  position: relative;
+  overflow-x: hidden;
+}
+
+.bg-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.bg-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle, rgba(var(--color-accent-rgb), 0.06) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, black 30%, transparent 70%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, black 30%, transparent 70%);
+}
+
+.bg-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.12;
+  will-change: transform;
+}
+
+.bg-orb-1 {
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(var(--color-accent-rgb), 0.5), transparent 70%);
+  top: -10%;
+  left: -5%;
+  animation: orb-drift-1 25s ease-in-out infinite;
+}
+
+.bg-orb-2 {
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(91, 139, 230, 0.4), transparent 70%);
+  top: 40%;
+  right: -8%;
+  animation: orb-drift-2 30s ease-in-out infinite;
+}
+
+.bg-orb-3 {
+  width: 350px;
+  height: 350px;
+  background: radial-gradient(circle, rgba(var(--color-accent-rgb), 0.35), transparent 70%);
+  bottom: -5%;
+  left: 30%;
+  animation: orb-drift-3 22s ease-in-out infinite;
+}
+
+@keyframes orb-drift-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%      { transform: translate(60px, 40px) scale(1.05); }
+  66%      { transform: translate(-30px, 70px) scale(0.95); }
+}
+
+@keyframes orb-drift-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  40%      { transform: translate(-50px, -60px) scale(1.1); }
+  70%      { transform: translate(30px, 30px) scale(0.9); }
+}
+
+@keyframes orb-drift-3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%      { transform: translate(70px, -50px) scale(1.08); }
+}
+
+.bg-particle {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(var(--color-accent-rgb), 0.25);
+  will-change: transform, opacity;
+}
+
+.bg-particle-1 {
+  width: 4px;
+  height: 4px;
+  top: 15%;
+  left: 20%;
+  animation: particle-float 18s ease-in-out infinite;
+}
+
+.bg-particle-2 {
+  width: 6px;
+  height: 6px;
+  top: 35%;
+  left: 75%;
+  animation: particle-float 22s ease-in-out infinite 3s;
+}
+
+.bg-particle-3 {
+  width: 3px;
+  height: 3px;
+  top: 60%;
+  left: 40%;
+  animation: particle-float 15s ease-in-out infinite 6s;
+}
+
+.bg-particle-4 {
+  width: 5px;
+  height: 5px;
+  top: 80%;
+  left: 65%;
+  animation: particle-float 20s ease-in-out infinite 2s;
+}
+
+.bg-particle-5 {
+  width: 3px;
+  height: 3px;
+  top: 25%;
+  left: 55%;
+  animation: particle-float 17s ease-in-out infinite 8s;
+}
+
+.bg-particle-6 {
+  width: 4px;
+  height: 4px;
+  top: 70%;
+  left: 15%;
+  animation: particle-float 24s ease-in-out infinite 5s;
+}
+
+@keyframes particle-float {
+  0%, 100% { transform: translate(0, 0); opacity: 0.2; }
+  25%      { transform: translate(30px, -40px); opacity: 0.6; }
+  50%      { transform: translate(-20px, -80px); opacity: 0.3; }
+  75%      { transform: translate(40px, -30px); opacity: 0.5; }
+}
+
+.guest-root > :not(.bg-canvas) {
+  position: relative;
+  z-index: 1;
 }
 
 .content-wrap {
@@ -421,6 +593,11 @@ watch(search, () => { clearTimeout(searchDebounce.value); searchDebounce.value =
 @media (max-width: 540px) { .filter-grid { grid-template-columns: 1fr; } }
 .filter-item { display: flex; flex-direction: column; gap: 4px; }
 .filter-label { font-size: 0.75rem; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.filter-help-warning {
+  color: var(--color-warning);
+  font-size: 0.72rem;
+  margin-top: 2px;
+}
 
 .top-rated-loading {
   background: var(--color-surface);
@@ -493,16 +670,40 @@ watch(search, () => { clearTimeout(searchDebounce.value); searchDebounce.value =
   color: #fff !important;
   font-weight: 600;
 }
+.page-btn-nav {
+  min-width: 36px;
+  width: 36px;
+  padding: 0;
+  font-size: 0.8rem;
+}
 .page-ellipsis {
   color: var(--color-text-muted);
   padding: 0 4px;
   user-select: none;
 }
 .page-info {
-  margin-left: 12px;
+  margin-left: 4px;
   font-size: 0.8rem;
   color: var(--color-text-muted);
 }
+.page-jump-input {
+  width: 52px;
+  height: 36px;
+  padding: 0 6px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  color: var(--color-text);
+  font-size: 0.875rem;
+  text-align: center;
+  outline: none;
+  transition: border-color 0.15s;
+  -moz-appearance: textfield;
+}
+.page-jump-input::-webkit-outer-spin-button,
+.page-jump-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.page-jump-input:focus { border-color: var(--color-accent); }
+.page-jump-input::placeholder { color: var(--color-text-muted); }
 
 .project-card {
   background: var(--color-surface);
@@ -577,6 +778,13 @@ watch(search, () => { clearTimeout(searchDebounce.value); searchDebounce.value =
   font-weight: 500;
 }
 .card-tag:hover { background: var(--color-border); color: var(--color-text); }
+.card-tag.card-tag-static {
+  cursor: default;
+}
+.card-tag.card-tag-static:hover {
+  background: var(--color-elevated);
+  color: var(--color-text-muted);
+}
 .card-tag-accent {
   background: rgba(var(--color-accent-rgb), 0.12);
   border-color: rgba(var(--color-accent-rgb), 0.3);

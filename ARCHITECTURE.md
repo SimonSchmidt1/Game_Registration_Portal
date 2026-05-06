@@ -1,7 +1,7 @@
 # Game Registration Portal - Architecture Overview
 
-**Version:** 1.0  
-**Last Updated:** November 26, 2025  
+**Version:** 1.1  
+**Last Updated:** February 2, 2026  
 **Tech Stack:** Laravel 11 + Vue 3 + PrimeVue + Sanctum
 
 ---
@@ -49,8 +49,10 @@ A web-based platform for UCM university students to register, showcase, and rate
 - **Framework:** Vue 3 (Composition API)
 - **Build Tool:** Vite 7
 - **UI Library:** PrimeVue (Aura theme)
+- **Theming:** CSS custom properties with light/dark mode (`data-theme` attribute on `<html>`)
 - **HTTP Client:** Axios
 - **Router:** Vue Router 4
+- **i18n:** vue-i18n 9 — 11 locales (sk, en, cs, pl, hu, de, fr, it, es, pt, nl)
 - **Icons:** PrimeIcons
 
 ### Development Tools
@@ -116,6 +118,26 @@ public function login(Request $request) {
 - **Views:** Page-level components (`HomeView`, `LoginView`, `ProjectView`)
 - **Components:** Reusable UI (`Navbar.vue`)
 - **Router Guards:** `requiresAuth` meta for protected routes
+
+#### 4. **Localization (i18n)**
+- All UI text is externalized to JSON locale files under `frontend/src/locales/`
+- `vue-i18n 9` runs in **composition mode** (`legacy: false`) so `useI18n()` is the only supported API
+- Locale detection order: `localStorage('locale_preference')` → browser `navigator.language` → default `sk`
+- Fallback locale: `en` (used when a key is missing in the active locale)
+- Locale is switched at runtime via `setLocale(code)` exported from `i18n.js`, which also updates `html[lang]`
+
+**Required boilerplate in every `<script setup>` that calls `t()` in its template:**
+```javascript
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
+```
+> ⚠️ **Critical:** Omitting either line while using `t()` in the template causes a silent runtime error and a completely blank view. The build succeeds with no warnings, making this hard to spot. See [Troubleshooting — Blank Screen After Login](#common-issues) for details.
+
+**Adding a new locale:**
+1. Create `frontend/src/locales/<code>.json` (copy `en.json` as template)
+2. Add `import <code> from './locales/<code>.json'` in `i18n.js`
+3. Add the entry to `SUPPORTED_LOCALES` array in `i18n.js`
+4. Add the code to the `messages` object in `createI18n()`
 
 ---
 
@@ -220,7 +242,7 @@ frontend/
 ├── public/
 ├── src/
 │   ├── assets/
-│   │   └── main.css                      # Tailwind imports
+│   │   └── main.css                      # Tailwind imports + centralised .steam-theme overrides
 │   ├── components/
 │   │   └── Navbar.vue                    # Header with auth state
 │   ├── features/
@@ -245,8 +267,13 @@ frontend/
 │   │   ├── AddProjectView.vue            # Project upload form
 │   │   ├── AddGameView.vue               # Legacy game upload
 │   │   └── TeamView.vue                  # Team detail page
+│   ├── i18n.js                           # vue-i18n setup, locale detection, setLocale()
+│   ├── locales/                          # Translation JSON files (11 languages)
+│   │   ├── sk.json                       # Slovak — default locale
+│   │   ├── en.json                       # English — fallback locale
+│   │   └── cs|pl|hu|de|fr|it|es|pt|nl.json
 │   ├── App.vue                           # Root component + inactivity logout
-│   └── main.js                           # Vue app, PrimeVue, axios setup
+│   └── main.js                           # Vue app, PrimeVue, vue-i18n, axios setup
 ├── index.html
 ├── package.json
 ├── vite.config.js
@@ -369,7 +396,7 @@ if ($team->scrum_master_id !== $user->id) {
 | user_id | bigint | FK |
 | role | enum('scrum_master','member') | |
 
-#### games
+#### games (LEGACY - replaced by projects table)
 | Column | Type | Notes |
 |--------|------|-------|
 | id | bigint | PK |
@@ -388,14 +415,71 @@ if ($team->scrum_master_id !== $user->id) {
 | rating_count | int | Number of ratings |
 | views | int | View counter |
 
+#### projects (NEW - universal project table)
+| Column | Type | Notes |
+|--------|------|-------|
+| id | bigint | PK |
+| team_id | bigint | FK to teams |
+| academic_year_id | bigint nullable | FK to academic_years |
+| title | varchar(255) | Project name |
+| description | text nullable | Project description |
+| type | enum | game, web_app, mobile_app, library, other |
+| school_type | enum nullable | ZŠ, SŠ, VŠ (základná/stredná/vysoká) |
+| year_of_study | int nullable | 1-9 for ZŠ, 1-5 for SŠ/VŠ |
+| subject | varchar nullable | Subject name (Slovenský jazyk, Matematika, etc.) |
+| predmet | varchar nullable | University course code |
+| release_date | date nullable | |
+| splash_screen_path | varchar nullable | Thumbnail image |
+| video_path | varchar nullable | Local video file |
+| video_url | varchar nullable | External video URL (YouTube, etc.) |
+| **files** | **json nullable** | **Universal file storage** |
+| **metadata** | **json nullable** | **Type-specific metadata** |
+| rating | decimal(3,2) | Average rating (default 0) |
+| rating_count | int | Number of ratings (default 0) |
+| views | int | View counter (default 0) |
+
+**files JSON structure:**
+```json
+{
+  "splash": "/path/to/splash.jpg",
+  "video": "/path/to/video.mp4",
+  "documentation": "/path/to/docs.pdf",
+  "presentation": "/path/to/slides.pptx",
+  "source_code": "/path/to/source.zip",
+  "export": "/path/to/build.zip",
+  "apk_file": "/path/to/app.apk",  // legacy
+  "ios_file": "/path/to/app.ipa"   // legacy
+}
+```
+
+**metadata JSON structure:**
+```json
+{
+  "export_type": "standalone|webgl|mobile|executable",
+  "tech_stack": "Unity, C#, Blender",
+  "github_url": "https://github.com/...",
+  "live_url": "https://...",
+  "platform": "android|ios|both",
+  "package_name": "@scope/package",
+  "npm_url": "https://npmjs.com/..."
+}
+```
+
+**File Upload Limits:**
+- documentation: PDF/DOCX/ZIP/RAR, 10MB max
+- presentation: PDF/PPT/PPTX, 15MB max
+- source_code: ZIP/RAR, 200MB max
+- export: ZIP/RAR/EXE/APK/IPA, 500MB max
+- project_folder: ZIP/RAR, 20MB max (contains project files/docs)
+
 #### game_ratings
 | Column | Type | Notes |
 |--------|------|-------|
 | id | bigint | PK |
 | user_id | bigint | FK |
-| game_id | bigint | FK |
+| project_id | bigint | FK to projects (replaces game_id) |
 | rating | int | 1-5 stars |
-| Unique(user_id, game_id) | | One vote per user |
+| Unique(user_id, project_id) | | One vote per user |
 
 #### password_reset_tokens
 | Column | Type | Notes |
@@ -413,14 +497,12 @@ if ($team->scrum_master_id !== $user->id) {
 | Column | Type | Notes |
 |--------|------|-------|
 | id | bigint | PK |
-| name | varchar(255) | "2024/2025" |
-| start_date | date | |
-| end_date | date | |
+| name | varchar(255) | "2024/2025" (strict YYYY/YYYY) |
 
 ### Relationships
 
 **User:**
-- `hasMany(Game)` via team
+- `hasMany(Project)` via team
 - `belongsToMany(Team)` via `team_user` pivot
 - `hasMany(GameRating)`
 - `hasMany(PasswordResetToken)`
@@ -428,10 +510,16 @@ if ($team->scrum_master_id !== $user->id) {
 **Team:**
 - `belongsTo(User, 'scrum_master_id')`
 - `belongsToMany(User)` via `team_user`
-- `hasMany(Game)`
+- `hasMany(Project)`
 - `belongsTo(AcademicYear)`
 
-**Game:**
+**Project:**
+- `belongsTo(Team)`
+- `belongsTo(AcademicYear)`
+- `hasMany(GameRating, 'project_id')`
+- **Casts:** `files` => array, `metadata` => array
+
+**Game (LEGACY):**
 - `belongsTo(Team)`
 - `belongsTo(AcademicYear)`
 - `hasMany(GameRating)`
@@ -478,20 +566,39 @@ POST   /api/teams/join              # Join with code
 
 #### Projects
 ```
-GET    /api/projects                # List all projects (with filters)
-POST   /api/projects                # Create project (Scrum Master only)
+GET    /api/projects                # List all projects (with filters: type, school_type, year_of_study, subject, search, academic_year_id)
+POST   /api/projects                # Create project (Scrum Master only, requires active team)
 PUT    /api/projects/{id}           # Update project (Scrum Master of project's team only)
+POST   /api/projects/{id}           # Update with _method=PUT (for FormData compatibility)
 GET    /api/projects/{id}           # Get project detail
-POST   /api/projects/{id}/views    # Increment view count
+POST   /api/projects/{id}/views     # Increment view count
 POST   /api/projects/{id}/rate      # Submit rating (once per user)
 GET    /api/projects/{id}/user-rating # Get user's rating
 GET    /api/projects/my?team_id={id} # Get team's projects
 ```
 
+#### Academic Years
+```
+GET    /api/academic-years          # List academic years
+```
+
+**Project Creation/Update Fields:**
+- Required: title, type, team_id (create only), school_type, subject, predmet
+- Optional: description, year_of_study, release_date
+- Files: splash_screen (image), video (file or video_url), documentation (PDF/DOCX/ZIP/RAR), presentation (PDF/PPT/PPTX), source_code (ZIP/RAR), export (ZIP/RAR/EXE/APK/IPA), project_folder (ZIP/RAR - contains project files)
+- Metadata: export_type (when export uploaded), tech_stack, github_url, live_url, platform, package_name, npm_url
+
 #### Games (LEGACY - Use Projects endpoints)
 ```
 POST   /api/games                   # Upload project (Scrum Master only)
 POST   /api/games/{id}/rate         # Submit rating
+```
+
+### Admin Endpoints (Admin Role Required)
+
+#### Admin Academic Years
+```
+POST   /api/admin/academic-years    # Create academic year (YYYY/YYYY)
 ```
 
 ### Request/Response Examples
@@ -557,31 +664,100 @@ POST   /api/games/{id}/rate         # Submit rating
 ### Structure
 ```
 storage/app/public/
-├── avatars/                    # User profile images
+├── avatars/                          # User profile images
 │   └── {hash}.jpg
-├── trailers/                   # Video files
-│   └── {hash}.mp4
-├── splash_screens/             # Poster images
-│   └── {hash}.png
-├── source_codes/               # .zip archives
-│   └── {hash}.zip
-└── exports/                    # Game builds
-    └── {hash}.exe
+├── projects/                         # Project files (organized by type)
+│   ├── game/
+│   │   ├── splash_screens/          # Poster images
+│   │   ├── videos/                  # Video files
+│   │   ├── documentation/           # PDF/DOCX/ZIP/RAR docs
+│   │   ├── presentations/           # PDF/PPT/PPTX files
+│   │   ├── source/                  # Source code ZIP/RAR archives
+│   │   ├── exports/                 # Game builds (ZIP/RAR/EXE/APK/IPA)
+│   │   └── folders/                 # Project folders (ZIP/RAR)
+│   ├── web_app/
+│   │   └── (same structure)
+│   ├── mobile_app/
+│   │   └── (same structure)
+│   ├── library/
+│   │   └── (same structure)
+│   └── other/
+│       └── (same structure)
+├── trailers/                         # LEGACY: Old video location
+└── splash_screens/                   # LEGACY: Old splash location
 ```
 
 ### Upload Validation
 
-**GameStoreRequest:**
-- **Trailer:** `max:20480` (20MB), `mimetypes:video/mp4,video/quicktime`
-- **Splash Screen:** `max:5120` (5MB), `image`
-- **Source Code:** `max:51200` (50MB), any file
-- **Export:** `max:51200` (50MB), any file
+**Universal Files (all project types):**
+- **documentation:** `mimes:pdf,docx,zip,rar`, `max:10240` (10MB - single DOCX, PDF, or archive ZIP/RAR)
+- **presentation:** `mimes:pdf,ppt,pptx`, `max:15360` (15MB)
+- **source_code:** `mimes:zip,rar`, `max:204800` (200MB)
+- **export:** `mimes:zip,rar,exe,apk,ipa`, `max:512000` (500MB)
+- **project_folder:** `mimes:zip,rar`, `max:20480` (20MB - complete project folder as archive)
+- **export_type:** Required with export: `standalone`, `webgl`, `mobile`, `executable`
+
+**Media Files:**
+- **splash_screen:** `image`, `max:2048` (2MB) - enforced in frontend
+- **video:** `video/mp4`, `max:102400` (100MB) - enforced in frontend
+- **video_url:** Alternative to video file, validated as URL
+
+**Type-Specific Metadata:**
+- **tech_stack:** String (optional)
+- **github_url:** URL (optional)
+- **live_url:** URL (web_app, other)
+- **platform:** `android|ios|both` (mobile_app)
+- **package_name:** String (library)
+- **npm_url:** URL (library)
 
 ### File Access
 - Public URL: `http://127.0.0.1:8000/storage/{path}`
 - Served via symlink: `php artisan storage:link`
+- Files stored in `files` JSON column as relative paths
+- Metadata stored in `metadata` JSON column
+
+**Example Project Record:**
+```json
+{
+  "id": 1,
+  "title": "Math Game",
+  "type": "game",
+  "files": {
+    "documentation": "projects/game/documentation/abc123.rar",
+    "presentation": "projects/game/presentations/xyz789.pptx",
+    "source_code": "projects/game/source/code_2024.rar",
+    "export": "projects/game/exports/build_v1.rar",
+    "project_folder": "projects/game/folders/project_complete.zip"
+  },
+  "metadata": {
+    "export_type": "standalone",
+    "tech_stack": "Unity, C#",
+    "github_url": "https://github.com/user/repo"
+  }
+}
+```
 
 **Future Enhancement:** Use signed URLs for downloads to prevent hotlinking.
+
+### PHP Configuration for Large Uploads
+
+The following PHP settings in `php.ini` must be configured to support large file uploads:
+
+```ini
+; Maximum allowed size of an uploaded file
+upload_max_filesize = 600M
+
+; Maximum size of POST data that PHP will accept
+post_max_size = 650M
+
+; Maximum memory a script may use
+memory_limit = 1024M
+
+; Seconds a script is allowed to run
+max_execution_time = 300
+```
+
+**Note:** These settings allow uploads up to **500MB** (export field maximum). Adjust based on your server capacity and network conditions. For XAMPP, edit `C:\xampp\php\php.ini`. For other setups, check your PHP installation directory.
 
 ---
 
@@ -708,7 +884,7 @@ User::factory()->create([
 - [ ] Export analytics to CSV
 
 ### Long-term (3+ months)
-- [ ] Multi-language support (i18n)
+- [x] Multi-language support (i18n) — **Implemented** (vue-i18n 9, 11 locales, browser autodetect)
 - [ ] Project versioning/changelog
 - [ ] Comment system on projects
 - [ ] Team leaderboards

@@ -14,7 +14,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // Create admin user if it doesn't exist
-        $adminEmail = config('admin.email') ?? 'admin@gameportal.local';
+        $adminEmail = config('admin.email') ?? 'admin@gameportal.dev';
         
         User::updateOrCreate(
             ['email' => $adminEmail],

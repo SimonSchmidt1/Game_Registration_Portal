@@ -10,50 +10,65 @@
         
         <!-- Title & Refresh -->
         <div class="w-full flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-0 relative">
-          <!-- Invisible spacer for symmetry on larger screens -->
-          <div class="hidden sm:block sm:w-32"></div>
+          <div class="w-full sm:w-32 flex items-center justify-start relative z-10">
+            <button class="back-btn" @click="$router.push('/')">
+              <i class="pi pi-arrow-left"></i>
+              <span>{{ t('common.back') }}</span>
+            </button>
+          </div>
           
-          <h1 class="text-3xl sm:text-4xl lg:text-5xl font-black admin-text-strong tracking-widest uppercase m-0 absolute left-1/2 transform -translate-x-1/2 w-full sm:w-auto text-center">
+          <h1 class="text-3xl sm:text-4xl lg:text-5xl font-black admin-text-strong tracking-widest uppercase m-0 w-full sm:w-auto text-center sm:absolute sm:left-1/2 sm:-translate-x-1/2">
             {{ t('admin.title') }}
           </h1>
           
           <div class="flex justify-end w-full sm:w-32 relative z-10">
             <Button 
               :label="t('admin.refresh_btn')"
-              class="admin-action-btn-styled p-button-sm rounded-xl whitespace-nowrap w-full sm:w-auto"
+              icon="pi pi-refresh"
+              class="admin-action-btn-styled admin-icon-btn p-button-sm rounded-xl whitespace-nowrap w-full sm:w-auto"
               @click="loadData"
               :loading="loading"
+              :title="t('admin.refresh_btn')"
             />
           </div>
         </div>
 
         <!-- Action Buttons -->
-        <div class="flex flex-wrap justify-center gap-3 w-full admin-elevated-card rounded-2xl p-5 shadow-lg">
-          <Button 
+        <div class="flex flex-wrap justify-center gap-3 w-full admin-elevated-card admin-action-strip rounded-2xl p-5 shadow-lg">
+          <Button
             :label="t('admin.register_user_btn')"
-            class="p-button-secondary p-button-outlined admin-action-btn-styled rounded-xl px-5"
+            icon="pi pi-user-plus"
+            class="p-button-secondary p-button-outlined admin-action-btn-styled admin-icon-btn admin-action-uniform rounded-xl px-5"
             @click="showRegisterUserDialog = true"
+            :title="t('admin.register_user_btn')"
           />
           <Button
             :label="t('admin.create_team_btn')"
-            class="p-button-secondary p-button-outlined admin-action-btn-styled rounded-xl px-5"
+            icon="pi pi-users"
+            class="p-button-secondary p-button-outlined admin-action-btn-styled admin-icon-btn admin-action-uniform rounded-xl px-5"
             @click="openCreateTeamDialog"
+            :title="t('admin.create_team_btn')"
+          />
+          <Button
+            label="Pridať projekt"
+            icon="pi pi-plus-circle"
+            class="p-button-secondary p-button-outlined admin-action-btn-styled admin-icon-btn admin-action-uniform rounded-xl px-5"
+            @click="openPickTeamDialog"
+            title="Pridať projekt pre vybraný tím"
           />
           <Button
             :label="t('admin.add_year_btn')"
-            class="p-button-secondary p-button-outlined admin-action-btn-styled rounded-xl px-5"
+            icon="pi pi-calendar-plus"
+            class="p-button-secondary p-button-outlined admin-action-btn-styled admin-icon-btn admin-action-uniform rounded-xl px-5"
             @click="openAddAcademicYearDialog"
+            :title="t('admin.add_year_btn')"
           />
           <Button
             :label="t('admin.manage_users_btn')"
-            class="p-button-secondary p-button-outlined admin-action-btn-styled rounded-xl px-5"
+            icon="pi pi-id-card"
+            class="p-button-secondary p-button-outlined admin-action-btn-styled admin-icon-btn admin-action-uniform rounded-xl px-5"
             @click="openUsersManagementDialog"
-          />
-          <Button
-            :label="t('admin.import_csv_btn')"
-            class="p-button-secondary p-button-outlined admin-action-btn-styled rounded-xl px-5"
-            @click="showImportDialog = true"
-            :disabled="!config.authorizationEnabled"
+            :title="t('admin.manage_users_btn')"
           />
         </div>
 
@@ -140,16 +155,20 @@
                   {{ team.academic_year.name }}
                 </span>
               </div>
-              <div class="flex gap-2 w-full sm:w-auto justify-center">
+              <div class="flex gap-2 w-full sm:w-auto justify-center admin-pending-actions">
                 <Button 
                   :label="t('admin.approve_btn')"
-                  class="p-button-sm p-button-success rounded-lg w-full sm:w-auto"
+                  icon="pi pi-check"
+                  class="p-button-sm p-button-success rounded-lg w-full sm:w-auto admin-icon-btn"
                   @click="approveTeam(team)"
+                  :title="t('admin.approve_btn')"
                 />
                 <Button 
                   :label="t('admin.reject_btn')"
-                  class="p-button-sm p-button-danger p-button-outlined rounded-lg w-full sm:w-auto"
+                  icon="pi pi-times"
+                  class="p-button-sm p-button-danger p-button-outlined rounded-lg w-full sm:w-auto admin-icon-btn"
                   @click="showRejectDialog(team)"
+                  :title="t('admin.reject_btn')"
                 />
               </div>
             </div>
@@ -180,10 +199,10 @@
             <tr>
               <th class="px-5 py-5 text-left text-sm font-black admin-text-muted uppercase tracking-wider w-10"></th>
               <th class="px-5 py-5 text-center text-sm font-black admin-text-muted uppercase tracking-wider">{{ t('admin.table_team') }}</th>
-              <th class="px-5 py-5 text-center text-sm font-black admin-text-muted uppercase tracking-wider">{{ t('admin.table_year') }}</th>
-              <th class="px-5 py-5 text-center text-sm font-black admin-text-muted uppercase tracking-wider">{{ t('admin.table_members') }}</th>
-              <th class="px-5 py-5 text-center text-sm font-black admin-text-muted uppercase tracking-wider">{{ t('admin.table_projects') }}</th>
-              <th class="px-5 py-5 text-center text-sm font-black admin-text-muted uppercase tracking-wider">{{ t('admin.table_status') }}</th>
+              <th class="px-5 py-5 text-center text-sm font-black admin-text-muted uppercase tracking-wider admin-col-year">{{ t('admin.table_year') }}</th>
+              <th class="px-5 py-5 text-center text-sm font-black admin-text-muted uppercase tracking-wider admin-col-members">{{ t('admin.table_members') }}</th>
+              <th class="px-5 py-5 text-center text-sm font-black admin-text-muted uppercase tracking-wider admin-col-projects">{{ t('admin.table_projects') }}</th>
+              <th class="px-5 py-5 text-center text-sm font-black admin-text-muted uppercase tracking-wider admin-col-status">{{ t('admin.table_status') }}</th>
               <th class="px-5 py-5 text-center text-sm font-black admin-text-muted uppercase tracking-wider">{{ t('admin.table_actions') }}</th>
             </tr>
           </thead>
@@ -194,9 +213,7 @@
                 @click="toggleTeamProjects(team)"
               >
                 <td class="px-4 py-4 text-center">
-                  <span class="text-gray-400">
-                    {{ expandedTeamId === team.id ? 'v' : '>' }}
-                  </span>
+                  <i :class="['pi text-gray-400 transition-transform duration-200', expandedTeamId === team.id ? 'pi-chevron-down' : 'pi-chevron-right']"></i>
                 </td>
                 <td class="px-4 py-4 text-center">
                   <div>
@@ -204,16 +221,16 @@
                     <div class="text-xs text-gray-500">{{ team.invite_code }}</div>
                   </div>
                 </td>
-                <td class="px-4 py-4 text-gray-300 text-center">
+                <td class="px-4 py-4 text-gray-300 text-center admin-col-year">
                   {{ team.academic_year?.name || '-' }}
                 </td>
-                <td class="px-4 py-4 text-center text-gray-300">
+                <td class="px-4 py-4 text-center text-gray-300 admin-col-members">
                   {{ team.members_count }}
                 </td>
-                <td class="px-4 py-4 text-center text-gray-300">
+                <td class="px-4 py-4 text-center text-gray-300 admin-col-projects">
                   {{ team.projects_count }}
                 </td>
-                <td class="px-4 py-4 text-center">
+                <td class="px-4 py-4 text-center admin-col-status">
                   <span 
                     :class="getStatusClass(team.status)"
                     class="px-2 py-1 rounded-md text-xs font-semibold"
@@ -222,21 +239,27 @@
                   </span>
                 </td>
                 <td class="px-4 py-4 text-center" @click.stop>
-                  <div class="flex justify-center gap-1">
+                  <div class="flex justify-center gap-1 admin-row-actions">
                     <Button 
                       :label="t('common.detail')"
-                      class="p-button-sm p-button-text p-button-rounded"
+                      icon="pi pi-eye"
+                      class="p-button-sm p-button-text p-button-rounded admin-icon-btn"
                       @click="showTeamDetails(team)"
+                      :title="t('common.detail')"
                     />
                     <Button 
                       :label="t('common.edit')"
-                      class="p-button-sm p-button-text p-button-rounded"
+                      icon="pi pi-pencil"
+                      class="p-button-sm p-button-text p-button-rounded admin-icon-btn"
                       @click="showEditDialog(team)"
+                      :title="t('common.edit')"
                     />
                     <Button 
                       :label="t('common.delete')"
-                      class="p-button-sm p-button-text p-button-rounded p-button-danger"
+                      icon="pi pi-trash"
+                      class="p-button-sm p-button-text p-button-rounded p-button-danger admin-icon-btn"
                       @click="confirmDeleteTeam(team)"
+                      :title="t('common.delete')"
                     />
                   </div>
                 </td>
@@ -251,13 +274,30 @@
                       <p class="mt-3 text-gray-400">{{ t('admin.loading_team_projects') }}</p>
                     </div>
 
-                    <!-- Empty State -->
-                    <div v-else-if="!teamProjects[team.id] || teamProjects[team.id].length === 0" class="text-center py-8">
-                      <p class="text-gray-400">{{ t('admin.no_team_projects') }}</p>
+                    <!-- Empty State (button integrated as a clear CTA) -->
+                    <div v-else-if="!teamProjects[team.id] || teamProjects[team.id].length === 0" class="text-center py-6">
+                      <p class="text-gray-400 mb-4">{{ t('admin.no_team_projects') }}</p>
+                      <Button
+                        label="Pridať projekt"
+                        icon="pi pi-plus-circle"
+                        class="p-button-success admin-add-project-cta px-5 py-2 rounded-xl"
+                        @click="addProjectForTeam(team)"
+                        title="Pridať prvý projekt pre tento tím"
+                      />
                     </div>
 
-                    <!-- Projects List -->
-                    <div v-else class="space-y-3">
+                    <!-- Projects List (with action bar) -->
+                    <div v-else>
+                      <div class="flex justify-end mb-4">
+                        <Button
+                          label="Pridať projekt"
+                          icon="pi pi-plus-circle"
+                          class="p-button-sm p-button-success admin-add-project-cta"
+                          @click="addProjectForTeam(team)"
+                          title="Pridať nový projekt pre tento tím"
+                        />
+                      </div>
+                      <div class="space-y-3">
                       <div
                         v-for="project in teamProjects[team.id]"
                         :key="project.id"
@@ -271,7 +311,7 @@
                               
                               <div class="flex flex-wrap gap-2">
                                 <span class="px-2.5 py-1 bg-blue-900/50 text-blue-300 rounded-md text-xs border border-blue-700/50 font-medium">
-                                  {{ project.type.replace('_', ' ') }}
+                                  {{ formatProjectType(project.type) }}
                                 </span>
                                 <span v-if="project.school_type" class="px-2.5 py-1 bg-gray-700 text-gray-300 rounded-md text-xs font-medium">
                                   {{ project.school_type.toUpperCase() }}
@@ -290,21 +330,27 @@
                             </div>
 
                             <!-- Right side: Actions -->
-                            <div class="flex gap-1 self-end sm:self-auto">
+                            <div class="flex gap-1 self-end sm:self-auto admin-row-actions">
                               <Button 
                                 :label="t('common.detail')"
-                                class="p-button-sm p-button-text p-button-rounded"
+                                icon="pi pi-eye"
+                                class="p-button-sm p-button-text p-button-rounded admin-icon-btn"
                                 @click="viewProjectDetail(project.id)"
+                                :title="t('common.detail')"
                               />
                               <Button 
                                 :label="t('common.edit')"
-                                class="p-button-sm p-button-text p-button-rounded"
+                                icon="pi pi-pencil"
+                                class="p-button-sm p-button-text p-button-rounded admin-icon-btn"
                                 @click="editProject(project.id)"
+                                :title="t('common.edit')"
                               />
                               <Button 
                                 :label="t('common.delete')"
-                                class="p-button-sm p-button-text p-button-rounded p-button-danger"
+                                icon="pi pi-trash"
+                                class="p-button-sm p-button-text p-button-rounded p-button-danger admin-icon-btn"
                                 @click="confirmDeleteProject(project)"
+                                :title="t('common.delete')"
                               />
                             </div>
                           </div>
@@ -314,93 +360,39 @@
                         <div class="border-t border-gray-700 bg-gray-900/30 px-4 py-3">
                           <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                             <!-- Splash Screen -->
-                            <div 
-                              :class="[
-                                'admin-attr',
-                                project.has_splash ? 'admin-attr-ok' : 'admin-attr-missing'
-                              ]"
-                            >
-                              <span :class="['text-xs font-semibold', project.has_splash ? 'text-emerald-300' : 'text-rose-300']">
-                                Splash
-                              </span>
-                              <span :class="['text-xs mt-1', project.has_splash ? 'text-emerald-300' : 'text-rose-300']">
-                                {{ project.has_splash ? 'OK' : 'Nie' }}
-                              </span>
+                            <div :class="['admin-attr', project.has_splash ? 'admin-attr-ok' : 'admin-attr-missing']">
+                              <span :class="['text-xs font-semibold', project.has_splash ? 'text-emerald-300' : 'text-rose-300']">Splash</span>
+                              <i :class="['pi text-sm mt-0.5', project.has_splash ? 'pi-check text-emerald-300' : 'pi-times text-rose-300']"></i>
                             </div>
 
                             <!-- Video -->
-                            <div 
-                              :class="[
-                                'admin-attr',
-                                project.has_video ? 'admin-attr-ok' : 'admin-attr-missing'
-                              ]"
-                            >
-                              <span :class="['text-xs font-semibold', project.has_video ? 'text-emerald-300' : 'text-rose-300']">
-                                Video
-                              </span>
-                              <span :class="['text-xs mt-1', project.has_video ? 'text-emerald-300' : 'text-rose-300']">
-                                {{ project.has_video ? 'OK' : 'Nie' }}
-                              </span>
+                            <div :class="['admin-attr', project.has_video ? 'admin-attr-ok' : 'admin-attr-missing']">
+                              <span :class="['text-xs font-semibold', project.has_video ? 'text-emerald-300' : 'text-rose-300']">Video</span>
+                              <i :class="['pi text-sm mt-0.5', project.has_video ? 'pi-check text-emerald-300' : 'pi-times text-rose-300']"></i>
                             </div>
 
                             <!-- Documentation -->
-                            <div 
-                              :class="[
-                                'admin-attr',
-                                project.has_documentation ? 'admin-attr-ok' : 'admin-attr-missing'
-                              ]"
-                            >
-                              <span :class="['text-xs font-semibold', project.has_documentation ? 'text-emerald-300' : 'text-rose-300']">
-                                Dokumentácia
-                              </span>
-                              <span :class="['text-xs mt-1', project.has_documentation ? 'text-emerald-300' : 'text-rose-300']">
-                                {{ project.has_documentation ? 'OK' : 'Nie' }}
-                              </span>
+                            <div :class="['admin-attr', project.has_documentation ? 'admin-attr-ok' : 'admin-attr-missing']">
+                              <span :class="['text-xs font-semibold', project.has_documentation ? 'text-emerald-300' : 'text-rose-300']">Dokumentácia</span>
+                              <i :class="['pi text-sm mt-0.5', project.has_documentation ? 'pi-check text-emerald-300' : 'pi-times text-rose-300']"></i>
                             </div>
 
                             <!-- Presentation -->
-                            <div 
-                              :class="[
-                                'admin-attr',
-                                project.has_presentation ? 'admin-attr-ok' : 'admin-attr-missing'
-                              ]"
-                            >
-                              <span :class="['text-xs font-semibold', project.has_presentation ? 'text-emerald-300' : 'text-rose-300']">
-                                Prezentácia
-                              </span>
-                              <span :class="['text-xs mt-1', project.has_presentation ? 'text-emerald-300' : 'text-rose-300']">
-                                {{ project.has_presentation ? 'OK' : 'Nie' }}
-                              </span>
+                            <div :class="['admin-attr', project.has_presentation ? 'admin-attr-ok' : 'admin-attr-missing']">
+                              <span :class="['text-xs font-semibold', project.has_presentation ? 'text-emerald-300' : 'text-rose-300']">Prezentácia</span>
+                              <i :class="['pi text-sm mt-0.5', project.has_presentation ? 'pi-check text-emerald-300' : 'pi-times text-rose-300']"></i>
                             </div>
 
                             <!-- Source Code -->
-                            <div 
-                              :class="[
-                                'admin-attr',
-                                project.has_source_code ? 'admin-attr-ok' : 'admin-attr-missing'
-                              ]"
-                            >
-                              <span :class="['text-xs font-semibold', project.has_source_code ? 'text-emerald-300' : 'text-rose-300']">
-                                Zdrojový kód
-                              </span>
-                              <span :class="['text-xs mt-1', project.has_source_code ? 'text-emerald-300' : 'text-rose-300']">
-                                {{ project.has_source_code ? 'OK' : 'Nie' }}
-                              </span>
+                            <div :class="['admin-attr', project.has_source_code ? 'admin-attr-ok' : 'admin-attr-missing']">
+                              <span :class="['text-xs font-semibold', project.has_source_code ? 'text-emerald-300' : 'text-rose-300']">Zdrojový kód</span>
+                              <i :class="['pi text-sm mt-0.5', project.has_source_code ? 'pi-check text-emerald-300' : 'pi-times text-rose-300']"></i>
                             </div>
 
                             <!-- Export -->
-                            <div 
-                              :class="[
-                                'admin-attr',
-                                project.has_export ? 'admin-attr-ok' : 'admin-attr-missing'
-                              ]"
-                            >
-                              <span :class="['text-xs font-semibold', project.has_export ? 'text-emerald-300' : 'text-rose-300']">
-                                Export
-                              </span>
-                              <span :class="['text-xs mt-1', project.has_export ? 'text-emerald-300' : 'text-rose-300']">
-                                {{ project.has_export ? 'OK' : 'Nie' }}
-                              </span>
+                            <div :class="['admin-attr', project.has_export ? 'admin-attr-ok' : 'admin-attr-missing']">
+                              <span :class="['text-xs font-semibold', project.has_export ? 'text-emerald-300' : 'text-rose-300']">Export</span>
+                              <i :class="['pi text-sm mt-0.5', project.has_export ? 'pi-check text-emerald-300' : 'pi-times text-rose-300']"></i>
                             </div>
 
                             <!-- Rating -->
@@ -413,9 +405,7 @@
                               <span :class="['text-xs font-semibold', project.rating ? 'text-emerald-300' : 'text-rose-300']">
                                 {{ project.rating ? Number(project.rating).toFixed(1) : 'Bez hodnotenia' }}
                               </span>
-                              <span :class="['text-xs mt-1', project.rating ? 'text-emerald-300' : 'text-rose-300']">
-                                {{ project.rating ? 'OK' : 'Nie' }}
-                              </span>
+                              <i :class="['pi text-sm mt-0.5', project.rating ? 'pi-star-fill text-emerald-300' : 'pi-times text-rose-300']"></i>
                             </div>
 
                             <!-- Views -->
@@ -432,6 +422,7 @@
                         </div>
                       </div>
                     </div>
+                    </div>
                   </div>
                 </td>
               </tr>
@@ -442,21 +433,25 @@
     </div>
 
     <!-- Team Details Dialog -->
-    <Dialog 
-      v-model:visible="showDetailsDialog" 
+    <Dialog
+      v-model:visible="showDetailsDialog"
       :modal="true"
+      :closable="false"
       :draggable="false"
       class="w-11/12 md:w-2/3 lg:w-1/2 admin-dialog-shell admin-edit-team-dialog"
-        :contentStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', padding: '1.5rem' }"
-        :headerStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', borderBottom: '1px solid var(--color-border)' }"
+      :contentStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', padding: '1.5rem' }"
+      :headerStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', borderBottom: '2px solid var(--color-accent)' }"
     >
       <template #header>
-        <span class="text-lg font-semibold text-center">Detail tímu: {{ selectedTeam?.name }}</span>
+        <div class="admin-dlg-header">
+          <span class="admin-dlg-title">Detail tímu: {{ selectedTeam?.name }}</span>
+          <button class="admin-dlg-close" @click="showDetailsDialog = false" type="button" aria-label="Zavrieť">×</button>
+        </div>
       </template>
 
       <div v-if="selectedTeamDetails" class="space-y-6">
         <!-- Team Info -->
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div class="admin-item-card p-3">
             <div class="admin-text-muted text-sm">Kód pre pripojenie</div>
             <div class="admin-text-strong font-mono text-lg">{{ selectedTeamDetails.team.invite_code }}</div>
@@ -469,15 +464,16 @@
 
         <!-- Members -->
         <div>
-          <div class="flex items-center justify-between mb-3">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-3">
             <h3 class="text-lg font-semibold admin-text-strong">Členovia ({{ selectedTeamDetails.members.length }})</h3>
             <Dropdown
               v-model="selectedNewScrumMaster"
               :options="scrumMasterCandidates"
               optionLabel="name"
               optionValue="id"
+  
               placeholder="Zmeniť Scrum Mastera"
-              class="w-64"
+              class="w-full sm:w-64"
               @change="confirmChangeScrumMaster"
             >
               <template #value="slotProps">
@@ -490,9 +486,9 @@
             <div 
               v-for="member in selectedTeamDetails.members" 
               :key="member.id"
-              class="flex items-center justify-between admin-item-card p-3"
+              class="flex flex-col sm:flex-row items-start sm:items-center justify-between admin-item-card p-3 gap-3"
             >
-              <div>
+              <div class="w-full sm:w-auto">
                 <div class="flex items-center gap-2">
                   <span :class="member.is_absolvent ? 'admin-text-muted opacity-60' : 'admin-text-strong'" class="font-medium">{{ member.name }}</span>
                   <span
@@ -510,122 +506,80 @@
                 </div>
                 <span class="admin-text-subtle text-sm">{{ member.email }}</span>
               </div>
-              <div class="flex items-center gap-2">
-                <span v-if="member.occupation" class="px-2 py-1 bg-indigo-900 text-indigo-300 rounded text-xs">
+              <div class="flex items-center gap-1.5 flex-wrap flex-shrink-0 w-full sm:w-auto">
+                <span v-if="member.occupation" class="tdlg-badge tdlg-badge-occupation">
                   {{ formatOccupation(member.occupation) || 'Neurčené' }}
                 </span>
-                <span 
-                  v-if="member.role_in_team === 'scrum_master'"
-                  class="px-2 py-1 bg-blue-900 text-blue-300 rounded text-xs font-semibold"
-                >
-                  SM
-                </span>
-                <Button 
+                <span v-if="member.role_in_team === 'scrum_master'" class="tdlg-badge tdlg-badge-sm">SM</span>
+                <span class="tdlg-sep"></span>
+                <button
                   v-if="(member.status || 'active') === 'active'"
-                  label="Deaktivovať"
-                  class="p-button-sm p-button-text p-button-rounded p-button-danger"
+                  class="tdlg-btn tdlg-btn-danger"
                   @click="deactivateTeamMember(member)"
-                  :loading="saving"
-                />
-                <Button 
+                  :disabled="saving"
+                >
+                  <i v-if="saving" class="pi pi-spin pi-spinner"></i>
+                  <i v-else class="pi pi-ban"></i>
+                  Deaktivovať
+                </button>
+                <button
                   v-else
-                  label="Aktivovať"
-                  class="p-button-sm p-button-text p-button-rounded p-button-success"
+                  class="tdlg-btn tdlg-btn-success"
                   @click="activateTeamMember(member)"
-                  :loading="saving"
-                />
-                <Button 
-                  label="Presunúť"
-                  class="p-button-sm p-button-text p-button-rounded p-button-warning"
-                  @click="openMoveToTeamDialog(member)"
-                />
-                <Button 
-                  label="Odstrániť"
-                  class="p-button-sm p-button-text p-button-rounded p-button-danger"
-                  @click="confirmRemoveMember(member)"
-                />
+                  :disabled="saving"
+                >
+                  <i v-if="saving" class="pi pi-spin pi-spinner"></i>
+                  <i v-else class="pi pi-check"></i>
+                  Aktivovať
+                </button>
+                <button class="tdlg-btn tdlg-btn-occ" @click="openOccupationDialog(member)">
+                  <i class="pi pi-briefcase"></i>
+                  Povolanie
+                </button>
+                <button class="tdlg-btn tdlg-btn-warn" @click="openMoveToTeamDialog(member)">
+                  <i class="pi pi-arrow-right-arrow-left"></i>
+                  Presunúť
+                </button>
+                <button class="tdlg-btn tdlg-btn-ghost-danger" @click="confirmRemoveMember(member)">
+                  <i class="pi pi-times"></i>
+                  Odstrániť
+                </button>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Projects -->
-        <div>
-          <h3 class="text-lg font-semibold admin-text-strong mb-3">Projekty ({{ selectedTeamDetails.projects.length }})</h3>
-          <div v-if="selectedTeamDetails.projects.length === 0" class="admin-text-muted text-center py-4">
-            Žiadne projekty
-          </div>
-          <div v-else class="space-y-2">
-            <div 
-              v-for="project in selectedTeamDetails.projects" 
-              :key="project.id"
-              class="admin-item-card p-3"
-            >
-              <div class="flex items-center justify-between">
-                <div>
-                  <span class="admin-text-strong font-medium">{{ project.title }}</span>
-                  <span class="admin-text-muted text-xs ml-2">({{ project.type }})</span>
-                </div>
-                <div class="flex items-center gap-3 text-xs">
-                  <span class="flex items-center gap-1">
-                    <span v-for="s in 5" :key="s" :class="s <= Math.round(Number(project.rating || 0)) ? 'text-yellow-400' : 'admin-text-muted opacity-50'" style="font-size: 0.65rem;">★</span>
-                    <span class="admin-text-muted text-xs ml-1">{{ Number(project.rating || 0).toFixed(1) }}</span>
-                  </span>
-                  <span class="flex items-center gap-1 admin-text-muted">
-                    <i class="pi pi-eye text-xs" aria-hidden="true"></i>
-                    <span class="text-xs">{{ project.views || 0 }}</span>
-                  </span>
-                </div>
-              </div>
-              <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3 text-xs">
-                <span :class="project.has_splash ? 'px-2 py-1 bg-emerald-900/20 border border-emerald-600/50 text-emerald-300 rounded text-center' : 'px-2 py-1 bg-rose-900/20 border border-rose-600/50 text-rose-300 rounded text-center'">
-                  Náhľad {{ project.has_splash ? '✓' : '✗' }}
-                </span>
-                <span :class="project.has_video ? 'px-2 py-1 bg-emerald-900/20 border border-emerald-600/50 text-emerald-300 rounded text-center' : 'px-2 py-1 bg-rose-900/20 border border-rose-600/50 text-rose-300 rounded text-center'">
-                  Video {{ project.has_video ? '✓' : '✗' }}
-                </span>
-                <span :class="project.has_documentation ? 'px-2 py-1 bg-emerald-900/20 border border-emerald-600/50 text-emerald-300 rounded text-center' : 'px-2 py-1 bg-rose-900/20 border border-rose-600/50 text-rose-300 rounded text-center'">
-                  Dokumentácia {{ project.has_documentation ? '✓' : '✗' }}
-                </span>
-                <span :class="project.has_presentation ? 'px-2 py-1 bg-emerald-900/20 border border-emerald-600/50 text-emerald-300 rounded text-center' : 'px-2 py-1 bg-rose-900/20 border border-rose-600/50 text-rose-300 rounded text-center'">
-                  Prezentácia {{ project.has_presentation ? '✓' : '✗' }}
-                </span>
-                <span :class="project.has_source_code ? 'px-2 py-1 bg-emerald-900/20 border border-emerald-600/50 text-emerald-300 rounded text-center' : 'px-2 py-1 bg-rose-900/20 border border-rose-600/50 text-rose-300 rounded text-center'">
-                  Zdrojový kód {{ project.has_source_code ? '✓' : '✗' }}
-                </span>
-                <span :class="project.has_export ? 'px-2 py-1 bg-emerald-900/20 border border-emerald-600/50 text-emerald-300 rounded text-center' : 'px-2 py-1 bg-rose-900/20 border border-rose-600/50 text-rose-300 rounded text-center'">
-                  Export {{ project.has_export ? '✓' : '✗' }}
-                </span>
-                <span class="px-2 py-1 bg-yellow-900/20 border border-yellow-600/50 text-yellow-300 rounded text-center">
-                  ⭐ {{ Number(project.rating || 0).toFixed(1) }}
-                </span>
-                <span class="px-2 py-1 border rounded text-center" style="background: var(--color-surface); border-color: var(--color-border); color: var(--color-text-muted);">
-                  <i class="pi pi-eye" aria-hidden="true"></i> {{ project.views || 0 }}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
       <template #footer>
         <div class="admin-dlg-actions">
+          <Button
+            label="Pridať projekt"
+            icon="pi pi-plus-circle"
+            class="p-button-success admin-add-project-cta px-4 py-2 rounded-xl"
+            @click="addProjectFromDetailsDialog"
+            title="Pridať projekt pre tento tím"
+          />
           <Button :label="t('common.close')" class="admin-action-btn-styled px-4 py-2 rounded-xl" @click="showDetailsDialog = false" />
         </div>
       </template>
     </Dialog>
 
     <!-- Edit Team Dialog -->
-    <Dialog 
-      v-model:visible="showEditTeamDialog" 
+    <Dialog
+      v-model:visible="showEditTeamDialog"
       :modal="true"
+      :closable="false"
       :draggable="false"
       class="w-11/12 md:w-1/3 admin-dialog-shell admin-edit-team-dialog"
-        :contentStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', padding: '1.5rem' }"
-        :headerStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', borderBottom: '1px solid var(--color-border)' }"
+      :contentStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', padding: '1.5rem' }"
+      :headerStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', borderBottom: '2px solid var(--color-accent)' }"
     >
       <template #header>
-        <span class="text-lg font-semibold">Upraviť tím</span>
+        <div class="admin-dlg-header">
+          <span class="admin-dlg-title">Upraviť tím</span>
+          <button class="admin-dlg-close" @click="showEditTeamDialog = false" type="button" aria-label="Zavrieť">×</button>
+        </div>
       </template>
 
       <div class="space-y-4">
@@ -643,6 +597,17 @@
             class="w-full"
           />
         </div>
+        <div>
+          <label class="block text-gray-300 mb-1">Akademický rok</label>
+          <Dropdown
+            v-model="editForm.academic_year_id"
+            :options="academicYearOptions"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Vybrať akademický rok"
+            class="w-full"
+          />
+        </div>
       </div>
 
       <template #footer>
@@ -654,16 +619,20 @@
     </Dialog>
 
     <!-- Reject Team Dialog -->
-    <Dialog 
-      v-model:visible="showRejectTeamDialog" 
+    <Dialog
+      v-model:visible="showRejectTeamDialog"
       :modal="true"
+      :closable="false"
       :draggable="false"
       class="w-11/12 md:w-1/3 admin-dialog-shell"
-        :contentStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', padding: '1.5rem' }"
-        :headerStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', borderBottom: '1px solid var(--color-border)' }"
+      :contentStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', padding: '1.5rem' }"
+      :headerStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', borderBottom: '2px solid var(--color-accent)' }"
     >
       <template #header>
-        <span class="text-lg font-semibold">Zamietnuť tím</span>
+        <div class="admin-dlg-header">
+          <span class="admin-dlg-title">Zamietnuť tím</span>
+          <button class="admin-dlg-close" @click="showRejectTeamDialog = false" type="button" aria-label="Zavrieť">×</button>
+        </div>
       </template>
 
       <div class="space-y-4">
@@ -683,128 +652,112 @@
     </Dialog>
 
     <!-- Delete Confirmation Dialog -->
-    <Dialog 
-      v-model:visible="showDeleteDialog" 
-      :modal="true"
-      :draggable="false"
-      class="w-11/12 md:w-1/3 admin-dialog-shell admin-edit-team-dialog"
-        :contentStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', padding: '1.5rem' }"
-        :headerStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', borderBottom: '1px solid var(--color-border)' }"
+    <Dialog
+      v-model:visible="showDeleteDialog"
+      :modal="true" :draggable="false" :closable="false" :showHeader="false" :dismissableMask="true"
+      :style="{ borderRadius: '12px', overflow: 'hidden', width: '340px' }"
+      :contentStyle="{ padding: '0' }"
     >
-      <template #header>
-        <span class="text-lg font-semibold admin-text-strong">Zmazať tím</span>
-      </template>
-
-      <div class="text-center">
-        <p class="admin-text-strong">
-          Naozaj chcete zmazať tím <strong class="admin-text-strong">{{ selectedTeam?.name }}</strong>?
-        </p>
-        <p class="admin-text-muted text-sm mt-2">Táto akcia je nevratná.</p>
-      </div>
-
-      <template #footer>
-        <div class="admin-dlg-actions">
-          <Button :label="t('common.cancel')" class="admin-action-btn-styled px-4 py-2 rounded-xl" @click="showDeleteDialog = false" />
-          <Button label="Zmazať" class="admin-action-btn-styled px-4 py-2 rounded-xl" @click="deleteTeam" :loading="saving" />
+      <div class="acd">
+        <button class="acd-close" @click="showDeleteDialog = false"><i class="pi pi-times"></i></button>
+        <h3 class="acd-title">Zmazať tím</h3>
+        <p class="acd-msg">Naozaj chcete zmazať tím <strong>{{ selectedTeam?.name }}</strong>?</p>
+        <div v-if="(selectedTeam?.projects_count ?? 0) > 0" class="bg-red-900/30 border border-red-700 rounded-lg p-3 mb-2">
+          <p class="text-red-300 text-sm">Tím má <strong>{{ selectedTeam.projects_count }}</strong> projekt(ov). Pred zmazaním tímu musíte najprv zmazať všetky jeho projekty.</p>
         </div>
-      </template>
+        <p v-else class="acd-note acd-note-danger">Táto akcia je nevratná.</p>
+        <div class="acd-actions">
+          <button class="acd-btn acd-btn-ghost" @click="showDeleteDialog = false">{{ t('common.cancel') }}</button>
+          <button class="acd-btn acd-btn-danger" @click="deleteTeam" :disabled="saving || (selectedTeam?.projects_count ?? 0) > 0">
+            <i v-if="saving" class="pi pi-spin pi-spinner"></i>
+            Zmazať
+          </button>
+        </div>
+      </div>
     </Dialog>
 
     <!-- Remove Member Confirmation Dialog -->
-    <Dialog 
-      v-model:visible="showRemoveMemberDialog" 
-      :modal="true"
-      :draggable="false"
-      class="w-11/12 md:w-1/3 admin-dialog-shell"
-        :contentStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', padding: '1.5rem' }"
-        :headerStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', borderBottom: '1px solid var(--color-border)' }"
+    <Dialog
+      v-model:visible="showRemoveMemberDialog"
+      :modal="true" :draggable="false" :closable="false" :showHeader="false" :dismissableMask="true"
+      :style="{ borderRadius: '12px', overflow: 'hidden', width: '380px' }"
+      :contentStyle="{ padding: '0' }"
     >
-      <template #header>
-        <span class="text-lg font-semibold text-red-400">Odstrániť člena</span>
-      </template>
-
-      <div class="text-center">
-        <p class="text-gray-300">
-          Naozaj chcete odstrániť člena <strong class="text-white">{{ selectedMemberToRemove?.name }}</strong> z tímu?
-        </p>
-        <p v-if="selectedMemberToRemove?.role_in_team === 'scrum_master'" class="text-orange-400 text-sm mt-2">
-          Upozornenie: Tento člen je Scrum Master tímu.
-        </p>
-      </div>
-
-      <template #footer>
-        <div class="admin-dlg-actions">
-          <Button :label="t('common.cancel')" class="admin-action-btn-styled px-4 py-2 rounded-xl" @click="showRemoveMemberDialog = false" />
-          <Button label="Odstrániť" class="admin-action-btn-styled px-4 py-2 rounded-xl" @click="removeMemberFromTeam" :loading="saving" />
+      <div class="acd">
+        <button class="acd-close" @click="showRemoveMemberDialog = false"><i class="pi pi-times"></i></button>
+        <h3 class="acd-title">Odstrániť člena</h3>
+        <p class="acd-msg">Naozaj chcete odstrániť <strong>{{ selectedMemberToRemove?.name }}</strong> z tímu?</p>
+        <div v-if="selectedMemberToRemove?.role_in_team === 'scrum_master'" class="acd-sm-warning">
+          <div class="acd-sm-warning-row">
+            <i class="pi pi-exclamation-triangle"></i>
+            <span>Tento člen je Scrum Master</span>
+          </div>
+          <p>Po odstránení nebude mať tím žiadneho Scrum Mastera. Admin bude musieť manuálne priradiť nového SM.</p>
         </div>
-      </template>
+        <div class="acd-actions">
+          <button class="acd-btn acd-btn-ghost" @click="showRemoveMemberDialog = false">{{ t('common.cancel') }}</button>
+          <button class="acd-btn acd-btn-danger" @click="removeMemberFromTeam" :disabled="saving">
+            <i v-if="saving" class="pi pi-spin pi-spinner"></i>
+            Odstrániť
+          </button>
+        </div>
+      </div>
     </Dialog>
 
     <!-- Change Scrum Master Confirmation Dialog -->
-    <Dialog 
-      v-model:visible="showChangeSMDialog" 
-      :modal="true"
-      :draggable="false"
-      class="w-11/12 md:w-1/3 admin-dialog-shell"
-        :contentStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', padding: '1.5rem' }"
-        :headerStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', borderBottom: '1px solid var(--color-border)' }"
+    <Dialog
+      v-model:visible="showChangeSMDialog"
+      :modal="true" :draggable="false" :closable="false" :showHeader="false" :dismissableMask="true"
+      :style="{ borderRadius: '12px', overflow: 'hidden', width: '380px' }"
+      :contentStyle="{ padding: '0' }"
     >
-      <template #header>
-        <span class="text-lg font-semibold text-blue-400">Zmeniť Scrum Mastera</span>
-      </template>
-
-      <div class="text-center">
-        <p class="text-gray-300">
-          Naozaj chcete zmeniť Scrum Mastera na <strong class="text-white">{{ getSelectedNewSMName() }}</strong>?
-        </p>
-        <p class="text-gray-400 text-sm mt-2">Súčasný Scrum Master bude zmenený na člena.</p>
-      </div>
-
-      <template #footer>
-        <div class="admin-dlg-actions">
-          <Button :label="t('common.cancel')" class="admin-action-btn-styled px-4 py-2 rounded-xl" @click="showChangeSMDialog = false" />
-          <Button label="Zmeniť" class="admin-action-btn-styled px-4 py-2 rounded-xl" @click="changeScrumMasterInTeam" :loading="saving" />
+      <div class="acd">
+        <button class="acd-close" @click="showChangeSMDialog = false"><i class="pi pi-times"></i></button>
+        <h3 class="acd-title">Zmeniť Scrum Mastera</h3>
+        <p class="acd-msg">Nový Scrum Master tímu bude</p>
+        <p class="acd-highlight">{{ getSelectedNewSMName() }}</p>
+        <p class="acd-note">Doterajší Scrum Master zostane členom tímu.</p>
+        <div class="acd-actions">
+          <button class="acd-btn acd-btn-ghost" @click="showChangeSMDialog = false">{{ t('common.cancel') }}</button>
+          <button class="acd-btn acd-btn-accent" @click="changeScrumMasterInTeam" :disabled="saving">
+            <i v-if="saving" class="pi pi-spin pi-spinner"></i>
+            Potvrdiť
+          </button>
         </div>
-      </template>
+      </div>
     </Dialog>
 
     <!-- Delete Project Confirmation Dialog -->
-    <Dialog 
-      v-model:visible="showDeleteProjectDialog" 
-      :modal="true"
-      :draggable="false"
-      class="w-11/12 md:w-1/3 admin-dialog-shell"
-        :contentStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', padding: '1.5rem' }"
-        :headerStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', borderBottom: '1px solid var(--color-border)' }"
+    <Dialog
+      v-model:visible="showDeleteProjectDialog"
+      :modal="true" :draggable="false" :closable="false" :showHeader="false" :dismissableMask="true"
+      :style="{ borderRadius: '12px', overflow: 'hidden', width: '340px' }"
+      :contentStyle="{ padding: '0' }"
     >
-      <template #header>
-        <span class="text-lg font-semibold text-red-400">Zmazať projekt</span>
-      </template>
-
-      <div class="text-center">
-        <p class="text-gray-300">
-          Naozaj chcete zmazať projekt <strong class="text-white">{{ selectedProject?.title }}</strong>?
-        </p>
-        <p class="text-gray-400 text-sm mt-2">Táto akcia je nevratná.</p>
-      </div>
-
-      <template #footer>
-        <div class="admin-dlg-actions">
-          <Button :label="t('common.cancel')" class="admin-action-btn-styled px-4 py-2 rounded-xl" @click="showDeleteProjectDialog = false" />
-          <Button label="Zmazať" class="admin-action-btn-styled px-4 py-2 rounded-xl" @click="deleteProject" :loading="saving" />
+      <div class="acd">
+        <button class="acd-close" @click="showDeleteProjectDialog = false"><i class="pi pi-times"></i></button>
+        <h3 class="acd-title">Zmazať projekt</h3>
+        <p class="acd-msg">Naozaj chcete zmazať projekt <strong>{{ selectedProject?.title }}</strong>?</p>
+        <p class="acd-note acd-note-danger">Táto akcia je nevratná.</p>
+        <div class="acd-actions">
+          <button class="acd-btn acd-btn-ghost" @click="showDeleteProjectDialog = false">{{ t('common.cancel') }}</button>
+          <button class="acd-btn acd-btn-danger" @click="deleteProject" :disabled="saving">
+            <i v-if="saving" class="pi pi-spin pi-spinner"></i>
+            Zmazať
+          </button>
         </div>
-      </template>
+      </div>
     </Dialog>
 
     <!-- Register User Dialog -->
-    <Dialog 
-      v-model:visible="showRegisterUserDialog" 
+    <Dialog
+      v-model:visible="showRegisterUserDialog"
       :modal="true"
       :closable="false"
       :draggable="false"
       class="w-11/12 md:w-1/2 lg:w-[560px] admin-dialog-shell"
         :contentStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', padding: '1.25rem 1.5rem 1.5rem' }"
-        :headerStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', borderBottom: '1px solid var(--color-border)' }"
+        :headerStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', borderBottom: '2px solid var(--color-accent)' }"
     >
       <template #header>
         <div class="admin-dlg-header">
@@ -821,7 +774,13 @@
         
         <div class="admin-dlg-field">
           <label class="admin-dlg-label">Email *</label>
-          <InputText v-model="registerForm.email" type="email" class="w-full" placeholder="email@example.com" />
+          <InputText v-model="registerForm.email" type="email" class="w-full" placeholder="1234567@ucm.sk" />
+          <div class="flex items-center gap-2 mt-2">
+            <input type="checkbox" id="skip_ucm" v-model="registerForm.skip_ucm_email" class="cursor-pointer" />
+            <label for="skip_ucm" class="text-sm cursor-pointer" style="color: var(--color-text-muted)">
+              Povoliť aj iný email (nielen UCM)
+            </label>
+          </div>
         </div>
         
         <div class="admin-dlg-field">
@@ -838,6 +797,7 @@
             optionValue="value"
             placeholder="Vyberte typ študenta"
             class="w-full"
+
           />
         </div>
 
@@ -864,7 +824,7 @@
       :draggable="false"
       class="w-11/12 md:w-1/2 lg:w-[560px] admin-dialog-shell"
       :contentStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', padding: '1.25rem 1.5rem 1.5rem' }"
-      :headerStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', borderBottom: '1px solid var(--color-border)' }"
+      :headerStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', borderBottom: '2px solid var(--color-accent)' }"
     >
       <template #header>
         <div class="admin-dlg-header">
@@ -880,34 +840,37 @@
         </div>
         <div class="admin-dlg-field">
           <label class="admin-dlg-label">Akademický rok</label>
-          <Dropdown 
-            v-model="createTeamForm.academic_year_id" 
-            :options="academicYearOptions" 
-            optionLabel="label" 
+          <Dropdown
+            v-model="createTeamForm.academic_year_id"
+            :options="academicYearOptions"
+            optionLabel="label"
             optionValue="value"
             placeholder="Vyberte akademický rok"
             class="w-full"
+
           />
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div class="admin-dlg-field">
             <label class="admin-dlg-label">Typ tímu</label>
-            <Dropdown 
-              v-model="createTeamForm.team_type" 
-              :options="teamTypeOptions" 
-              optionLabel="label" 
+            <Dropdown
+              v-model="createTeamForm.team_type"
+              :options="teamTypeOptions"
+              optionLabel="label"
               optionValue="value"
               class="w-full"
+  
             />
           </div>
           <div class="admin-dlg-field">
             <label class="admin-dlg-label">Stav</label>
-            <Dropdown 
-              v-model="createTeamForm.status" 
-              :options="teamStatusOptions" 
-              optionLabel="label" 
+            <Dropdown
+              v-model="createTeamForm.status"
+              :options="teamStatusOptions"
+              optionLabel="label"
               optionValue="value"
               class="w-full"
+  
             />
           </div>
         </div>
@@ -923,6 +886,55 @@
       </template>
     </Dialog>
 
+    <!-- Pick Team for Project Dialog -->
+    <Dialog
+      v-model:visible="showPickTeamDialog"
+      modal
+      :closable="false"
+      :draggable="false"
+      class="w-11/12 md:w-1/2 lg:w-[480px] admin-dialog-shell"
+      :contentStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', padding: '1.25rem 1.5rem 1.5rem' }"
+      :headerStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', borderBottom: '2px solid var(--color-accent)' }"
+    >
+      <template #header>
+        <div class="admin-dlg-header">
+          <span class="admin-dlg-title">Pridať projekt — vyberte tím</span>
+          <button class="admin-dlg-close" @click="closePickTeamDialog" type="button" aria-label="Zavrieť">×</button>
+        </div>
+      </template>
+
+      <div class="admin-dlg-content">
+        <div class="admin-dlg-field">
+          <label class="admin-dlg-label">Tím *</label>
+          <Dropdown
+            v-model="pickTeamForm.team_id"
+            :options="pickTeamOptions"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Vyberte tím"
+            class="w-full"
+            :filter="true"
+            filterPlaceholder="Hľadať tím..."
+          />
+        </div>
+        <div class="admin-dlg-note">
+          <p>Po výbere tímu budete presmerovaný na formulár pre vytvorenie nového projektu pre tento tím.</p>
+        </div>
+      </div>
+      <template #footer>
+        <div class="admin-dlg-actions">
+          <Button :label="t('common.cancel')" class="admin-action-btn-styled px-4 py-2 rounded-xl" @click="closePickTeamDialog" />
+          <Button
+            label="Pokračovať"
+            icon="pi pi-arrow-right"
+            class="p-button-success admin-add-project-cta px-4 py-2 rounded-xl"
+            @click="submitPickTeam"
+            :disabled="!pickTeamForm.team_id"
+          />
+        </div>
+      </template>
+    </Dialog>
+
     <!-- Add Academic Year Dialog -->
     <Dialog
       v-model:visible="showAddAcademicYearDialog"
@@ -931,7 +943,7 @@
       :draggable="false"
       class="w-11/12 md:w-1/2 lg:w-[560px] admin-dialog-shell"
       :contentStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', padding: '1.25rem 1.5rem 1.5rem' }"
-      :headerStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', borderBottom: '1px solid var(--color-border)' }"
+      :headerStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', borderBottom: '2px solid var(--color-accent)' }"
     >
       <template #header>
         <div class="admin-dlg-header">
@@ -965,12 +977,19 @@
     <Dialog
       v-model:visible="showMoveToTeamDialog"
       modal
-      header="Presunúť používateľa do iného tímu"
+      :closable="false"
+      :draggable="false"
       :style="{ width: '520px' }"
       class="admin-dialog-shell"
       :contentStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', padding: '1.5rem' }"
-      :headerStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', borderBottom: '1px solid var(--color-border)' }"
+      :headerStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', borderBottom: '2px solid var(--color-accent)' }"
     >
+      <template #header>
+        <div class="admin-dlg-header">
+          <span class="admin-dlg-title">Presunúť používateľa do iného tímu</span>
+          <button class="admin-dlg-close" @click="closeMoveToTeamDialog" type="button" aria-label="Zavrieť">×</button>
+        </div>
+      </template>
       <div class="space-y-4">
         <div>
           <label class="block text-sm text-gray-300 mb-1">Používateľ</label>
@@ -986,10 +1005,10 @@
         </div>
         <div>
           <label class="block text-sm text-gray-300 mb-1">Cieľový tím *</label>
-          <Dropdown 
-            v-model="moveToTeamForm.to_team_id" 
-            :options="availableTeamsForMove" 
-            optionLabel="name" 
+          <Dropdown
+            v-model="moveToTeamForm.to_team_id"
+            :options="availableTeamsForMove"
+            optionLabel="name"
             optionValue="id"
             placeholder="Vyberte cieľový tím"
             class="w-full"
@@ -1012,14 +1031,9 @@
             class="w-full"
           />
         </div>
-        <div class="bg-yellow-900/30 border border-yellow-700 rounded-lg p-3">
+        <div v-if="selectedMemberToMove?.role_in_team === 'scrum_master'" class="bg-yellow-900/30 border border-yellow-700 rounded-lg p-3">
           <p class="text-yellow-300 text-sm">
-            <span v-if="selectedMemberToMove?.role_in_team === 'scrum_master'">
-              Tento používateľ je Scrum Master. Bude automaticky degradovaný na člena a najstarší člen zdrojového tímu sa stane novým Scrum Masterom.
-            </span>
-            <span v-else>
-              Používateľ bude presunul ako člen do novej tímu.
-            </span>
+            Tento používateľ je Scrum Master. Bude automaticky degradovaný na člena a najstarší člen zdrojového tímu sa stane novým Scrum Masterom.
           </p>
         </div>
       </div>
@@ -1031,15 +1045,142 @@
       </template>
     </Dialog>
 
+    <!-- Change Occupation Dialog -->
+    <Dialog
+      v-model:visible="showOccupationDialog"
+      modal
+      :closable="false"
+      :draggable="false"
+      :style="{ width: '400px' }"
+      class="admin-dialog-shell"
+      :contentStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', padding: '1.5rem' }"
+      :headerStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', borderBottom: '2px solid var(--color-accent)' }"
+    >
+      <template #header>
+        <div class="admin-dlg-header">
+          <span class="admin-dlg-title">Zmeniť povolanie</span>
+          <button class="admin-dlg-close" @click="closeOccupationDialog" type="button" aria-label="Zavrieť">×</button>
+        </div>
+      </template>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm text-gray-300 mb-1">Člen tímu</label>
+          <div class="bg-gray-800 rounded-lg p-3 text-gray-200">
+            {{ selectedMemberForOccupation?.name || '-' }}
+            <span class="text-gray-400 text-sm ml-1">({{ selectedMemberForOccupation?.email || '-' }})</span>
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm text-gray-300 mb-1">Aktuálne povolanie</label>
+          <div class="bg-gray-800 rounded-lg p-3">
+            <span v-if="selectedMemberForOccupation?.occupation" class="tdlg-badge tdlg-badge-occupation">
+              {{ formatOccupation(selectedMemberForOccupation.occupation) || selectedMemberForOccupation.occupation }}
+            </span>
+            <span v-else class="text-gray-400 text-sm">Neurčené</span>
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm text-gray-300 mb-1">Nové povolanie *</label>
+          <Dropdown
+            v-model="newOccupation"
+            :options="occupationOptions"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Vyberte povolanie"
+            class="w-full"
+          />
+        </div>
+      </div>
+      <template #footer>
+        <div class="admin-dlg-actions">
+          <Button :label="t('common.cancel')" class="admin-action-btn-styled px-4 py-2 rounded-xl" @click="closeOccupationDialog" />
+          <Button label="Uložiť" class="admin-action-btn-styled px-4 py-2 rounded-xl" @click="saveMemberOccupation" :loading="saving" />
+        </div>
+      </template>
+    </Dialog>
+
+    <!-- Add User to Team Dialog -->
+    <Dialog
+      v-model:visible="showAddToTeamDialog"
+      :modal="true"
+      :closable="false"
+      :draggable="false"
+      class="w-11/12 md:w-1/2 lg:w-[500px] admin-dialog-shell"
+      :contentStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', padding: '1.25rem 1.5rem 1.5rem' }"
+      :headerStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', borderBottom: '2px solid var(--color-accent)' }"
+    >
+      <template #header>
+        <div class="admin-dlg-header">
+          <span class="admin-dlg-title">Pridať do tímu</span>
+          <button class="admin-dlg-close" @click="closeAddToTeamDialog" type="button" aria-label="Zavrieť">×</button>
+        </div>
+      </template>
+
+      <div class="admin-dlg-content">
+        <!-- User identity card -->
+        <div class="att-user-card">
+          <div class="att-user-avatar"><span>{{ addToTeamUser?.name?.charAt(0)?.toUpperCase() }}</span></div>
+          <div class="att-user-details">
+            <span class="att-user-name">{{ addToTeamUser?.name }}</span>
+            <span class="att-user-email">{{ addToTeamUser?.email }}</span>
+          </div>
+          <span class="att-user-badge">
+            {{ addToTeamUser?.student_type === 'denny' ? 'Denný' : addToTeamUser?.student_type === 'externy' ? 'Externý' : 'Špeciálny' }}
+          </span>
+        </div>
+
+        <div v-if="teamsCompatibleWithUser.length === 0" class="admin-dlg-alert admin-dlg-alert-warning">
+          <span>Žiadne kompatibilné tímy pre tohto používateľa.</span>
+        </div>
+
+        <div class="admin-dlg-field">
+          <label class="admin-dlg-label">Cieľový tím *</label>
+          <Dropdown
+            v-model="addToTeamForm.team_id"
+            :options="teamsCompatibleWithUser"
+            optionLabel="name"
+            optionValue="id"
+            placeholder="Vyberte tím..."
+            class="w-full"
+          />
+        </div>
+
+        <div class="admin-dlg-field">
+          <label class="admin-dlg-label">Povolanie v tíme *</label>
+          <Dropdown
+            v-model="addToTeamForm.occupation"
+            :options="[
+              { label: 'Programátor', value: 'Programátor' },
+              { label: 'Grafik 2D', value: 'Grafik 2D' },
+              { label: 'Grafik 3D', value: 'Grafik 3D' },
+              { label: 'Tester', value: 'Tester' },
+              { label: 'Animátor', value: 'Animátor' }
+            ]"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Vyberte povolanie..."
+            class="w-full"
+          />
+        </div>
+      </div>
+
+      <template #footer>
+        <div class="admin-dlg-actions">
+          <Button :label="t('common.cancel')" class="admin-action-btn-styled px-4 py-2 rounded-xl" @click="closeAddToTeamDialog" />
+          <Button label="Pridať do tímu" class="admin-action-btn-styled px-4 py-2 rounded-xl" @click="submitAddToTeam" :loading="saving" :disabled="teamsCompatibleWithUser.length === 0" />
+        </div>
+      </template>
+    </Dialog>
+
     <!-- Users Management Dialog -->
-    <Dialog 
-      v-model:visible="showUsersManagementDialog" 
+    <Dialog
+      v-model:visible="showUsersManagementDialog"
       :modal="true"
       :closable="false"
       :draggable="false"
       class="w-11/12 md:w-3/4 lg:w-2/3 admin-dialog-shell"
       :contentStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', padding: '1.5rem', maxHeight: '70vh', overflow: 'auto' }"
-      :headerStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', borderBottom: '1px solid var(--color-border)' }"
+      :headerStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', borderBottom: '2px solid var(--color-accent)' }"
     >
       <template #header>
         <div class="admin-dlg-header">
@@ -1068,6 +1209,7 @@
               optionValue="value"
               placeholder="Filter podľa stavu"
               class="w-full"
+  
             />
           </div>
         </div>
@@ -1084,11 +1226,35 @@
 
         <!-- Users List -->
         <div v-else class="space-y-2 max-h-96 overflow-y-auto">
-          <div 
-            v-for="user in filteredUsers" 
+          <!-- Select All Row -->
+          <div class="flex items-center gap-3 px-4 py-2 admin-item-card">
+            <input
+              type="checkbox"
+              :checked="allActiveFilteredSelected"
+              @change="toggleSelectAll"
+              class="w-4 h-4 cursor-pointer"
+              title="Vybrať všetkých aktívnych"
+            />
+            <span class="admin-text-subtle text-sm">
+              Vybrať všetkých aktívnych
+              <span v-if="selectedUserIds.length > 0" class="text-yellow-400 ml-2">({{ selectedUserIds.length }} vybraných)</span>
+            </span>
+          </div>
+
+          <div
+            v-for="user in filteredUsers"
             :key="user.id"
             class="flex items-center justify-between admin-item-card p-4"
           >
+            <div class="flex items-center gap-3 flex-1 min-w-0">
+              <input
+                v-if="(user.status || 'active') === 'active'"
+                type="checkbox"
+                :value="user.id"
+                v-model="selectedUserIds"
+                class="w-4 h-4 cursor-pointer flex-shrink-0"
+              />
+              <div v-else class="w-4 flex-shrink-0" />
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2 flex-wrap">
                 <span :class="user.is_absolvent ? 'admin-text-muted opacity-60' : 'admin-text-strong'" class="font-semibold">{{ user.name }}</span>
@@ -1116,21 +1282,32 @@
                 </span>
               </div>
             </div>
-            <div class="flex gap-2 ml-4">
-              <Button 
+            <div class="flex gap-2 ml-4 flex-shrink-0 flex-wrap">
+              <button class="umgmt-btn umgmt-btn-accent" @click="openAddToTeamDialog(user)">
+                <i class="pi pi-user-plus"></i>
+                <span class="admin-mobile-hide-label">Pridať do tímu</span>
+              </button>
+              <button
                 v-if="(user.status || 'active') === 'active'"
-                label="Deaktivovať"
-                class="p-button-sm p-button-danger p-button-outlined"
+                class="umgmt-btn umgmt-btn-danger"
                 @click="deactivateUser(user)"
-                :loading="saving"
-              />
-              <Button 
+                :disabled="saving"
+              >
+                <i v-if="saving" class="pi pi-spin pi-spinner"></i>
+                <i v-else class="pi pi-ban"></i>
+                <span class="admin-mobile-hide-label">Deaktivovať</span>
+              </button>
+              <button
                 v-else
-                label="Aktivovať"
-                class="p-button-sm p-button-success"
+                class="umgmt-btn umgmt-btn-success"
                 @click="activateUser(user)"
-                :loading="saving"
-              />
+                :disabled="saving"
+              >
+                <i v-if="saving" class="pi pi-spin pi-spinner"></i>
+                <i v-else class="pi pi-check"></i>
+                <span class="admin-mobile-hide-label">Aktivovať</span>
+              </button>
+            </div>
             </div>
           </div>
         </div>
@@ -1147,6 +1324,13 @@
         <div class="admin-dlg-actions">
           <Button :label="t('common.close')" class="admin-action-btn-styled px-4 py-2 rounded-xl" @click="showUsersManagementDialog = false" />
           <Button label="Obnoviť" class="admin-action-btn-styled px-4 py-2 rounded-xl" @click="loadAllUsers" :loading="loadingUsers" />
+          <Button
+            v-if="selectedUserIds.length > 0"
+            :label="`Deaktivovať vybraných (${selectedUserIds.length})`"
+            class="p-button-danger px-4 py-2 rounded-xl"
+            @click="bulkDeactivateUsers"
+            :loading="saving"
+          />
         </div>
       </template>
     </Dialog>
@@ -1159,7 +1343,7 @@
       :draggable="false"
       class="w-11/12 md:w-3/4 lg:w-[720px] admin-dialog-shell"
       :contentStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', padding: '1.25rem 1.5rem 1.5rem' }"
-      :headerStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', borderBottom: '1px solid var(--color-border)' }"
+      :headerStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', borderBottom: '2px solid var(--color-accent)' }"
     >
       <template #header>
         <div class="admin-dlg-header">
@@ -1228,10 +1412,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
+import { apiFetch } from '@/utils/apiFetch'
 import Toast from 'primevue/toast'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
@@ -1258,7 +1443,6 @@ const teamProjects = ref({})
 const loadingTeamProjects = ref({})
 
 // Dialogs
-const showDetailsDialog = ref(false)
 const showEditTeamDialog = ref(false)
 const showRejectTeamDialog = ref(false)
 const showDeleteDialog = ref(false)
@@ -1271,10 +1455,76 @@ const showAddAcademicYearDialog = ref(false)
 const showMoveToTeamDialog = ref(false)
 const showUsersManagementDialog = ref(false)
 const showImportDialog = ref(false)
+const showDetailsDialog = ref(false)
+const showAddToTeamDialog = ref(false)
+const showOccupationDialog = ref(false)
+const showPickTeamDialog = ref(false)
+
+// Team-picker for "Pridať projekt" top action
+const pickTeamForm = ref({ team_id: null })
+
+const pickTeamOptions = computed(() =>
+  (teams.value || []).map(t => ({
+    value: t.id,
+    label: t.academic_year?.name ? `${t.name} (${t.academic_year.name})` : t.name,
+  }))
+)
+
+// Add-to-team state
+const addToTeamUser = ref(null)
+const addToTeamForm = ref({ team_id: null, occupation: null })
+
+// Teams compatible with the selected user (by student type)
+const teamsCompatibleWithUser = computed(() => {
+  if (!addToTeamUser.value) return []
+  const type = addToTeamUser.value.student_type
+  return teams.value.filter(t => {
+    const prefix = (t.invite_code || '').substring(0, 3)
+    if (prefix === 'DEN' && type !== 'denny') return false
+    if (prefix === 'EXT' && type !== 'externy') return false
+    return true
+  })
+})
+
+// Lock page scroll whenever any dialog is open
+watch([
+  showDetailsDialog, showEditTeamDialog, showRejectTeamDialog,
+  showDeleteDialog, showRemoveMemberDialog, showChangeSMDialog,
+  showDeleteProjectDialog, showRegisterUserDialog, showCreateTeamDialog,
+  showAddAcademicYearDialog, showMoveToTeamDialog, showUsersManagementDialog,
+  showImportDialog, showAddToTeamDialog, showOccupationDialog,
+  showPickTeamDialog
+], (vals) => {
+  const locked = vals.some(Boolean)
+  document.documentElement.classList.toggle('scroll-locked', locked)
+  document.body.classList.toggle('scroll-locked', locked)
+})
 const allUsers = ref([])
 const loadingUsers = ref(false)
 const userSearchQuery = ref('')
 const userStatusFilter = ref(null)
+const selectedUserIds = ref([])
+
+const allActiveFilteredSelected = computed(() =>
+  filteredUsers.value.filter(u => (u.status || 'active') === 'active').length > 0 &&
+  filteredUsers.value.filter(u => (u.status || 'active') === 'active').every(u => selectedUserIds.value.includes(u.id))
+)
+
+function toggleSelectAll() {
+  const activeIds = filteredUsers.value.filter(u => (u.status || 'active') === 'active').map(u => u.id)
+  if (allActiveFilteredSelected.value) {
+    selectedUserIds.value = selectedUserIds.value.filter(id => !activeIds.includes(id))
+  } else {
+    selectedUserIds.value = [...new Set([...selectedUserIds.value, ...activeIds])]
+  }
+}
+
+function formatProjectType(type) {
+  const normalizedType = String(type || '').trim().toLowerCase()
+  const valid = ['game', 'web_app', 'mobile_app', 'library', 'webgl', 'other']
+  return valid.includes(normalizedType) ? t(`project_types.${normalizedType}`) : t('project_types.other')
+}
+
 const selectedCsvFile = ref(null)
 const csvImportResult = ref(null)
 const importing = ref(false)
@@ -1285,6 +1535,17 @@ const config = ref({
 const selectedTeam = ref(null)
 const selectedTeamDetails = ref(null)
 const selectedProject = ref(null)
+const selectedMemberForOccupation = ref(null)
+const newOccupation = ref(null)
+
+const occupationOptions = [
+  { label: 'Programátor', value: 'Programátor' },
+  { label: 'Grafik 2D',   value: 'Grafik 2D' },
+  { label: 'Grafik 3D',   value: 'Grafik 3D' },
+  { label: 'Tester',      value: 'Tester' },
+  { label: 'Animátor',    value: 'Animátor' },
+]
+
 const selectedMemberToMove = ref(null)
 const moveToTeamForm = ref({
   to_team_id: null,
@@ -1298,7 +1559,7 @@ const registerForm = ref({
   name: '',
   email: '',
   password: '',
-  student_type: 'denny'
+  skip_ucm_email: false
 })
 const createTeamForm = ref({
   name: '',
@@ -1311,11 +1572,11 @@ const createAcademicYearForm = ref({
 })
 const creatingAcademicYear = ref(false)
 const academicYearSuggestion = ref('')
-
 // Helper function to format occupation with proper diacritics and canonical labels
 function formatOccupation(occupation) {
   if (!occupation) return null
-  const normalized = occupation.toLowerCase().trim()
+  const normalized = occupation
+    .toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
   const occupationMap = {
     'programator': 'Programátor',
@@ -1360,7 +1621,19 @@ const academicYearOptions = computed(() => (academicYears.value || []).map(y => 
 // Computed - available teams for moving (exclude current team)
 const availableTeamsForMove = computed(() => {
   if (!selectedTeam.value) return []
-  return teams.value.filter(t => t.id !== selectedTeam.value.id)
+  const memberStudentType = selectedMemberToMove.value?.student_type
+  return teams.value.filter(t => {
+    // Exclude the source team
+    if (t.id === selectedTeam.value.id) return false
+    // If we know the member's student type, exclude incompatible teams
+    if (memberStudentType && t.invite_code) {
+      const prefix = t.invite_code.substring(0, 3)
+      if (prefix === 'DEN' && memberStudentType !== 'denny') return false
+      if (prefix === 'EXT' && memberStudentType !== 'externy') return false
+      // SPE teams accept everyone
+    }
+    return true
+  })
 })
 
 const currentScrumMasterId = computed(() => selectedTeamDetails.value?.team?.scrum_master_id || null)
@@ -1484,7 +1757,7 @@ async function toggleTeamProjects(team) {
       const token = localStorage.getItem('access_token')
       
       try {
-        const res = await fetch(`${API_URL}/api/admin/teams/${team.id}/projects`, {
+        const res = await apiFetch(`${API_URL}/api/admin/teams/${team.id}/projects`, {
           headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
         })
         
@@ -1508,10 +1781,10 @@ async function toggleTeamProjects(team) {
 
 function getStatusClass(status) {
   switch (status) {
-    case 'active': return 'bg-green-900 text-green-300 border border-green-700'
-    case 'pending': return 'bg-yellow-900 text-yellow-300 border border-yellow-700'
-    case 'suspended': return 'bg-red-900 text-red-300 border border-red-700'
-    default: return 'bg-gray-700 text-gray-300 border border-gray-600'
+    case 'active': return 'team-badge-active'
+    case 'pending': return 'team-badge-pending'
+    case 'suspended': return 'team-badge-suspended'
+    default: return 'team-badge-default'
   }
 }
 
@@ -1529,7 +1802,7 @@ async function showTeamDetails(team) {
   const token = localStorage.getItem('access_token')
 
   try {
-    const res = await fetch(`${API_URL}/api/admin/teams/${team.id}`, {
+    const res = await apiFetch(`${API_URL}/api/admin/teams/${team.id}`, {
       headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
     })
 
@@ -1544,9 +1817,16 @@ async function showTeamDetails(team) {
   }
 }
 
-function showEditDialog(team) {
+async function showEditDialog(team) {
   selectedTeam.value = team
-  editForm.value = { name: team.name, status: team.status || 'active' }
+  editForm.value = {
+    name: team.name,
+    status: team.status || 'active',
+    academic_year_id: team.academic_year?.id ?? null
+  }
+  if (!academicYears.value || academicYears.value.length === 0) {
+    await loadAcademicYears()
+  }
   showEditTeamDialog.value = true
 }
 
@@ -1560,7 +1840,7 @@ async function saveTeamEdit() {
   const token = localStorage.getItem('access_token')
 
   try {
-    const res = await fetch(`${API_URL}/api/admin/teams/${selectedTeam.value.id}`, {
+    const res = await apiFetch(`${API_URL}/api/admin/teams/${selectedTeam.value.id}`, {
       method: 'PUT',
       headers: { 
         'Authorization': `Bearer ${token}`, 
@@ -1576,7 +1856,11 @@ async function saveTeamEdit() {
       loadData()
     } else {
       const data = await res.json()
-      toast.add({ severity: 'error', summary: t('common.error'), detail: data.error || 'Nepodarilo sa aktualizovať tím', life: 4000 })
+      let errorMsg = data.error || data.message || 'Nepodarilo sa aktualizovať tím';
+      if (errorMsg === 'The name has already been taken.' || (data.errors && data.errors.name && data.errors.name[0].includes('taken'))) {
+        errorMsg = 'Tento názov tímu je už obsadený.';
+      }
+      toast.add({ severity: 'error', summary: t('common.error'), detail: errorMsg, life: 4000 })
     }
   } catch (err) {
     toast.add({ severity: 'error', summary: t('common.error'), detail: 'Chyba pri komunikácii so serverom', life: 4000 })
@@ -1595,7 +1879,7 @@ async function deleteTeam() {
   const token = localStorage.getItem('access_token')
 
   try {
-    const res = await fetch(`${API_URL}/api/admin/teams/${selectedTeam.value.id}`, {
+    const res = await apiFetch(`${API_URL}/api/admin/teams/${selectedTeam.value.id}`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
     })
@@ -1630,7 +1914,7 @@ async function approveTeam(team) {
   const token = localStorage.getItem('access_token')
 
   try {
-    const res = await fetch(`${API_URL}/api/admin/teams/${team.id}/approve`, {
+    const res = await apiFetch(`${API_URL}/api/admin/teams/${team.id}/approve`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
     })
@@ -1658,7 +1942,7 @@ async function rejectTeam() {
   const token = localStorage.getItem('access_token')
 
   try {
-    const res = await fetch(`${API_URL}/api/admin/teams/${selectedTeam.value.id}/reject`, {
+    const res = await apiFetch(`${API_URL}/api/admin/teams/${selectedTeam.value.id}/reject`, {
       method: 'POST',
       headers: { 
         'Authorization': `Bearer ${token}`, 
@@ -1696,7 +1980,7 @@ async function removeMemberFromTeam() {
   const token = localStorage.getItem('access_token')
 
   try {
-    const res = await fetch(
+    const res = await apiFetch(
       `${API_URL}/api/admin/teams/${selectedTeam.value.id}/members/${selectedMemberToRemove.value.id}`,
       {
         method: 'DELETE',
@@ -1707,19 +1991,26 @@ async function removeMemberFromTeam() {
     const data = await res.json()
 
     if (res.ok) {
-      toast.add({ 
-        severity: 'success', 
-        summary: t('common.success'), 
-        detail: data.message || 'Člen bol odstránený z tímu', 
-        life: 4000 
+      toast.add({
+        severity: 'success',
+        summary: t('common.success'),
+        detail: data.message || 'Člen bol odstránený z tímu',
+        life: 4000
       })
       showRemoveMemberDialog.value = false
       selectedMemberToRemove.value = null
-      
-      // Refresh team details
-      await showTeamDetails(selectedTeam.value)
-      // Refresh main data
-      await loadData()
+
+      if (data.team_deleted) {
+        // The team was auto-deleted (empty, no project) — close detail panel
+        showDetailsDialog.value = false
+        selectedTeam.value = null
+        await loadData()
+      } else {
+        // Refresh team details
+        await showTeamDetails(selectedTeam.value)
+        // Refresh main data
+        await loadData()
+      }
     } else {
       toast.add({ 
         severity: 'error', 
@@ -1730,6 +2021,59 @@ async function removeMemberFromTeam() {
     }
   } catch (err) {
     console.error('Remove member error:', err)
+    toast.add({ severity: 'error', summary: t('common.error'), detail: 'Chyba pri komunikácii so serverom', life: 4000 })
+  } finally {
+    saving.value = false
+  }
+}
+
+function openOccupationDialog(member) {
+  selectedMemberForOccupation.value = member
+  newOccupation.value = member.occupation || null
+  showOccupationDialog.value = true
+}
+
+function closeOccupationDialog() {
+  showOccupationDialog.value = false
+  selectedMemberForOccupation.value = null
+  newOccupation.value = null
+}
+
+async function saveMemberOccupation() {
+  if (!newOccupation.value) {
+    toast.add({ severity: 'warn', summary: 'Chýbajúce údaje', detail: 'Vyberte povolanie', life: 3000 })
+    return
+  }
+  if (newOccupation.value === selectedMemberForOccupation.value?.occupation) {
+    toast.add({ severity: 'info', summary: 'Bez zmeny', detail: 'Povolanie je rovnaké ako aktuálne', life: 3000 })
+    return
+  }
+
+  saving.value = true
+  const token = localStorage.getItem('access_token')
+  try {
+    const res = await apiFetch(
+      `${API_URL}/api/admin/teams/${selectedTeam.value.id}/members/${selectedMemberForOccupation.value.id}/occupation`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ occupation: newOccupation.value })
+      }
+    )
+    const data = await res.json()
+    if (res.ok) {
+      toast.add({ severity: 'success', summary: t('common.success'), detail: data.message, life: 4000 })
+      closeOccupationDialog()
+      await showTeamDetails(selectedTeam.value)
+    } else {
+      toast.add({ severity: 'error', summary: t('common.error'), detail: data.error || 'Chyba', life: 4000 })
+    }
+  } catch (err) {
+    console.error('Change occupation error:', err)
     toast.add({ severity: 'error', summary: t('common.error'), detail: 'Chyba pri komunikácii so serverom', life: 4000 })
   } finally {
     saving.value = false
@@ -1769,7 +2113,7 @@ async function moveUserToTeam() {
   const token = localStorage.getItem('access_token')
 
   try {
-    const res = await fetch(
+    const res = await apiFetch(
       `${API_URL}/api/admin/users/${selectedMemberToMove.value.id}/move-team`,
       {
         method: 'POST',
@@ -1793,15 +2137,22 @@ async function moveUserToTeam() {
       toast.add({
         severity: 'success',
         summary: t('common.success'),
-        detail: `${selectedMemberToMove.value.name} bol presunul do tímu ${targetTeam?.name || 'neznámeho'}`,
+        detail: `${selectedMemberToMove.value.name} bol presunutý do tímu ${targetTeam?.name || 'neznámeho'}`,
         life: 4000
       })
       closeMoveToTeamDialog()
-      
-      // Refresh team details
-      await showTeamDetails(selectedTeam.value)
-      // Refresh main data
-      await loadData()
+
+      if (data.source_deleted) {
+        // Source team was auto-deleted — close detail panel
+        showDetailsDialog.value = false
+        selectedTeam.value = null
+        await loadData()
+      } else {
+        // Refresh team details
+        await showTeamDetails(selectedTeam.value)
+        // Refresh main data
+        await loadData()
+      }
     } else {
       toast.add({
         severity: 'error',
@@ -1860,7 +2211,7 @@ async function changeScrumMasterInTeam() {
   const token = localStorage.getItem('access_token')
 
   try {
-    const res = await fetch(
+    const res = await apiFetch(
       `${API_URL}/api/admin/teams/${selectedTeam.value.id}/scrum-master`,
       {
         method: 'POST',
@@ -1914,6 +2265,35 @@ function editProject(projectId) {
   router.push(`/edit-project/${projectId}`)
 }
 
+function addProjectForTeam(team) {
+  if (!team?.id) return
+  router.push({ path: '/add-project', query: { team_id: team.id } })
+}
+
+function openPickTeamDialog() {
+  pickTeamForm.value = { team_id: null }
+  showPickTeamDialog.value = true
+}
+
+function closePickTeamDialog() {
+  showPickTeamDialog.value = false
+  pickTeamForm.value = { team_id: null }
+}
+
+function submitPickTeam() {
+  const id = pickTeamForm.value.team_id
+  if (!id) return
+  showPickTeamDialog.value = false
+  router.push({ path: '/add-project', query: { team_id: id } })
+}
+
+function addProjectFromDetailsDialog() {
+  const id = selectedTeam.value?.id || selectedTeamDetails.value?.team?.id
+  if (!id) return
+  showDetailsDialog.value = false
+  router.push({ path: '/add-project', query: { team_id: id } })
+}
+
 function confirmDeleteProject(project) {
   selectedProject.value = project
   showDeleteProjectDialog.value = true
@@ -1926,7 +2306,7 @@ async function deleteProject() {
   const token = localStorage.getItem('access_token')
 
   try {
-    const res = await fetch(
+    const res = await apiFetch(
       `${API_URL}/api/admin/projects/${selectedProject.value.id}`,
       {
         method: 'DELETE',
@@ -1980,7 +2360,8 @@ function closeRegisterDialog() {
     name: '',
     email: '',
     password: '',
-    student_type: 'denny'
+    student_type: 'denny',
+    skip_ucm_email: false
   }
 }
 
@@ -1990,12 +2371,82 @@ async function openUsersManagementDialog() {
   await loadAllUsers()
 }
 
+function openAddToTeamDialog(user) {
+  addToTeamUser.value = user
+  addToTeamForm.value = { team_id: null, occupation: null }
+  showAddToTeamDialog.value = true
+}
+
+function closeAddToTeamDialog() {
+  showAddToTeamDialog.value = false
+  addToTeamUser.value = null
+  addToTeamForm.value = { team_id: null, occupation: null }
+}
+
+async function submitAddToTeam() {
+  if (!addToTeamForm.value.team_id) {
+    toast.add({ severity: 'warn', summary: 'Chýbajúce údaje', detail: 'Vyberte tím', life: 3000 })
+    return
+  }
+  if (!addToTeamForm.value.occupation) {
+    toast.add({ severity: 'warn', summary: 'Chýbajúce údaje', detail: 'Vyberte povolanie', life: 3000 })
+    return
+  }
+
+  saving.value = true
+  const token = localStorage.getItem('access_token')
+
+  try {
+    const res = await apiFetch(
+      `${API_URL}/api/admin/users/${addToTeamUser.value.id}/add-to-team`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          team_id: addToTeamForm.value.team_id,
+          occupation: addToTeamForm.value.occupation
+        })
+      }
+    )
+
+    const data = await res.json()
+
+    if (res.ok) {
+      const teamName = teams.value.find(t => t.id === addToTeamForm.value.team_id)?.name || ''
+      toast.add({
+        severity: 'success',
+        summary: t('common.success'),
+        detail: data.message || `${addToTeamUser.value.name} bol pridaný do tímu ${teamName}`,
+        life: 4000
+      })
+      closeAddToTeamDialog()
+      await loadData()
+    } else {
+      toast.add({
+        severity: 'error',
+        summary: t('common.error'),
+        detail: data.error || data.message || 'Nepodarilo sa pridať používateľa do tímu',
+        life: 5000
+      })
+    }
+  } catch (err) {
+    console.error('Add to team error:', err)
+    toast.add({ severity: 'error', summary: t('common.error'), detail: 'Chyba pri komunikácii so serverom', life: 4000 })
+  } finally {
+    saving.value = false
+  }
+}
+
 async function loadAllUsers() {
   loadingUsers.value = true
   const token = localStorage.getItem('access_token')
 
   try {
-    const res = await fetch(`${API_URL}/api/admin/users`, {
+    const res = await apiFetch(`${API_URL}/api/admin/users`, {
       headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
       cache: 'no-store'
     })
@@ -2019,7 +2470,7 @@ async function deactivateUser(user) {
   const token = localStorage.getItem('access_token')
 
   try {
-    const res = await fetch(`${API_URL}/api/admin/users/${user.id}/deactivate`, {
+    const res = await apiFetch(`${API_URL}/api/admin/users/${user.id}/deactivate`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
     })
@@ -2044,12 +2495,44 @@ async function deactivateUser(user) {
   }
 }
 
+async function bulkDeactivateUsers() {
+  if (selectedUserIds.value.length === 0) return
+  saving.value = true
+  const token = localStorage.getItem('access_token')
+
+  try {
+    const res = await apiFetch(`${API_URL}/api/admin/users/bulk-deactivate`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_ids: selectedUserIds.value })
+    })
+
+    const data = await res.json()
+
+    if (res.ok) {
+      toast.add({ severity: 'success', summary: t('common.success'), detail: data.message, life: 4000 })
+      data.user_ids.forEach(id => {
+        const idx = allUsers.value.findIndex(u => u.id === id)
+        if (idx !== -1) allUsers.value[idx].status = 'inactive'
+      })
+      selectedUserIds.value = []
+    } else {
+      toast.add({ severity: 'error', summary: t('common.error'), detail: data.error || 'Nepodarilo sa deaktivovať používateľov', life: 4000 })
+    }
+  } catch (err) {
+    console.error('Bulk deactivate error:', err)
+    toast.add({ severity: 'error', summary: t('common.error'), detail: 'Chyba pri komunikácii so serverom', life: 4000 })
+  } finally {
+    saving.value = false
+  }
+}
+
 async function activateUser(user) {
   saving.value = true
   const token = localStorage.getItem('access_token')
 
   try {
-    const res = await fetch(`${API_URL}/api/admin/users/${user.id}/activate`, {
+    const res = await apiFetch(`${API_URL}/api/admin/users/${user.id}/activate`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
     })
@@ -2075,9 +2558,7 @@ async function activateUser(user) {
 }
 
 function getUserStatusClass(status) {
-  return status === 'inactive' 
-    ? 'bg-red-900 text-red-300 border border-red-700' 
-    : 'bg-green-900 text-green-300 border border-green-700'
+  return status === 'inactive' ? 'usr-badge-inactive' : 'usr-badge-active'
 }
 
 function getUserStatusLabel(status) {
@@ -2090,7 +2571,7 @@ async function deactivateTeamMember(member) {
   const token = localStorage.getItem('access_token')
 
   try {
-    const res = await fetch(`${API_URL}/api/admin/users/${member.id}/deactivate`, {
+    const res = await apiFetch(`${API_URL}/api/admin/users/${member.id}/deactivate`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
     })
@@ -2125,7 +2606,7 @@ async function activateTeamMember(member) {
   const token = localStorage.getItem('access_token')
 
   try {
-    const res = await fetch(`${API_URL}/api/admin/users/${member.id}/activate`, {
+    const res = await apiFetch(`${API_URL}/api/admin/users/${member.id}/activate`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
     })
@@ -2187,7 +2668,7 @@ function getSafeAcademicYearSuggestion() {
 async function loadAcademicYears() {
   const token = localStorage.getItem('access_token')
   try {
-    const res = await fetch(`${API_URL}/api/academic-years`, {
+    const res = await apiFetch(`${API_URL}/api/academic-years`, {
       headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
       cache: 'no-store'
     })
@@ -2238,7 +2719,7 @@ async function createTeam() {
   saving.value = true
   const token = localStorage.getItem('access_token')
   try {
-    const res = await fetch(`${API_URL}/api/admin/teams`, {
+    const res = await apiFetch(`${API_URL}/api/admin/teams`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -2253,7 +2734,11 @@ async function createTeam() {
       closeCreateTeamDialog()
       await loadData()
     } else {
-      toast.add({ severity: 'error', summary: t('common.error'), detail: data.error || data.message || 'Nepodarilo sa vytvoriť tím', life: 5000 })
+      let errorMsg = data.error || data.message || 'Nepodarilo sa vytvoriť tím';
+      if (errorMsg === 'The name has already been taken.' || (data.errors && data.errors.name && data.errors.name[0].includes('taken'))) {
+        errorMsg = 'Tento názov tímu je už obsadený.';
+      }
+      toast.add({ severity: 'error', summary: t('common.error'), detail: errorMsg, life: 5000 })
     }
   } catch (err) {
     toast.add({ severity: 'error', summary: t('common.error'), detail: 'Chyba pri komunikácii so serverom', life: 4000 })
@@ -2279,7 +2764,7 @@ async function createAcademicYear() {
   const token = localStorage.getItem('access_token')
 
   try {
-    const res = await fetch(`${API_URL}/api/admin/academic-years`, {
+    const res = await apiFetch(`${API_URL}/api/admin/academic-years`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -2329,6 +2814,17 @@ async function registerUser() {
     return
   }
 
+  const ucmEmailRegex = /^[0-9]{7}@ucm\.sk$/
+  if (!registerForm.value.skip_ucm_email && !ucmEmailRegex.test(registerForm.value.email)) {
+    toast.add({ 
+      severity: 'warn', 
+      summary: 'UCM email', 
+      detail: 'Email musí byť v tvare 7čísel@ucm.sk (pokiaľ nezaškrtnete "Povoliť aj iný email")', 
+      life: 5000 
+    })
+    return
+  }
+
   // Validate password length
   if (registerForm.value.password.length < 8) {
     toast.add({ 
@@ -2344,7 +2840,7 @@ async function registerUser() {
   const token = localStorage.getItem('access_token')
 
   try {
-    const res = await fetch(`${API_URL}/api/admin/users`, {
+    const res = await apiFetch(`${API_URL}/api/admin/users`, {
       method: 'POST',
       headers: { 
         'Authorization': `Bearer ${token}`, 
@@ -2412,7 +2908,7 @@ async function importCsvFile() {
     const formData = new FormData()
     formData.append('csv_file', selectedCsvFile.value)
     
-    const response = await fetch(`${API_URL}/api/admin/authorized-students/import`, {
+    const response = await apiFetch(`${API_URL}/api/admin/authorized-students/import`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`
@@ -2473,7 +2969,7 @@ onMounted(async () => {
   
   // Load config to check if authorization is enabled
   try {
-    const configResponse = await fetch(`${API_URL}/api/admin/config`, {
+    const configResponse = await apiFetch(`${API_URL}/api/admin/config`, {
       headers: { Authorization: `Bearer ${token}` }
     })
     if (configResponse.ok) {
@@ -2486,6 +2982,44 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+/* Uniform width for top action strip buttons (symmetry) */
+.admin-action-uniform {
+  min-width: 220px;
+  justify-content: center;
+}
+@media (max-width: 640px) {
+  .admin-action-uniform {
+    min-width: 100%;
+  }
+}
+
+/* Green "Add Project" CTA — high visibility */
+.admin-add-project-cta,
+.admin-add-project-cta:not(:disabled) {
+  background-color: #10b981 !important; /* emerald-500 */
+  border-color: #059669 !important;     /* emerald-600 */
+  color: #ffffff !important;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(16, 185, 129, 0.35);
+}
+.admin-add-project-cta:hover:not(:disabled) {
+  background-color: #059669 !important; /* emerald-600 */
+  border-color: #047857 !important;     /* emerald-700 */
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.5);
+}
+.admin-add-project-cta:focus,
+.admin-add-project-cta:focus-visible {
+  outline: 2px solid #34d399 !important;
+  outline-offset: 2px;
+}
+.admin-add-project-cta:disabled {
+  background-color: #4b5563 !important;
+  border-color: #374151 !important;
+  color: #9ca3af !important;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
 /* Dialog Item Styling */
 .admin-item-card {
   background-color: var(--color-elevated);
@@ -2577,6 +3111,31 @@ onMounted(async () => {
   cursor: not-allowed;
 }
 
+.admin-icon-btn :deep(.p-button) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  line-height: 1;
+}
+
+.admin-icon-btn :deep(.p-button-icon) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  font-size: 0.95rem;
+  /* PrimeIcons glyphs render slightly above the geometric centre of their
+     em-box; nudge by 1px so the icon lines up with the label x-height. */
+  transform: translateY(1px);
+}
+
+.admin-icon-btn :deep(.p-button-label) {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
 .admin-stat-card {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
@@ -2632,6 +3191,237 @@ onMounted(async () => {
   border-radius: 4px;
 }
 
+/* ── Admin Confirm Dialog (acd) ─────────────────────────────── */
+.acd {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 36px 28px 24px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  position: relative;
+}
+
+.acd-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  transition: background 0.15s, color 0.15s;
+}
+.acd-close:hover { background: var(--color-border); color: var(--color-text); }
+
+.acd-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  margin-bottom: 16px;
+  flex-shrink: 0;
+}
+.acd-icon-accent {
+  background: rgba(var(--color-accent-rgb), 0.12);
+  border: 2px solid rgba(var(--color-accent-rgb), 0.25);
+  color: var(--color-accent);
+}
+.acd-icon-danger {
+  background: rgba(239, 68, 68, 0.1);
+  border: 2px solid rgba(239, 68, 68, 0.25);
+  color: #ef4444;
+}
+
+.acd-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-accent);
+  margin: 0 0 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.acd-msg {
+  font-size: 0.92rem;
+  color: var(--color-text-muted);
+  line-height: 1.6;
+  margin: 0;
+}
+.acd-msg strong { color: var(--color-text); }
+
+.acd-note {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  margin: 6px 0 0;
+  opacity: 0.75;
+}
+.acd-note-danger { color: #ef4444; opacity: 1; }
+
+.acd-warn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: #f59e0b;
+  margin: 8px 0 0;
+}
+
+.acd-highlight {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-accent);
+  margin: 4px 0 8px;
+  letter-spacing: 0.01em;
+}
+
+.acd-sm-warning {
+  margin-top: 14px;
+  background: rgba(239, 68, 68, 0.07);
+  border: 1px solid rgba(239, 68, 68, 0.22);
+  border-radius: 8px;
+  padding: 12px 14px;
+  text-align: left;
+  width: 100%;
+}
+
+.acd-sm-warning-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #ef4444;
+  margin-bottom: 6px;
+}
+
+.acd-sm-warning p {
+  font-size: 0.79rem;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.acd-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 24px;
+  width: 100%;
+}
+
+.acd-btn {
+  flex: 1;
+  padding: 9px 0;
+  border-radius: 8px;
+  border: none;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.acd-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.acd-btn-ghost {
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+}
+.acd-btn-ghost:hover:not(:disabled) { background: var(--color-border); color: var(--color-text); }
+.acd-btn-accent {
+  background: var(--color-accent);
+  color: var(--color-accent-contrast, #fff);
+}
+.acd-btn-accent:hover:not(:disabled) { opacity: 0.88; }
+.acd-btn-danger {
+  background: #ef4444;
+  color: #fff;
+}
+.acd-btn-danger:hover:not(:disabled) { background: #dc2626; }
+.acd-btn-primary {
+  background: #3b82f6;
+  color: #fff;
+}
+.acd-btn-primary:hover:not(:disabled) { background: #2563eb; }
+
+/* Add-to-team dialog user card */
+.att-user-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--color-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+.att-user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  color: #fff;
+  font-weight: 700;
+  font-size: 16px;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.att-user-avatar span {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.att-user-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.att-user-name {
+  font-weight: 600;
+  color: var(--color-text-strong);
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.att-user-email {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.att-user-badge {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(var(--color-accent-rgb), 0.12);
+  color: var(--color-accent);
+  border: 1px solid rgba(var(--color-accent-rgb), 0.25);
+}
+
 .admin-dlg-header {
   position: relative;
   display: flex;
@@ -2645,7 +3435,7 @@ onMounted(async () => {
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--color-text-strong);
+  color: var(--color-accent);
   text-align: center;
 }
 
@@ -2812,6 +3602,52 @@ onMounted(async () => {
   .admin-dlg-actions {
     flex-direction: column;
   }
+
+  .admin-action-strip {
+    gap: 0.5rem;
+    padding: 0.85rem;
+  }
+
+  .admin-row-actions {
+    gap: 0.3rem;
+  }
+
+  .admin-mobile-hide-label {
+    display: none;
+  }
+
+  .umgmt-btn,
+  .tdlg-btn {
+    min-width: 34px;
+    min-height: 34px;
+    justify-content: center;
+    padding: 0.45rem;
+    gap: 0;
+  }
+
+  .tdlg-btn {
+    font-size: 0;
+  }
+
+  .tdlg-btn i {
+    font-size: 0.9rem;
+  }
+
+  .admin-icon-btn :deep(.p-button-label) {
+    display: none;
+  }
+
+  .admin-icon-btn :deep(.p-button-icon) {
+    margin-right: 0;
+    font-size: 0.95rem;
+  }
+
+  .admin-icon-btn :deep(.p-button) {
+    min-width: 34px;
+    min-height: 34px;
+    padding: 0.42rem 0.5rem;
+    justify-content: center;
+  }
 }
 
 /* Tailwind & PrimeVue overrides now live in main.css (global) */
@@ -2840,12 +3676,211 @@ onMounted(async () => {
   .admin-pending-actions :deep(.p-button) {
     flex: 1;
   }
+
+  .admin-col-members,
+  .admin-col-status {
+    display: none;
+  }
+}
+
+@media (max-width: 1024px) {
+  .admin-col-year,
+  .admin-col-projects {
+    display: none;
+  }
 }
 
 @media (max-width: 540px) {
   .admin-action-btn {
     flex: 1 1 100%;
   }
+}
+
+/* ── Checkbox accent ─────────────────────────────────────────── */
+input[type="checkbox"] {
+  accent-color: var(--color-accent);
+}
+
+/* ── Team status badges (table) ──────────────────────────────── */
+.team-badge-active {
+  background: rgba(var(--color-accent-rgb), 0.12);
+  border: 1px solid rgba(var(--color-accent-rgb), 0.32);
+  color: var(--color-accent);
+}
+.team-badge-pending {
+  background: rgba(245, 158, 11, 0.10);
+  border: 1px solid rgba(245, 158, 11, 0.30);
+  color: #fbbf24;
+}
+.team-badge-suspended {
+  background: rgba(239, 68, 68, 0.10);
+  border: 1px solid rgba(239, 68, 68, 0.28);
+  color: #f87171;
+}
+.team-badge-default {
+  background: rgba(var(--color-border-rgb), 0.20);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+
+/* ── User status badges (user management list) ───────────────── */
+.usr-badge-active {
+  background: rgba(var(--color-accent-rgb), 0.10);
+  border: 1px solid rgba(var(--color-accent-rgb), 0.28);
+  color: var(--color-accent);
+}
+.usr-badge-inactive {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #f87171;
+}
+
+/* ── User management action buttons ─────────────────────────── */
+.umgmt-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+}
+.umgmt-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.umgmt-btn-accent {
+  background: rgba(var(--color-accent-rgb), 0.09);
+  border-color: rgba(var(--color-accent-rgb), 0.28);
+  color: var(--color-accent);
+}
+.umgmt-btn-accent:hover:not(:disabled) {
+  background: rgba(var(--color-accent-rgb), 0.18);
+  border-color: rgba(var(--color-accent-rgb), 0.52);
+}
+
+.umgmt-btn-danger {
+  background: rgba(239, 68, 68, 0.07);
+  border-color: rgba(239, 68, 68, 0.25);
+  color: #f87171;
+}
+.umgmt-btn-danger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.48);
+}
+
+.umgmt-btn-success {
+  background: rgba(var(--color-accent-rgb), 0.07);
+  border-color: rgba(var(--color-accent-rgb), 0.22);
+  color: var(--color-accent);
+}
+.umgmt-btn-success:hover:not(:disabled) {
+  background: rgba(var(--color-accent-rgb), 0.18);
+  border-color: rgba(var(--color-accent-rgb), 0.48);
+}
+
+/* ── Team detail dialog member action buttons ────────────────── */
+.tdlg-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 5px;
+  font-size: 0.73rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+}
+.tdlg-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.tdlg-btn-danger {
+  background: rgba(239, 68, 68, 0.07);
+  border-color: rgba(239, 68, 68, 0.22);
+  color: #f87171;
+}
+.tdlg-btn-danger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.45);
+}
+
+.tdlg-btn-success {
+  background: rgba(var(--color-accent-rgb), 0.08);
+  border-color: rgba(var(--color-accent-rgb), 0.22);
+  color: var(--color-accent);
+}
+.tdlg-btn-success:hover:not(:disabled) {
+  background: rgba(var(--color-accent-rgb), 0.18);
+  border-color: rgba(var(--color-accent-rgb), 0.48);
+}
+
+.tdlg-btn-warn {
+  background: rgba(245, 158, 11, 0.07);
+  border-color: rgba(245, 158, 11, 0.22);
+  color: #fbbf24;
+}
+.tdlg-btn-warn:hover:not(:disabled) {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.45);
+}
+
+.tdlg-btn-ghost-danger {
+  background: transparent;
+  border-color: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
+.tdlg-btn-ghost-danger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.10);
+  border-color: rgba(239, 68, 68, 0.38);
+}
+
+.tdlg-btn-occ {
+  background: rgba(var(--color-accent-rgb), 0.06);
+  border-color: rgba(var(--color-accent-rgb), 0.18);
+  color: var(--color-accent);
+  opacity: 0.85;
+}
+.tdlg-btn-occ:hover:not(:disabled) {
+  background: rgba(var(--color-accent-rgb), 0.14);
+  border-color: rgba(var(--color-accent-rgb), 0.38);
+  opacity: 1;
+}
+
+/* ── Team detail member badges ───────────────────────────────── */
+.tdlg-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border: 1px solid;
+  white-space: nowrap;
+}
+.tdlg-badge-occupation {
+  background: rgba(var(--color-accent-rgb), 0.08);
+  border-color: rgba(var(--color-accent-rgb), 0.22);
+  color: var(--color-accent);
+}
+.tdlg-badge-sm {
+  background: rgba(59, 130, 246, 0.10);
+  border-color: rgba(59, 130, 246, 0.28);
+  color: #93c5fd;
+  letter-spacing: 0.05em;
+}
+
+/* Separator between badges and action buttons in team detail */
+.tdlg-sep {
+  display: inline-block;
+  width: 1px;
+  height: 20px;
+  background: rgba(var(--color-accent-rgb), 0.22);
+  flex-shrink: 0;
+  align-self: center;
+  margin: 0 3px;
 }
 </style>
 

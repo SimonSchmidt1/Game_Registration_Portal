@@ -14,7 +14,8 @@ import AdminView from '../views/AdminView.vue'
 import GuestView from '../views/GuestView.vue'
 
 const routes = [
-  { path: '/', name: 'Home', component: HomeView },
+  { path: '/', name: 'Home', component: GuestView },
+  { path: '/home', name: 'Dashboard', component: HomeView, meta: { requiresAuth: true } },
   { path: '/guest', name: 'Guest', component: GuestView },
   { path: '/login', name: 'Login', component: LoginView },
   { path: '/register', name: 'Register', component: RegisterView },

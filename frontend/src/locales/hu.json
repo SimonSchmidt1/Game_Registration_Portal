@@ -8,7 +8,8 @@
     "logout": "Kijelentkezés",
     "dark_mode": "Sötét mód",
     "light_mode": "Világos mód",
-    "my_profile": "Profilom"
+    "my_profile": "Profilom",
+    "guide": "Útmutató"
   },
   "common": {
     "loading": "Betöltés...",
@@ -110,7 +111,9 @@
     "current_password_label": "Jelenlegi jelszó",
     "new_password_label": "Új jelszó",
     "confirm_password_label": "Új jelszó megerősítése",
-    "save_password_btn": "Jelszó módosítása"
+    "save_password_btn": "Jelszó módosítása",
+    "remove_avatar_btn": "Avatár eltávolítása",
+    "remove_avatar_success": "Avatár eltávolítva. Újra a kezdőbetűk jelennek meg."
   },
   "filter": {
     "title": "Projektek szűrése",
@@ -125,7 +128,8 @@
     "all_subjects": "Minden tantárgy",
     "all": "Összes",
     "my_projects_btn": "Saját projektek",
-    "all_projects_btn": "Összes projekt"
+    "all_projects_btn": "Összes projekt",
+    "select_school_type_first": "Először válassza ki az iskola típusát"
   },
   "school_types": {
     "zs": "Általános iskola",
@@ -138,7 +142,8 @@
     "web_app": "Webalkalmazás",
     "mobile_app": "Mobilalkalmazás",
     "library": "Könyvtár",
-    "other": "Egyéb"
+    "other": "Egyéb",
+    "webgl": "WebGL Játék"
   },
   "subjects": {
     "all": "Minden tantárgy",
@@ -237,14 +242,14 @@
   },
   "landing": {
     "title": "Projektportál",
-    "desc": "A projektek megtekintéséhez és a portál funkcióinak használatához be kell jelentkeznie.",
+    "desc": "Diákprojektek böngészése, szűrése és letöltése bejelentkezés nélkül.",
     "login_btn": "Bejelentkezés",
     "guest_btn": "Folytatás vendégként",
     "register_btn": "Regisztráció"
   },
   "guest": {
     "hero_title": "UCM projektportál",
-    "hero_subtitle": "Böngésszen, szűrjön és töltse le a hallgatói projekteket bejelentkezés nélkül.",
+    "hero_subtitle": "Diákprojektek böngészése, szűrése és letöltése bejelentkezés nélkül.",
     "login_btn": "Bejelentkezés"
   },
   "project": {
@@ -256,6 +261,8 @@
     "rate_title": "{n} / 5 értékelés",
     "views_label": "megtekintés",
     "video_section": "Videó",
+    "no_video_label": "Nincs videó",
+    "no_video_hint": "Ehhez a projekthez nem érhető el videó — a fedőkép látható helyette.",
     "description_section": "Leírás",
     "project_section": "Projekt",
     "team_members_section": "Csapattagok",
@@ -283,7 +290,10 @@
     "already_rated_desc": "Ezt a projektet már értékelte.",
     "not_found": "A projekt nem található.",
     "id_missing": "Hiányzik a projekt azonosítója.",
-    "load_error": "Hiba a projekt betöltésekor."
+    "load_error": "Hiba a projekt betöltésekor.",
+    "webgl_section": "WebGL Játék",
+    "webgl_play": "Játék a böngészőben",
+    "webgl_open": "Megnyitás új lapon"
   },
   "add_project": {
     "add_title": "Új projekt hozzáadása",
@@ -375,13 +385,30 @@
     "choose_folder_btn": "Mappa kiválasztása (max. 20MB)",
     "choose_apk_btn": "APK kiválasztása",
     "choose_ios_btn": "iOS build kiválasztása",
-    "export_hint": "ZIP, RAR, EXE, APK vagy IPA \u2022 Max. méret: 500MB",
+    "export_hint": "ZIP, RAR, EXE, APK vagy IPA • Max. méret: 500MB",
     "apk_label": "APK fájl",
     "ios_label": "iOS build",
     "tech_stack_hint": "(vesszővel elválasztva)",
     "tech_stack_hint_semi": "(vesszővel vagy ; elválasztva)",
     "response_error": "Válasz hiba",
-    "response_error_desc": "A szerver érvénytelen választ küldött. Kérjül, próbálja újra."
+    "response_error_desc": "A szerver érvénytelen választ küldött. Kérjül, próbálja újra.",
+    "add_subtitle": "Töltse ki a projekt részleteit, és tegye közzé a portálon.",
+    "edit_subtitle": "Frissítse a projekt információit.",
+    "basic_section": "Alapinformációk",
+    "media_section": "Média",
+    "required_note": "A *-gal jelölt mezők kitöltése kötelező.",
+    "webgl_source_label": "Hogyan jelenjen meg a játék",
+    "webgl_mode_build": "Build feltöltése",
+    "webgl_mode_url": "Külső URL",
+    "webgl_build_label": "WebGL build (ZIP archívum)",
+    "webgl_build_btn": "Fájl kiválasztása",
+    "webgl_build_hint": "Töltsön fel egy ZIP archívumot. Az archívumnak tartalmaznia kell egy index.html fájlt. Max méret: 100 MB.",
+    "webgl_url_label": "WebGL játék URL",
+    "webgl_url_hint": "Az URL, ahol a játék található. A játék közvetlenül a portálba lesz ágyazva.",
+    "missing_desc_title": "A leírás túl rövid",
+    "missing_desc_desc": "A leírásnak legalább 10 szót kell tartalmaznia.",
+    "missing_splash_title": "Hiányzó projekt bélyegkép",
+    "missing_splash_desc": "Töltsön fel egy posztert/miniatűrt a projekthez."
   },
   "admin": {
     "title": "Admin panel",
@@ -450,5 +477,22 @@
     "next": "Következő oldal",
     "page_of": "{current}. oldal / {total}",
     "rating_aria": "Értékelés"
+  },
+  "guide": {
+    "guest_title": "Vendég útmutató",
+    "user_title": "Felhasználói útmutató",
+    "guest_steps": [
+      "Böngéssz projekteket a főoldalon. Szűrők segítségével típus, iskola vagy tantárgy szerint kereshetsz.",
+      "Kattints egy projektkártyára a részletek, leírás, videó és letölthető fájlok megtekintéséhez.",
+      "Értékelj egy projektet csillagra kattintással (projektenként 1 értékelés megengedett).",
+      "Teljes hozzáféréshez jelentkezz be vagy regisztrálj."
+    ],
+    "user_steps": [
+      "Regisztrálj, erősítsd meg az e-mailedet, és jelentkezz be.",
+      "Hozz létre csapatot (Scrum Masterként) vagy csatlakozz meglévőhöz meghívókóddal.",
+      "Scrum Masterként: kattints a \"Projekt hozzáadása\" gombra a projekt közzétételéhez.",
+      "Böngéssz és értékeld más csapatok projektjeit.",
+      "Kezeld fiókodat a jobb felső sarokban lévő avatárra kattintva."
+    ]
   }
 }

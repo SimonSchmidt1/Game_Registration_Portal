@@ -2,6 +2,8 @@
 
 This guide helps you quickly diagnose and fix common issues in the Game Registration Portal.
 
+**Last Updated:** February 1, 2026
+
 ## Table of Contents
 
 - [Authentication Issues](#authentication-issues)
@@ -12,6 +14,7 @@ This guide helps you quickly diagnose and fix common issues in the Game Registra
 - [Email Issues](#email-issues)
 - [Performance Issues](#performance-issues)
 - [Development Issues](#development-issues)
+- [Admin Issues](#admin-issues)
 
 ---
 
@@ -53,23 +56,84 @@ This guide helps you quickly diagnose and fix common issues in the Game Registra
 
 ---
 
-### Problem: Email Verification Not Working
+### Problem: Password Reset Shows "Chyba pripojenia"
 
 **Symptoms:**
-- "Účet nie je overený" message on login
-- Verification link doesn't work
+- "Chyba pripojenia" error on password reset resend
+- User thinks network is broken
+- Actually hitting rate limit
 
 **Solution:**
-1. Check spam folder for verification email
-2. Verification token may have expired - login 5 times to trigger new email
-3. Contact administrator if issue persists
+This is NOT a network error - it's the rate limiter working correctly!
+1. Rate limiting: max 1 request per minute, 5 per hour per email+IP
+2. Wait the displayed countdown (typically 60 seconds)
+3. Error message now shows: "Príliš veľa pokusov. Skús znova o X sekúnd."
+4. Countdown updates every second
 
-**Backend Check:**
-```bash
-cd backend
-php artisan tinker
-User::where('email', 'your@email.ucm.sk')->update(['email_verified_at' => now()]);
-```
+**Prevention:**
+- Don't click resend button multiple times
+- Wait full cooldown before retrying
+- Check email spam folder while waiting
+
+**Explanation:**
+- Rate limiter blocks rapid password reset requests
+- Prevents account enumeration and brute force attacks
+- Server returns HTTP 429 (Too Many Requests)
+- Frontend displays countdown timer showing retry time
+
+---
+
+### Problem: Invalid Email Format for Account (Non-UCM)
+
+**Symptoms:**
+- "Neplatný email" error during registration
+- Can't use non-UCM email (not 7digits@ucm.sk)
+
+**Solution:**
+1. For regular teams: Must use UCM email format (1234567@ucm.sk)
+2. For international teams: Any email format allowed
+   - Admin creates team with type "Medzinárodný tím (SPE)"
+   - Invite code will have SPE prefix (e.g., SPEABC123)
+   - Join using SPE code to allow non-UCM email
+
+**Explanation:**
+- UCM email validation only applies to regular teams
+- International teams (SPE) accept any email format
+- Allows partner institutions to join with their emails
+
+---
+
+### Problem: Cannot Join International Team
+
+**Symptoms:**
+- "Student type must match team type" error
+- Can't join SPE team as external student
+
+**Solution:**
+1. Check team type is "international" (SPE prefix)
+2. International teams bypass student type checking
+3. Any student type can join international teams
+4. If error persists:
+   - Admin manually adds user to team
+   - Or create new SPE team to verify it's configured correctly
+
+---
+
+### Problem: User Cannot Login After Deactivation
+
+**Symptoms:**
+- "Váš účet bol deaktivovaný" message
+- Cannot login even with correct password
+
+**Solution:**
+1. Admin has deactivated your account
+2. Wait for admin to reactivate
+3. Check Admin Panel → Users Management for status
+4. Contact administrator to request reactivation
+
+**Prevention:**
+- Ensure admin knows account is still needed
+- Request reactivation immediately if deactivated unexpectedly
 
 ---
 
@@ -97,26 +161,6 @@ User::where('email', 'your@email.ucm.sk')->update(['email_verified_at' => now()]
 
 ## Team Management Issues
 
-### Problem: Cannot Join Team with Code
-
-**Symptoms:**
-- "Tím s týmto kódom nebol nájdený"
-- Invalid invite code error
-
-**Solution:**
-1. Verify code is exactly 6 characters (case-insensitive)
-2. Check for extra spaces when copying code
-3. Ensure team exists in database:
-   ```bash
-   php artisan tinker
-   Team::where('invite_code', 'YOUR_CODE')->first();
-   ```
-4. Team may be full (max 4 members)
-
-**Prevention:**
-- Copy invite code directly (don't type manually)
-- Scrum Master should verify code before sharing
-
 ---
 
 ### Problem: Cannot Create Team
@@ -129,7 +173,8 @@ User::where('email', 'your@email.ucm.sk')->update(['email_verified_at' => now()]
 1. Team name must be unique
 2. Check if you're already Scrum Master of another team
 3. Ensure academic year is selected
-4. Verify database connection is working
+4. Select team type (Denný/Externý/Medzinárodný)
+5. Verify database connection is working
 
 **Backend Check:**
 ```bash
@@ -167,6 +212,26 @@ Team::where('name', 'Team Name')->exists(); // Should be false
 - Scrum Master must transfer role before leaving
 - Or delete the entire team if no longer needed
 - Regular members can leave without restrictions
+
+---
+
+### Problem: Team Member Status Badge
+
+**Symptoms:**
+- User shows "Neaktívny" in team details
+- User cannot login
+
+**Solution:**
+1. Check user status in Admin Panel → Users Management
+2. If "Neaktívny" (red badge), admin has deactivated account
+3. Request admin to activate user account
+4. Or admin can click "Aktivovať" button next to user
+
+**Admin Action**:
+1. Go to Admin Panel → Team Detail
+2. Find member with "Neaktívny" badge
+3. Click "Aktivovať" to reactivate user
+4. User can login again immediately
 
 ---
 
@@ -225,17 +290,17 @@ $team->members()->updateExistingPivot(USER_ID, ['role_in_team' => 'scrum_master'
 
 **Solution:**
 1. Check file size limits:
-   - Trailer video: 20MB max
+   - Trailer video: 100MB max
    - Splash screen: 5MB max
-   - Source code: 50MB max
-   - Export: 50MB max
+   - Source code: 100MB max
+   - Export: 100MB max
 2. Compress files before uploading
 3. For videos, use YouTube link instead of uploading
 
 **Backend Configuration (if limits need adjustment):**
 ```php
 // config/validation.php or directly in request
-'trailer' => 'file|max:20480', // in KB (20MB)
+'trailer' => 'file|max:102400', // in KB (100MB)
 ```
 
 **Server Configuration:**
@@ -256,10 +321,10 @@ max_execution_time = 300
 
 **Solution:**
 1. Check accepted formats:
-   - Trailer: `.mp4`, `.mov`, `.avi`
-   - Splash screen: `.jpg`, `.png`, `.gif`, `.jpeg`
-   - Source code: `.zip`, `.rar`, `.7z`
-   - Export: `.zip`, `.exe`, `.apk`
+   - Trailer: `.mp4`, `.mov`, `.avi` (max 100MB)
+   - Splash screen: `.jpg`, `.png`, `.gif`, `.jpeg` (max 5MB)
+   - Source code: `.zip`, `.rar`, `.7z` (max 100MB)
+   - Export: `.zip`, `.exe`, `.apk` (max 100MB)
 2. Convert file to accepted format
 3. Check file extension matches actual file type
 
@@ -656,5 +721,150 @@ If issues persist:
 
 ---
 
-**Last Updated:** December 2025  
-**Version:** 1.3
+### Problem: Cannot Deactivate/Activate Users
+
+**Symptoms:**
+- Deactivate/Activate buttons not visible
+- 403 Forbidden error when clicking
+
+**Solution:**
+1. Verify you're logged in as admin (check user email matches ADMIN_EMAIL)
+2. Check admin middleware is properly configured:
+   ```bash
+   php artisan route:list | grep admin
+   ```
+3. Re-login as admin to refresh permissions
+4. Check database for user role:
+   ```bash
+   php artisan tinker
+   User::where('email', 'admin@gameportal.local')->first()->role; // Should be 'admin'
+   ```
+
+**Admin User Management**:
+- Locate Users Management section in Admin Panel (top right)
+- Click "Registrovať používateľa" to add new users
+- Click deactivate (red button) to disable user account
+- Click activate (green button) to re-enable user account
+- Changes take effect immediately
+
+---
+
+### Problem: Password Reset Rate Limit - "Príliš veľa pokusov"
+
+**Symptoms:**
+- Cannot resend password reset email
+- Message shows "Príliš veľa pokusov. Skús znova o X sekúnd."
+- Countdown timer visible
+
+**Solution:**
+1. This is working as designed - rate limiting is active
+2. Wait for countdown timer to reach 0
+3. Rate limits: 1 request per minute, 5 per hour per email+IP
+4. After timer expires, resend button becomes active
+
+**Why Rate Limiting?**
+- Prevents brute force attacks
+- Prevents account enumeration
+- Protects against spam and abuse
+- Standard security best practice
+
+**If Stuck (More Than 5 Hours)**:
+- Try resetting from different network/IP address
+- Or contact admin for manual password reset
+- Admin can use tinker to reset password:
+  ```bash
+  php artisan tinker
+  $user = User::where('email', 'user@email.com')->first();
+  $user->update(['password' => Hash::make('new-password')]);
+  ```
+
+---
+
+## Localization (i18n) Issues
+
+### Problem: Blank Screen After Login — No Content Visible
+
+**Symptoms:**
+- Login succeeds (token stored, redirected to `/`)
+- Home page (or any view) renders completely blank
+- No error message shown to the user
+- Browser console shows: `TypeError: t is not a function` or `t is not defined`
+- Vite build completes successfully with **no errors or warnings**
+
+**Root Cause:**
+A Vue view uses `t()` in its template but is missing the `useI18n` import and/or the `const { t } = useI18n()` declaration in its `<script setup>`. Because `vue-i18n 9` operates in composition mode (`legacy: false`), the `t` function is **not injected globally** — each component must explicitly call `useI18n()` to get it. When `t` is undefined, the first template expression that calls it throws a runtime error that silently kills the entire component render, leaving a blank screen.
+
+**Fix:**
+Add the following two lines to the `<script setup>` of every view or component that uses `t()` in its template:
+```javascript
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
+```
+
+**Example — correct pattern (from `HomeView.vue` after fix):**
+```javascript
+<script setup>
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'   // ← must be present
+// ...
+const { t } = useI18n()              // ← must be present
+</script>
+```
+
+**How to Diagnose:**
+1. Open browser DevTools → Console tab
+2. Look for `t is not a function`, `t is not defined`, or a Vue rendering error
+3. If blank screen only appears after login (not on public pages), the affected view is likely the post-login landing view (`HomeView.vue`)
+4. Audit all views with this command from the project root:
+   ```powershell
+   # Find views that call t() in template but may lack useI18n
+   Select-String -Path frontend\src\views\*.vue -Pattern "useI18n" | Select-Object Path
+   # Cross-reference: find views that actually use t() in template
+   Select-String -Path frontend\src\views\*.vue -Pattern "\bt\(" | Select-Object Path | Sort-Object -Unique
+   ```
+   Every path in the second list must also appear in the first.
+
+**Why the Build Doesn't Catch It:**
+- Vite/Rollup only checks syntax and module resolution — it does not track whether `t` is in scope at runtime
+- `vue-i18n` does not provide a Vite plugin warning for missing `useI18n()` calls
+- The error only surfaces at runtime when the component is mounted
+
+**Known Affected File (Fixed Feb 26, 2026):**
+- `frontend/src/views/HomeView.vue` — was missing `import { useI18n } from 'vue-i18n'` and `const { t } = useI18n()`. All other views had the correct pattern already.
+
+**Prevention:**
+- Use a snippet or template for new views that includes `useI18n` boilerplate
+- After adding any `t('...')` call to a template, immediately verify the import and declaration exist in `<script setup>`
+- When a blank screen occurs after login, check the console for `t is not a function` **before** investigating auth or API issues
+
+---
+
+### Problem: Translations Show Raw Keys (e.g., `team.active_team`)
+
+**Symptoms:**
+- Text like `team.active_team` or `filter.title` displayed literally on screen instead of translated text
+
+**Solution:**
+1. Verify the key exists in the active locale file (`frontend/src/locales/<code>.json`)
+2. Verify the key exists in the fallback locale (`en.json`) — vue-i18n falls back to `en` before displaying the raw key
+3. Check for typos (keys are case-sensitive and dot-notation is used for nesting)
+4. If the key is new, add it to **all** locale files to avoid missing-translation warnings in the console
+
+---
+
+### Problem: Language Does Not Switch
+
+**Symptoms:**
+- Changing language in the UI has no effect
+
+**Solution:**
+1. Ensure `setLocale(code)` from `frontend/src/i18n.js` is called, not a direct mutation
+2. Verify the locale code is in `SUPPORTED_LOCALES` (check `i18n.js`)
+3. Check `localStorage.getItem('locale_preference')` in DevTools → Application → Local Storage
+4. Clear localStorage and reload to reset to browser auto-detection
+
+---
+
+**Last Updated:** February 26, 2026  
+**Version:** 1.6

@@ -17,122 +17,81 @@
     </div>
 
     <!-- Team Detail -->
-    <div v-else-if="team" class="space-y-6">
-      <!-- Header with Back Button -->
-      <div class="steam-header">
-        <Button 
-          :label="t('common.back')"
-          class="steam-btn steam-btn-ghost steam-btn-sm"
-          @click="$router.push('/')" 
-        />
-        <h1 class="steam-title">{{ team.name }}</h1>
-      </div>
+    <div v-else-if="team" class="tv-layout">
 
-      <!-- Team Info Card -->
-      <div class="steam-card">
-        <div class="steam-grid">
-          <!-- Left Column -->
-          <div class="steam-stack">
-            <div>
-              <h3 class="section-heading">{{ t('team.basic_info_section') }}</h3>
-              <div class="steam-stack-sm">
-                <div class="steam-info-row">
-                  <div>
-                    <span class="steam-label">{{ t('create_team.academic_year_label') }}:</span>
-                    <p class="steam-value">{{ team.academic_year?.name || 'N/A' }}</p>
-                  </div>
-                </div>
-                <div class="steam-info-row">
-                  <div>
-                    <span class="steam-label">{{ t('team.members_count_label') }}</span>
-                    <p class="steam-value">{{ team.members?.length || 0 }}/10</p>
-                  </div>
-                </div>
-                <div class="steam-info-row">
-                  <div>
-                    <span class="steam-label">{{ t('team.projects_count_label') }}</span>
-                    <p class="steam-value">{{ projectCount }}</p>
-                  </div>
-                </div>
-              </div>
+      <!-- ── HERO ─────────────────────────────────────────── -->
+      <div class="tv-hero">
+        <button class="back-btn" @click="$router.push('/')">
+          <i class="pi pi-arrow-left"></i>
+          <span>{{ t('common.back') }}</span>
+        </button>
+        <h1 class="tv-hero-name">{{ team.name }}</h1>
+        <div class="tv-hero-footer">
+          <div class="tv-stats">
+            <div class="tv-stat">
+              <i class="pi pi-users"></i>
+              <span>{{ team.members?.length || 0 }}<span class="tv-stat-max">/10</span></span>
+              <span class="tv-stat-label">{{ t('team.members_count_label') }}</span>
             </div>
-
-            <!-- Invite Code -->
-            <div class="steam-invite">
-              <h3 class="section-heading">{{ t('team.invite_code_section') }}</h3>
-              <div class="steam-invite-row">
-                <span class="steam-invite-code">
-                  {{ team.invite_code }}
-                </span>
-                <button class="steam-btn steam-btn-ghost steam-btn-xs" @click="copyInviteCode">
-                  {{ t('team.copy_code_sm') }}
-                </button>
-              </div>
+            <div class="tv-stat-divider"></div>
+            <div class="tv-stat">
+              <i class="pi pi-folder"></i>
+              <span>{{ projectCount }}</span>
+              <span class="tv-stat-label">{{ t('team.projects_count_label') }}</span>
+            </div>
+            <div class="tv-stat-divider"></div>
+            <div class="tv-stat">
+              <i class="pi pi-calendar"></i>
+              <span>{{ team.academic_year?.name || '—' }}</span>
+              <span class="tv-stat-label">{{ t('create_team.academic_year_label') }}</span>
             </div>
           </div>
+          <div class="tv-invite-inline">
+            <span class="tv-invite-label">{{ t('team.invite_code_section') }}</span>
+            <span class="steam-invite-code">{{ team.invite_code }}</span>
+            <button class="tv-copy-icon" @click="copyInviteCode">
+              <i class="pi pi-copy"></i>
+            </button>
+          </div>
+        </div>
+      </div>
 
-          <!-- Right Column: Team Members -->
-          <div>
-            <h3 class="section-heading">{{ t('project.team_members_section') }}</h3>
-            <div class="steam-stack-xs">
-              <div 
-                v-for="member in team.members" 
-                :key="member.id"
-                class="member-row"
-                @click="showMemberDetails(member)"
-              >
-                <div class="member-main">
-                  <div 
-                    v-if="member.avatar_path"
-                    class="member-avatar"
-                  >
-                    <img 
-                      :src="getAvatarUrl(member.avatar_path)" 
-                      :alt="member.name"
-                      class="member-avatar-img"
-                    />
-                  </div>
-                  <div 
-                    v-else
-                    class="member-avatar member-avatar-fallback"
-                  >
-                    {{ member.name?.charAt(0).toUpperCase() }}
-                  </div>
-                  <div class="member-meta">
-                    <div class="member-name-row">
-                      <p :class="member.is_absolvent ? 'member-name member-name-muted' : 'member-name'">{{ member.name }}</p>
-                      <span
-                        v-if="member.is_absolvent"
-                        class="steam-badge badge-muted"
-                      >
-                        {{ t('team.absolvent') }}
-                      </span>
-                    </div>
-                    <p class="member-email">{{ member.email }}</p>
-                    <div class="member-occupation">
-                      <span class="steam-badge badge-sm">
-                        {{ formatOccupation(member.pivot?.occupation) || t('common.unspecified') }}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div class="member-role">
-                  <span 
-                    v-if="isScumMaster(member)"
-                    class="steam-badge badge-active"
-                  >
-                    SM
-                  </span>
-                </div>
+      <!-- ── MEMBERS ───────────────────────────────────────── -->
+      <div class="tv-section">
+        <h2 class="tv-section-heading">{{ t('project.team_members_section') }}</h2>
+        <div class="members-grid">
+          <div
+            v-for="(member, idx) in team.members"
+            :key="member.id"
+            :class="['member-row', isScumMaster(member) ? 'member-row-sm' : '', isUserDeactivated(member) ? 'member-row-deactivated' : '']"
+            @click="showMemberDetails(member)"
+          >
+            <div class="member-rank">{{ idx + 1 }}</div>
+            <div class="member-main">
+              <div v-if="member.avatar_path" class="member-avatar">
+                <img :src="getAvatarUrl(member.avatar_path)" :alt="member.name" class="member-avatar-img" />
               </div>
+              <div v-else class="member-avatar member-avatar-fallback">
+                <span>{{ member.name?.charAt(0).toUpperCase() }}</span>
+              </div>
+              <div class="member-meta">
+                <div class="member-name-row">
+                  <p :class="member.is_absolvent ? 'member-name member-name-muted' : 'member-name'">{{ member.name }}</p>
+                  <span v-if="member.is_absolvent" class="steam-badge badge-muted">{{ t('team.absolvent') }}</span>
+                </div>
+                <span class="steam-badge badge-sm">{{ formatOccupation(member.pivot?.occupation) || t('common.unspecified') }}</span>
+              </div>
+            </div>
+            <div class="member-role">
+              <span v-if="isScumMaster(member)" class="steam-badge badge-active">SM</span>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Team Projects -->
-      <div class="steam-card">
-        <h2 class="section-heading">{{ t('team.projects_section') }}</h2>
+      <!-- ── PROJECTS ─────────────────────────────────────── -->
+      <div class="tv-section">
+        <h2 class="tv-section-heading">{{ t('team.projects_section') }}</h2>
         
         <div v-if="loadingProjects" class="state-message">
           <span>{{ t('common.loading_projects') }}</span>
@@ -169,7 +128,13 @@
                 <span v-if="project.school_type" class="card-tag">
                   {{ getSchoolTypeLabel(project.school_type) }}
                 </span>
-                <span v-if="project.year_of_study" class="card-tag">
+                <span
+                  v-if="project.year_of_study"
+                  class="card-tag card-tag-static"
+                  @click.stop
+                  @keydown.enter.stop
+                  @keydown.space.stop
+                >
                   {{ project.year_of_study }}{{ t('common.year_suffix') }}
                 </span>
                 <span v-if="project.subject" class="card-tag">
@@ -184,11 +149,16 @@
               <div class="card-footer">
                 <div class="card-meta-left">
                   <div class="card-rating">
-                    <span class="rating-num">{{ t('team.rating_label') }} {{ project.rating || '0.0' }}</span>
+                    <span v-for="star in 5" :key="star" :class="star <= Math.round(Number(project.rating || 0)) ? 'star-filled' : 'star-empty'">★</span>
+                    <span class="rating-num">{{ Number(project.rating || 0).toFixed(1) }}</span>
+                  </div>
+                  <div class="card-views">
+                    <i class="pi pi-eye view-icon" aria-hidden="true"></i>
+                    <span class="view-num">{{ formatViews(viewCounts[project.id] ?? project.views) }}</span>
                   </div>
                 </div>
                 <div class="card-meta-right">
-                  <span class="card-year"><i class="pi pi-eye" aria-hidden="true"></i> {{ project.views || 0 }} {{ t('common.views_count') }}</span>
+                  <span v-if="project.academic_year" class="card-year">{{ project.academic_year.name }}</span>
                 </div>
               </div>
             </div>
@@ -199,83 +169,65 @@
   </div>
 
   <!-- Member Details Dialog -->
-  <Dialog 
-    v-model:visible="showMemberDialog" 
-    :modal="true" 
-    :closable="true" 
+  <Dialog
+    v-model:visible="showMemberDialog"
+    :modal="true"
+    :closable="false"
     :draggable="false"
+    :dismissableMask="true"
+    :showHeader="false"
     class="dialog-shell dialog-md"
-    :contentStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', padding: '1.5rem', border: 'none' }" 
-    :headerStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', borderBottom: '1px solid var(--color-border)', padding: '1.25rem 1.5rem', position: 'relative' }"
-    :style="{ borderRadius: '4px', overflow: 'hidden' }"
+    :contentStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', padding: '0', border: 'none' }"
+    :style="{ borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--color-border)' }"
   >
-    <template #header>
-      <div class="dlg-header">
-        <span class="dlg-title">{{ t('team.member_info_title') }}</span>
-      </div>
-    </template>
-    
-    <div v-if="selectedMember" class="dlg-body">
-      <!-- Avatar Section -->
-      <div class="dlg-panel">
-        <div class="dlg-avatar">
-          <img 
-            v-if="selectedMember.avatar_path" 
-            :src="getAvatarUrl(selectedMember.avatar_path)" 
-            alt="Avatar"
-            class="dlg-avatar-img"
-          />
-          <div v-else class="dlg-avatar-fallback">
-            {{ selectedMember.name?.charAt(0).toUpperCase() }}
-          </div>
+    <div v-if="selectedMember" class="dlg-card">
+
+      <!-- Close button -->
+      <button class="dlg-close" @click="showMemberDialog = false">
+        <i class="pi pi-times"></i>
+      </button>
+
+      <!-- Avatar + identity -->
+      <div class="dlg-identity">
+        <div class="dlg-avatar-wrap" :class="{ 'dlg-avatar-deactivated': isUserDeactivated(selectedMember) }">
+          <img v-if="selectedMember.avatar_path" :src="getAvatarUrl(selectedMember.avatar_path)" alt="Avatar" class="dlg-avatar-img" />
+          <div v-else class="dlg-avatar-fallback"><span>{{ selectedMember.name?.charAt(0).toUpperCase() }}</span></div>
+        </div>
+        <h3 class="dlg-name">{{ selectedMember.name }}</h3>
+        <div class="dlg-badges">
+          <span v-if="isScumMaster(selectedMember)" class="steam-badge badge-active">Scrum Master</span>
+          <span v-if="selectedMember.is_absolvent" class="steam-badge badge-muted">{{ t('team.absolvent') }}</span>
         </div>
       </div>
-   
-      <!-- Member Info -->
+
+      <!-- Deactivated notice -->
+      <div v-if="isUserDeactivated(selectedMember)" class="dlg-deactivated-notice">
+        Používateľ bol deaktivovaný adminom. Pravdepodobne už neštuduje na UCM.
+      </div>
+
+      <!-- Info rows -->
       <div class="dlg-info">
-        <div class="dlg-row">
-          <span class="dlg-label">{{ t('profile.name_label') }}:</span>
-          <span class="dlg-value">{{ selectedMember.name }}</span>
+        <div class="dlg-field">
+          <span class="dlg-field-label">{{ t('profile.email_label') }}</span>
+          <span class="dlg-field-value">{{ selectedMember.email }}</span>
         </div>
-        
-        <div class="dlg-row">
-          <span class="dlg-label">{{ t('profile.email_label') }}:</span>
-          <span class="dlg-value dlg-value-sm">{{ selectedMember.email }}</span>
+        <div class="dlg-field">
+          <span class="dlg-field-label">{{ t('team.occupation_label') }}</span>
+          <span class="dlg-field-value">{{ formatOccupation(selectedMember.pivot?.occupation) || t('common.unspecified') }}</span>
         </div>
-        
-        <div class="dlg-row">
-          <span class="dlg-label">{{ t('auth.student_type_label') }}:</span>
-          <span v-if="selectedMember.student_type" class="steam-badge badge-sm">
-            {{ getStudentTypeLabel(selectedMember.student_type) }}
-          </span>
-            <span v-else class="dlg-muted">{{ t('common.unspecified') }}</span>
-        </div>
-
-        <div class="dlg-row">
-          <span class="dlg-label">{{ t('team.occupation_label') }}</span>
-          <span class="steam-badge badge-sm">
-            {{ formatOccupation(selectedMember.pivot?.occupation) || t('common.unspecified') }}
-          </span>
-        </div>
-
-        <div v-if="isScumMaster(selectedMember)" class="dlg-row">
-          <span class="dlg-label">{{ t('team.role_label') }}</span>
-          <span class="steam-badge badge-active">SM</span>
-        </div>
-
-        <div v-if="selectedMember.is_absolvent" class="dlg-row">
-          <span class="dlg-label">{{ t('team.member_status_label') }}</span>
-          <span class="steam-badge badge-muted">{{ t('team.absolvent') }}</span>
+        <div class="dlg-field">
+          <span class="dlg-field-label">{{ t('auth.student_type_label') }}</span>
+          <span class="dlg-field-value">{{ selectedMember.student_type ? getStudentTypeLabel(selectedMember.student_type) : t('common.unspecified') }}</span>
         </div>
       </div>
-   
-      <div class="dlg-actions">
-        <Button 
-          :label="t('common.close')" 
-          class="steam-btn steam-btn-dark auth-btn-block"
-          @click="showMemberDialog = false" 
-        />
+
+      <!-- Close button -->
+      <div class="dlg-footer">
+        <button class="steam-btn steam-btn-dark auth-btn-block" @click="showMemberDialog = false">
+          {{ t('common.close') }}
+        </button>
       </div>
+
     </div>
   </Dialog>
 </template>
@@ -287,8 +239,12 @@ import { useI18n } from 'vue-i18n'
 import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
 import Button from 'primevue/button'
+import { apiFetch } from '@/utils/apiFetch'
 import Dialog from 'primevue/dialog'
 import Tooltip from 'primevue/tooltip'
+import { isUserDeactivated } from '../utils/userStatus.js'
+import { formatViews } from '@/utils/formatViews'
+import { viewCounts } from '@/utils/viewCountStore'
 
 const vTooltip = Tooltip
 
@@ -328,7 +284,7 @@ async function loadTeam() {
   const token = localStorage.getItem('access_token')
   
   try {
-    const res = await fetch(`${API_URL}/api/teams/${teamId}`, {
+    const res = await apiFetch(`${API_URL}/api/teams/${teamId}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Accept': 'application/json'
@@ -359,7 +315,7 @@ async function loadProjects() {
   const token = localStorage.getItem('access_token')
   
   try {
-    const res = await fetch(`${API_URL}/api/projects/my?team_id=${teamId}`, {
+    const res = await apiFetch(`${API_URL}/api/projects/my?team_id=${teamId}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Accept': 'application/json'
@@ -448,11 +404,147 @@ onMounted(() => {
   padding: 24px 32px 48px;
 }
 
+/* ═══════════════════════════════════════════════════════════ */
+/* PAGE LAYOUT                                                */
+/* ═══════════════════════════════════════════════════════════ */
+.tv-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ═══════════════════════════════════════════════════════════ */
+/* HERO                                                       */
+/* ═══════════════════════════════════════════════════════════ */
+.tv-hero {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-top: 3px solid var(--color-accent);
+  border-radius: 4px;
+  padding: 24px 28px 20px;
+}
+
+
+.tv-hero-name {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--color-text-strong);
+  letter-spacing: -0.02em;
+  margin-bottom: 18px;
+  line-height: 1.15;
+  text-align: center;
+}
+
+.tv-hero-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}
+
+.tv-stats {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0;
+}
+
+.tv-stat {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding-right: 18px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.tv-stat i {
+  color: var(--color-accent);
+  font-size: 0.85rem;
+}
+
+.tv-stat-max {
+  font-weight: 400;
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+}
+
+.tv-stat-label {
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-left: -3px;
+}
+
+.tv-stat-divider {
+  width: 1px;
+  height: 22px;
+  background: var(--color-border);
+  margin: 0 16px 0 2px;
+}
+
+.tv-invite-inline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tv-invite-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.tv-copy-icon {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-size: 0.85rem;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.tv-copy-icon:hover {
+  color: var(--color-accent);
+}
+
+/* ═══════════════════════════════════════════════════════════ */
+/* SECTIONS                                                   */
+/* ═══════════════════════════════════════════════════════════ */
+.tv-section {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 22px 24px;
+}
+
+.tv-section-heading {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+  margin-bottom: 14px;
+}
+
+/* ═══════════════════════════════════════════════════════════ */
+/* (legacy)                                                   */
+/* ═══════════════════════════════════════════════════════════ */
 .steam-header {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 20px;
 }
 
 .steam-title {
@@ -466,7 +558,6 @@ onMounted(() => {
   border: 1px solid var(--color-border);
   border-radius: 4px;
   padding: 22px 24px;
-  margin-bottom: 20px;
 }
 
 .steam-grid {
@@ -587,22 +678,59 @@ onMounted(() => {
 /* ═══════════════════════════════════════════════════════════ */
 /* MEMBER LIST                                                */
 /* ═══════════════════════════════════════════════════════════ */
+.members-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+/* Every 3rd member (1st, 4th, 7th, 10th…) spans full width — alternating horizontal/vertical rhythm */
+.members-grid .member-row:nth-child(3n+1) {
+  grid-column: span 2;
+}
+
+@media (max-width: 700px) {
+  .members-grid { grid-template-columns: 1fr; }
+  .members-grid .member-row:nth-child(3n+1) { grid-column: span 1; }
+}
+
+.member-rank {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--color-text-subtle);
+  width: 18px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
 .member-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
+  gap: 10px;
+  padding: 8px 12px;
   background: var(--color-elevated);
   border: 1px solid var(--color-border);
+  border-left: 3px solid transparent;
   border-radius: 4px;
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
 }
 
+.member-row-sm {
+  border-left-color: var(--color-accent);
+}
+
+.member-row-deactivated {
+  opacity: 0.45;
+  filter: grayscale(0.6);
+}
+
 .member-row:hover {
-  border-color: var(--color-accent);
-  background: var(--color-elevated);
+  border-right-color: var(--color-accent);
+  border-top-color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
+  background: rgba(var(--color-accent-rgb), 0.04);
 }
 
 .member-main {
@@ -612,11 +740,12 @@ onMounted(() => {
 }
 
 .member-avatar {
-  width: 40px;
-  height: 40px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   overflow: hidden;
   border: 2px solid var(--color-border);
+  flex-shrink: 0;
 }
 
 .member-avatar-img {
@@ -626,18 +755,24 @@ onMounted(() => {
 }
 
 .member-avatar-fallback {
+  position: relative;
+  overflow: hidden;
+  background: rgba(var(--color-accent-rgb), 0.15);
+  color: var(--color-accent);
+  font-weight: 700;
+}
+.member-avatar-fallback span {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--color-accent), var(--color-border));
-  color: var(--color-accent-contrast);
-  font-weight: 700;
 }
 
 .member-meta {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 2px;
 }
 
 .member-name-row {
@@ -729,6 +864,7 @@ onMounted(() => {
 .project-card:hover .card-thumb-img {
   transform: scale(1.03);
 }
+.project-card:hover .card-title { color: var(--color-text-strong); }
 
 .card-body {
   padding: 14px 16px 16px;
@@ -768,6 +904,10 @@ onMounted(() => {
   font-weight: 500;
 }
 
+.card-tag.card-tag-static {
+  cursor: default;
+}
+
 .card-tag-accent {
   background: rgba(var(--color-accent-rgb), 0.12);
   border-color: rgba(var(--color-accent-rgb), 0.3);
@@ -795,11 +935,15 @@ onMounted(() => {
   gap: 8px;
 }
 
-.card-meta-left { display: flex; align-items: center; }
-.card-rating { display: flex; align-items: center; gap: 4px; }
+.card-meta-left { display: flex; align-items: center; gap: 12px; }
+.card-rating { display: flex; align-items: center; gap: 2px; }
+.card-views { display: flex; align-items: center; gap: 4px; }
+.view-icon { font-size: 0.8rem; color: var(--color-text-muted); position: relative; top: 1px; }
+.view-num { font-size: 0.8rem; color: var(--color-text-muted); font-weight: 600; }
 .star-filled { color: var(--color-warning); font-size: 0.75rem; }
-.rating-num { font-size: 0.8rem; color: var(--color-text-muted); font-weight: 600; }
-.card-meta-right { display: flex; align-items: center; }
+.star-empty  { color: var(--color-border); font-size: 0.75rem; }
+.rating-num  { font-size: 0.8rem; color: var(--color-text-muted); margin-left: 4px; font-weight: 600; }
+.card-meta-right { display: flex; align-items: center; gap: 8px; }
 .card-year { font-size: 0.7rem; color: var(--color-text-subtle); }
 
 /* ═══════════════════════════════════════════════════════════ */
@@ -843,13 +987,16 @@ onMounted(() => {
 }
 
 .steam-badge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 2px 7px;
   font-size: 0.65rem;
   font-weight: 600;
   border-radius: 2px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  line-height: 1;
 }
 
 .badge-active { background: rgba(var(--color-accent-rgb), 0.15); color: var(--color-accent); }
@@ -857,85 +1004,149 @@ onMounted(() => {
 .badge-muted { background: rgba(var(--color-text-muted-rgb), 0.12); color: var(--color-text-muted); }
 
 /* ═══════════════════════════════════════════════════════════ */
-/* DIALOG                                                     */
+/* DIALOG — profile card                                     */
 /* ═══════════════════════════════════════════════════════════ */
-.dialog-shell { width: 92%; max-width: 520px; }
-.dialog-md { max-width: 520px; }
+.dialog-shell { width: 92%; max-width: 360px; }
+.dialog-md { max-width: 360px; }
 
-.dlg-header {
+.dlg-card {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.dlg-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 3px;
+  line-height: 1;
+  transition: color 0.15s, background 0.15s;
+  z-index: 1;
+}
+.dlg-close:hover { color: var(--color-text); background: var(--color-hover-bg-soft); }
+
+/* Identity block — centered avatar + name + badges */
+.dlg-identity {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 32px 24px 24px;
+  background: var(--color-elevated);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.dlg-avatar-wrap {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid rgba(var(--color-accent-rgb), 0.35);
+  flex-shrink: 0;
+}
+
+.dlg-avatar-deactivated {
+  filter: grayscale(1);
+  opacity: 0.6;
+  border-color: var(--color-border);
+}
+
+.dlg-deactivated-notice {
+  font-size: 0.78rem;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 6px;
+  padding: 8px 12px;
+  text-align: center;
+  margin: 0 24px 4px;
+  line-height: 1.4;
+}
+
+.dlg-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dlg-avatar-fallback {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  background: rgba(var(--color-accent-rgb), 0.15);
+  color: var(--color-accent);
+  font-weight: 700;
+  font-size: 2rem;
+}
+.dlg-avatar-fallback span {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
 }
 
-.dlg-title {
-  font-size: 1rem;
+.dlg-name {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--color-text-strong);
+  text-align: center;
+  line-height: 1.3;
+}
+
+.dlg-badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+  min-height: 18px;
+}
+
+/* Stacked info fields */
+.dlg-info {
+  display: flex;
+  flex-direction: column;
+  padding: 20px 24px;
+  gap: 16px;
+}
+
+.dlg-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.dlg-field-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+}
+
+.dlg-field-value {
+  font-size: 0.9rem;
   font-weight: 600;
   color: var(--color-text);
 }
 
-.dlg-body {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+.dlg-footer {
+  padding: 0 24px 24px;
 }
-
-.dlg-panel {
-  display: flex;
-  justify-content: center;
-  padding: 18px;
-  background: var(--color-elevated);
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-}
-
-.dlg-avatar {
-  position: relative;
-}
-
-.dlg-avatar-img,
-.dlg-avatar-fallback {
-  width: 96px;
-  height: 96px;
-  border-radius: 50%;
-  border: 4px solid rgba(var(--color-accent-rgb), 0.4);
-}
-
-.dlg-avatar-fallback {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, var(--color-accent), var(--color-border));
-  color: var(--color-accent-contrast);
-  font-weight: 700;
-  font-size: 2rem;
-}
-
-.dlg-info { display: flex; flex-direction: column; gap: 10px; }
-
-.dlg-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  background: var(--color-elevated);
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-}
-
-.dlg-label { color: var(--color-text-muted); font-weight: 600; font-size: 0.85rem; }
-.dlg-value { color: var(--color-text); font-weight: 600; }
-.dlg-value-sm { font-size: 0.85rem; }
-.dlg-muted { color: var(--color-text-subtle); font-size: 0.85rem; }
-
-.dlg-actions { display: flex; }
 
 .auth-btn-block { width: 100%; }
 
 @media (max-width: 900px) {
   .steam-grid { grid-template-columns: 1fr; }
+  .tv-hero-footer { flex-direction: column; align-items: flex-start; }
 }
 
 @media (max-width: 768px) {
@@ -978,10 +1189,6 @@ onMounted(() => {
     word-break: break-all;
   }
 
-  .dlg-row {
-    flex-direction: column;
-    align-items: flex-start;
-  }
 }
 
 @media (max-width: 640px) {

@@ -5,11 +5,14 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Project;
+use App\Models\Team;
 use App\Models\GameRating;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Str;
 use App\Rules\VideoMaxResolution;
 use App\Models\AcademicYear;
 
@@ -18,7 +21,7 @@ class ProjectController extends Controller
     public function index(Request $request)
     {
         $query = $this->buildProjectQuery($request, false);
-        $perPage = min((int) $request->query('per_page', 20), 50);
+        $perPage = min((int) $request->query('per_page', 21), 50);
         $projects = $query->orderBy('created_at', 'desc')->paginate($perPage);
         return response()->json($projects);
     }
@@ -26,7 +29,7 @@ class ProjectController extends Controller
     public function publicIndex(Request $request)
     {
         $query = $this->buildProjectQuery($request, true);
-        $perPage = min((int) $request->query('per_page', 20), 50);
+        $perPage = min((int) $request->query('per_page', 21), 50);
         $projects = $query->orderBy('created_at', 'desc')->paginate($perPage);
         return response()->json($projects);
     }
@@ -78,11 +81,11 @@ class ProjectController extends Controller
     {
         $request->validate(['rating' => 'required|integer|min:1|max:5']);
 
-        $fingerprint = sha1(($request->ip() ?? 'unknown') . '|' . ($request->userAgent() ?? '')); 
-        $voteKey = "public_project_rating:{$id}:{$fingerprint}";
-        if (Cache::has($voteKey)) {
-            return response()->json(['message' => 'Tento projekt ste už hodnotili.'], 429);
+        $guestId = (string) ($request->cookie('guest_rating_id') ?? '');
+        if ($guestId === '') {
+            $guestId = (string) Str::uuid();
         }
+        $guestFingerprint = hash('sha256', $guestId);
 
         $query = Project::where('id', $id);
         if (Schema::hasColumn('teams', 'status')) {
@@ -96,28 +99,86 @@ class ProjectController extends Controller
             return response()->json(['message' => 'Projekt nebol nájdený.'], 404);
         }
 
-        return DB::transaction(function () use ($id, $request, $project) {
-            GameRating::create(['project_id' => $id, 'rating' => $request->rating]);
+        $alreadyRatedByGuest = GameRating::where('project_id', $id)
+            ->whereNull('user_id')
+            ->where('guest_fingerprint', $guestFingerprint)
+            ->exists();
+        if ($alreadyRatedByGuest) {
+            return response()->json([
+                'message' => 'Tento projekt ste už hodnotili.',
+                'already_rated' => true,
+                'rating' => $project->rating,
+                'rating_count' => $project->rating_count,
+            ], 200)
+                ->cookie(Cookie::make('guest_rating_id', $guestId, 60 * 24 * 365 * 5, '/', null, false, true, false, 'Lax'));
+        }
+
+        return DB::transaction(function () use ($id, $request, $project, $guestId, $guestFingerprint) {
+            try {
+                GameRating::create([
+                    'project_id' => $id,
+                    'user_id' => null,
+                    'guest_fingerprint' => $guestFingerprint,
+                    'rating' => $request->rating,
+                ]);
+            } catch (QueryException $e) {
+                // SQLSTATE 23000 => integrity constraint violation (duplicate unique key)
+                if ((string) $e->getCode() === '23000') {
+                    return response()->json([
+                        'message' => 'Tento projekt ste už hodnotili.',
+                        'already_rated' => true,
+                        'rating' => $project->rating,
+                        'rating_count' => $project->rating_count,
+                    ], 200)
+                        ->cookie(Cookie::make('guest_rating_id', $guestId, 60 * 24 * 365 * 5, '/', null, false, true, false, 'Lax'));
+                }
+                throw $e;
+            }
 
             $avgRating = GameRating::where('project_id', $id)->avg('rating');
             $ratingCount = GameRating::where('project_id', $id)->count();
-            $project->update(['rating' => round($avgRating, 2), 'rating_count' => $ratingCount]);
-
-            $fingerprint = sha1(($request->ip() ?? 'unknown') . '|' . ($request->userAgent() ?? ''));
-            $voteKey = "public_project_rating:{$id}:{$fingerprint}";
-            Cache::put($voteKey, true, now()->addDays(30));
+            $project->fill(['rating' => round($avgRating, 2), 'rating_count' => $ratingCount]);
+            if (!$project->save()) {
+                throw new \RuntimeException('Failed to persist project rating counters.');
+            }
 
             return response()->json([
                 'message' => 'Hodnotenie uložené',
                 'rating' => $project->rating,
                 'rating_count' => $project->rating_count
-            ]);
+            ])->cookie(Cookie::make('guest_rating_id', $guestId, 60 * 24 * 365 * 5, '/', null, false, true, false, 'Lax'));
         });
     }
 
     private function buildProjectQuery(Request $request, bool $onlyActiveTeams)
     {
         $query = Project::with(['team.members', 'academicYear']);
+
+        if ($request->boolean('my_projects')) {
+            $user = $request->user();
+
+            if (!$user) {
+                // Keep consistent response shape for unauthenticated callers.
+                $query->whereRaw('1 = 0');
+                return $query;
+            }
+
+            $teamId = (int) $request->query('team_id');
+            $teamIds = $user->teams()->pluck('teams.id');
+
+            if ($teamId > 0) {
+                if (!$teamIds->contains($teamId) && $user->role !== 'admin') {
+                    $query->whereRaw('1 = 0');
+                    return $query;
+                }
+                $query->where('team_id', $teamId);
+            } elseif ($teamIds->isNotEmpty()) {
+                $query->whereIn('team_id', $teamIds);
+            } else {
+                $query->whereRaw('1 = 0');
+                return $query;
+            }
+        }
 
         if ($onlyActiveTeams && Schema::hasColumn('teams', 'status')) {
             $query->whereHas('team', function ($q) {
@@ -160,7 +221,7 @@ class ProjectController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'type' => 'required|in:game,web_app,mobile_app,library,other',
+            'type' => 'required|in:game,web_app,mobile_app,library,other,webgl',
             'school_type' => 'required|in:zs,ss,vs',
             'year_of_study' => 'nullable|integer|min:1|max:9',
             'subject' => 'required|string|max:255',
@@ -287,11 +348,31 @@ class ProjectController extends Controller
                     'metadata' => $metadata,
                 ]);
 
+                // Extract WebGL build if provided, otherwise URL mode needs no local path
+                if ($validated['type'] === 'webgl') {
+                    if ($request->hasFile('webgl_build')) {
+                        $webglPath = $this->extractWebGLBuild($request->file('webgl_build'), $project->id);
+                        if ($webglPath) {
+                            $meta = $project->metadata ?? [];
+                            unset($meta['webgl_url']);
+                            $meta['webgl_local_path'] = $webglPath;
+                            $project->metadata = $meta;
+                            $project->save();
+                        }
+                    } elseif (!empty($project->metadata['webgl_url'])) {
+                        // URL mode — ensure no stale local path
+                        $meta = $project->metadata ?? [];
+                        unset($meta['webgl_local_path']);
+                        $project->metadata = $meta;
+                        $project->save();
+                    }
+                }
+
                 return response()->json(['project' => $project, 'message' => 'Projekt bol úspešne vytvorený!'], 201);
             });
         } catch (\Exception $e) {
             \Log::error('Project creation failed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
-            return response()->json(['message' => 'Chyba pri vytváraní projektu. Skúste znova.'], 500);
+            return response()->json(['message' => 'Chyba pri vyvváraní projektu: ' . $e->getMessage() . ' na riadku ' . $e->getLine()], 500);
         }
     }
 
@@ -412,7 +493,7 @@ class ProjectController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'type' => 'required|in:game,web_app,mobile_app,library,other',
+            'type' => 'required|in:game,web_app,mobile_app,library,other,webgl',
             'school_type' => 'required|in:zs,ss,vs',
             'year_of_study' => 'nullable|integer|min:1|max:9',
             'subject' => 'required|string|max:255',
@@ -525,6 +606,23 @@ class ProjectController extends Controller
         // Handle metadata update
         $currentMetadata = $project->metadata ?? [];
         $newMetadata = array_merge($currentMetadata, $this->extractMetadata($request));
+
+        // Handle WebGL build upload on update
+        if ($validated['type'] === 'webgl') {
+            if ($request->hasFile('webgl_build')) {
+                // New build uploaded — extract it and clear any URL
+                $webglPath = $this->extractWebGLBuild($request->file('webgl_build'), $project->id);
+                if ($webglPath) {
+                    $newMetadata['webgl_local_path'] = $webglPath;
+                    unset($newMetadata['webgl_url']);
+                }
+            } elseif (!empty($newMetadata['webgl_url'])) {
+                // URL mode — clear any old local build path
+                unset($newMetadata['webgl_local_path']);
+                $this->deleteWebGLBuild($project->id);
+            }
+        }
+
         $updateData['metadata'] = $newMetadata;
 
         // Ensure academic_year_id is set if not provided
@@ -576,6 +674,10 @@ class ProjectController extends Controller
             'mobile_app' => ['platform' => 'nullable|in:android,ios,both'],
             'library' => ['package_name' => 'nullable|string', 'npm_url' => 'nullable|url'],
             'other' => ['live_url' => 'nullable|url'],
+            'webgl' => [
+                'webgl_url'   => 'nullable|url',
+                'webgl_build' => 'nullable|file|mimes:zip|max:102400', // 100MB zip
+            ],
             default => [],
         };
 
@@ -594,12 +696,203 @@ class ProjectController extends Controller
         ];
     }
 
+    /**
+     * Extract a WebGL zip build into storage/webgl/{projectId}/ and return the public path.
+     * Returns null on failure (logs the error).
+     */
+    private function extractWebGLBuild(\Illuminate\Http\UploadedFile $zip, int $projectId): ?string
+    {
+        $allowedExtensions = ['html','htm','js','mjs','wasm','data','json','css',
+                              'png','jpg','jpeg','gif','webp','svg','ico','txt','unityweb',
+                              'framework','loader','mem','symbols','br','gz',
+                              'mp3','mp4','ogg','wav','webm','m4a',
+                              'glb','gltf','bin','fbx','obj','mtl',
+                              'ttf','otf','woff','woff2',
+                              'atlas','xml','vert','frag'];
+        $maxFiles   = 500;
+        $maxBytes   = 200 * 1024 * 1024; // 200MB uncompressed
+
+        $za = new \ZipArchive();
+        if ($za->open($zip->getRealPath()) !== true) {
+            \Log::error('WebGL: failed to open zip', ['project_id' => $projectId]);
+            return null;
+        }
+
+        // Security + sanity checks before extracting anything
+        if ($za->count() > $maxFiles) {
+            $za->close();
+            \Log::error('WebGL: too many files in zip', ['count' => $za->count()]);
+            return null;
+        }
+
+        $hasIndex   = false;
+        $totalBytes = 0;
+        for ($i = 0; $i < $za->count(); $i++) {
+            $stat = $za->statIndex($i);
+            $name = $stat['name'];
+
+            // Block path traversal
+            if (str_contains($name, '..') || str_starts_with($name, '/')) {
+                $za->close();
+                \Log::error('WebGL: path traversal detected', ['name' => $name]);
+                return null;
+            }
+
+            // Skip directories
+            if (str_ends_with($name, '/')) continue;
+
+            // Check extension
+            $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+            if ($ext !== '' && !in_array($ext, $allowedExtensions, true)) {
+                $za->close();
+                \Log::error('WebGL: disallowed extension', ['name' => $name, 'ext' => $ext]);
+                return null;
+            }
+
+            $totalBytes += $stat['size'];
+            if ($totalBytes > $maxBytes) {
+                $za->close();
+                \Log::error('WebGL: uncompressed size exceeds limit');
+                return null;
+            }
+
+            // Accept index.html at root or one level deep
+            if (basename($name) === 'index.html') $hasIndex = true;
+        }
+
+        if (!$hasIndex) {
+            $za->close();
+            \Log::error('WebGL: no index.html found in zip', ['project_id' => $projectId]);
+            return null;
+        }
+
+        // Delete any previous build
+        Storage::disk('public')->deleteDirectory('webgl/' . $projectId);
+        Storage::disk('public')->makeDirectory('webgl/' . $projectId);
+
+        $destPath = Storage::disk('public')->path('webgl/' . $projectId);
+
+          // Extract everything as-is no assumptions about folder structure
+          $za->extractTo($destPath);
+          $za->close();
+
+          // Generate an .htaccess file in this directory to fix common 404 errors for Unity WebGL files (.wasm, .gz, .br) on Apache
+          $htaccessContent = <<<HTACCESS
+<IfModule mod_mime.c>
+  AddType application/wasm .wasm
+  AddType application/javascript .js
+  AddType application/octet-stream .data
+  AddEncoding gzip .gz
+  AddEncoding brotli .br
+</IfModule>
+
+<IfModule mod_headers.c>
+  # Fix for Unity WebGL throwing CSP 'eval' errors which leads to 404 asm.js fallback
+  Header set Content-Security-Policy "default-src 'self' 'unsafe-eval' 'unsafe-inline' data: blob:; script-src * 'unsafe-eval' 'unsafe-inline' data: blob:; connect-src * 'unsafe-eval' 'unsafe-inline' data: blob:; style-src * 'unsafe-inline'; worker-src * blob:;"
+
+<FilesMatch "\.wasm\.gz$">
+  Header set Content-Encoding gzip
+  ForceType application/wasm
+</FilesMatch>
+<FilesMatch "\.js\.gz$">
+  Header set Content-Encoding gzip
+  ForceType application/javascript
+</FilesMatch>
+<FilesMatch "\.data\.gz$">
+  Header set Content-Encoding gzip
+  ForceType application/octet-stream
+</FilesMatch>
+<FilesMatch "\.wasm\.br$">
+  Header set Content-Encoding brotli
+  ForceType application/wasm
+</FilesMatch>
+<FilesMatch "\.js\.br$">
+  Header set Content-Encoding brotli
+  ForceType application/javascript
+</FilesMatch>
+<FilesMatch "\.data\.br$">
+  Header set Content-Encoding brotli
+  ForceType application/octet-stream
+</FilesMatch>
+</IfModule>
+HTACCESS;
+          file_put_contents($destPath . DIRECTORY_SEPARATOR . '.htaccess', $htaccessContent);
+
+        // Find the shallowest index.html anywhere in the extracted tree
+        $indexPath = $this->findShallowIndex($destPath);
+        if (!$indexPath) {
+            \Log::error('WebGL: index.html not found after extraction', ['project_id' => $projectId]);
+            $this->deleteWebGLBuild($projectId);
+            return null;
+        }
+
+// Force rename to strictly lowercase "index.html" so the frontend URL matched perfectly on case-sensitive Linux servers
+          $indexDir = dirname($indexPath);
+          $baseName = basename($indexPath);
+          if ($baseName !== 'index.html') {
+              $newIndexPath = $indexDir . DIRECTORY_SEPARATOR . 'index.html';
+              rename($indexPath, $newIndexPath);
+              $indexPath = $newIndexPath;
+          }
+
+          // Store path relative to storage/app/public/
+          $destPathNormalized = str_replace('\\', '/', Storage::disk('public')->path('webgl/' . $projectId));
+          $indexDirNormalized = str_replace('\\', '/', $indexDir);
+
+          $storedPath = rtrim('webgl/' . $projectId . ($indexDirNormalized !== rtrim($destPathNormalized, '/')
+              ? '/' . ltrim(substr($indexDirNormalized, strlen(rtrim($destPathNormalized, '/'))), '/')
+              : ''), '/');
+
+        \Log::info('WebGL build extracted', ['project_id' => $projectId, 'index' => $indexPath, 'path' => $storedPath]);
+        return $storedPath;
+    }
+
+    private function deleteWebGLBuild(int $projectId): void
+    {
+        Storage::disk('public')->deleteDirectory('webgl/' . $projectId);
+    }
+
+    /**
+     * Recursively find the shallowest index.html under $dir.
+     * Returns the absolute path to index.html, or null if not found.
+     */
+    private function findShallowIndex(string $dir): ?string
+    {
+        $found = [];
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($dir, \RecursiveDirectoryIterator::SKIP_DOTS)
+        );
+        foreach ($iterator as $file) {
+            if (!$file->isFile()) continue;
+            if (strtolower($file->getFilename()) === 'index.html') {
+                $found[] = $file->getRealPath();
+            }
+        }
+        if (empty($found)) return null;
+        // Return the shallowest one (fewest path segments)
+        usort($found, fn($a, $b) => substr_count($a, DIRECTORY_SEPARATOR) <=> substr_count($b, DIRECTORY_SEPARATOR));
+        return $found[0];
+    }
+
+    private function deleteDirectory(string $path): void
+    {
+        if (!is_dir($path)) return;
+        $files = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($path, \RecursiveDirectoryIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::CHILD_FIRST
+        );
+        foreach ($files as $file) {
+            $file->isDir() ? rmdir($file->getRealPath()) : unlink($file->getRealPath());
+        }
+        rmdir($path);
+    }
+
     private function extractMetadata(Request $request)
     {
         $metadata = [];
         
         // URL fields - sanitize and validate
-        $urlFields = ['live_url', 'github_url', 'npm_url'];
+        $urlFields = ['live_url', 'github_url', 'npm_url', 'webgl_url'];
         foreach ($urlFields as $field) {
             if ($request->has($field)) {
                 $val = $request->input($field);

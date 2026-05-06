@@ -8,7 +8,8 @@
     "logout": "Wyloguj się",
     "dark_mode": "Tryb ciemny",
     "light_mode": "Tryb jasny",
-    "my_profile": "Mój profil"
+    "my_profile": "Mój profil",
+    "guide": "Poradnik"
   },
   "common": {
     "loading": "Ładowanie...",
@@ -110,7 +111,9 @@
     "current_password_label": "Aktualne hasło",
     "new_password_label": "Nowe hasło",
     "confirm_password_label": "Potwierdź nowe hasło",
-    "save_password_btn": "Zmień hasło"
+    "save_password_btn": "Zmień hasło",
+    "remove_avatar_btn": "Usuń avatar",
+    "remove_avatar_success": "Avatar usunięty. Ponownie wyświetlane są inicjały."
   },
   "filter": {
     "title": "Filtruj projekty",
@@ -125,7 +128,8 @@
     "all_subjects": "Wszystkie przedmioty",
     "all": "Wszystkie",
     "my_projects_btn": "Moje projekty",
-    "all_projects_btn": "Wszystkie projekty"
+    "all_projects_btn": "Wszystkie projekty",
+    "select_school_type_first": "Najpierw wybierz typ szkoły"
   },
   "school_types": {
     "zs": "Szkoła podstawowa",
@@ -138,7 +142,8 @@
     "web_app": "Aplikacja web",
     "mobile_app": "Aplikacja mobilna",
     "library": "Biblioteka",
-    "other": "Inne"
+    "other": "Inne",
+    "webgl": "Gra WebGL"
   },
   "subjects": {
     "all": "Wszystkie przedmioty",
@@ -237,7 +242,7 @@
   },
   "landing": {
     "title": "Portal projektów",
-    "desc": "Musisz się zalogować, aby przeglądać projekty i korzystać z funkcji portalu.",
+    "desc": "Przeglądaj, filtruj i pobieraj projekty studentów bez logowania.",
     "login_btn": "Zaloguj się",
     "guest_btn": "Kontynuuj jako gość",
     "register_btn": "Zarejestruj się"
@@ -256,6 +261,8 @@
     "rate_title": "Oceń {n} / 5",
     "views_label": "odsłon",
     "video_section": "Wideo",
+    "no_video_label": "Brak wideo",
+    "no_video_hint": "Brak dostępnego wideo dla tego projektu — wyświetlany jest obraz powitalny.",
     "description_section": "Opis",
     "project_section": "Projekt",
     "team_members_section": "Członkowie zespołu",
@@ -283,7 +290,10 @@
     "already_rated_desc": "Ten projekt został już przez Ciebie oceniony.",
     "not_found": "Projekt nie został znaleziony.",
     "id_missing": "Brak ID projektu.",
-    "load_error": "Błąd podczas ładowania projektu."
+    "load_error": "Błąd podczas ładowania projektu.",
+    "webgl_section": "Gra WebGL",
+    "webgl_play": "Graj w przeglądarce",
+    "webgl_open": "Otwórz w nowej karcie"
   },
   "add_project": {
     "add_title": "Dodaj nowy projekt",
@@ -375,13 +385,30 @@
     "choose_folder_btn": "Wybierz folder (maks. 20MB)",
     "choose_apk_btn": "Wybierz APK",
     "choose_ios_btn": "Wybierz build iOS",
-    "export_hint": "ZIP, RAR, EXE, APK lub IPA \u2022 Maks. rozmiar: 500MB",
+    "export_hint": "ZIP, RAR, EXE, APK lub IPA • Maks. rozmiar: 500MB",
     "apk_label": "Plik APK",
     "ios_label": "Build iOS",
     "tech_stack_hint": "(oddzielone przecinkami)",
     "tech_stack_hint_semi": "(oddzielone przecinkami lub ;)",
     "response_error": "Błąd odpowiedzi",
-    "response_error_desc": "Serwer zwrócił nieprawidłową odpowiedź. Spróbuj ponownie."
+    "response_error_desc": "Serwer zwrócił nieprawidłową odpowiedź. Spróbuj ponownie.",
+    "add_subtitle": "Wypełnij szczegóły i opublikuj swój projekt na portalu.",
+    "edit_subtitle": "Zaktualizuj informacje o projekcie.",
+    "basic_section": "Podstawowe informacje",
+    "media_section": "Media",
+    "required_note": "Pola oznaczone * są wymagane.",
+    "webgl_source_label": "Jak wyświetlić grę",
+    "webgl_mode_build": "Wgraj build",
+    "webgl_mode_url": "Zewnętrzny adres URL",
+    "webgl_build_label": "Build WebGL (archiwum ZIP)",
+    "webgl_build_btn": "Wybierz plik",
+    "webgl_build_hint": "Prześlij archiwum ZIP zawierające wyeksportowany build WebGL. Archiwum musi zawierać plik index.html. Maks. rozmiar: 100 MB.",
+    "webgl_url_label": "Adres URL gry WebGL",
+    "webgl_url_hint": "Adres URL pod którym hostowana jest gra. Zostanie umieszczona bezpośrednio na portalu.",
+    "missing_desc_title": "Opis jest zbyt krótki",
+    "missing_desc_desc": "Opis musi zawierać co najmniej 10 słów.",
+    "missing_splash_title": "Brakująca miniatura projektu",
+    "missing_splash_desc": "Prześlij plakat/miniaturę dla projektu. Wyświetla się na karcie projektu."
   },
   "admin": {
     "title": "Panel admina",
@@ -450,5 +477,22 @@
     "next": "Następna strona",
     "page_of": "Strona {current} z {total}",
     "rating_aria": "Ocena"
+  },
+  "guide": {
+    "guest_title": "Poradnik dla gości",
+    "user_title": "Poradnik dla użytkowników",
+    "guest_steps": [
+      "Przeglądaj projekty na stronie głównej. Użyj filtrów, aby wyszukiwać według typu, szkoły lub przedmiotu.",
+      "Kliknij na kartę projektu, aby zobaczyć szczegóły, opis, film i pliki do pobrania.",
+      "Oceń projekt, klikając gwiazdkę (1 ocena na projekt).",
+      "Zaloguj się lub zarejestruj, aby uzyskać pełny dostęp."
+    ],
+    "user_steps": [
+      "Zarejestruj się, zweryfikuj e-mail i zaloguj się.",
+      "Utwórz zespół (jako Scrum Master) lub dołącz do istniejącego za pomocą kodu zaproszenia.",
+      "Jako Scrum Master: kliknij \"Dodaj projekt\", aby opublikować projekt swojego zespołu.",
+      "Przeglądaj i oceniaj projekty innych zespołów.",
+      "Zarządzaj kontem, klikając awatar w prawym górnym rogu."
+    ]
   }
 }

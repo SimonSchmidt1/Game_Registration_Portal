@@ -8,7 +8,8 @@
     "logout": "Odhlásit se",
     "dark_mode": "Tmavý režim",
     "light_mode": "Světlý režim",
-    "my_profile": "Můj profil"
+    "my_profile": "Můj profil",
+    "guide": "Návod"
   },
   "common": {
     "loading": "Načítám...",
@@ -110,7 +111,9 @@
     "current_password_label": "Aktuální heslo",
     "new_password_label": "Nové heslo",
     "confirm_password_label": "Potvrdit nové heslo",
-    "save_password_btn": "Změnit heslo"
+    "save_password_btn": "Změnit heslo",
+    "remove_avatar_btn": "Odebrat avatar",
+    "remove_avatar_success": "Avatar byl odstraněn. Znovu se zobrazují iniciály."
   },
   "filter": {
     "title": "Filtrovat projekty",
@@ -125,7 +128,8 @@
     "all_subjects": "Všechny předměty",
     "all": "Vše",
     "my_projects_btn": "Moje projekty",
-    "all_projects_btn": "Všechny projekty"
+    "all_projects_btn": "Všechny projekty",
+    "select_school_type_first": "Nejprve vyberte typ školy"
   },
   "school_types": {
     "zs": "Základní škola (ZŠ)",
@@ -138,7 +142,8 @@
     "web_app": "Webová aplikace",
     "mobile_app": "Mobilní aplikace",
     "library": "Knihovna",
-    "other": "Jiné"
+    "other": "Jiné",
+    "webgl": "WebGL Hra"
   },
   "subjects": {
     "all": "Všechny předměty",
@@ -237,7 +242,7 @@
   },
   "landing": {
     "title": "Portál projektů",
-    "desc": "Pro zobrazení projektů a funkcí portálu se musíte přihlásit.",
+    "desc": "Prohlížejte, filtrujte a stahujte studentské projekty bez přihlášení.",
     "login_btn": "Přihlásit se",
     "guest_btn": "Pokračovat jako host",
     "register_btn": "Registrovat se"
@@ -256,6 +261,8 @@
     "rate_title": "Ohodnotit {n} / 5",
     "views_label": "zobrazení",
     "video_section": "Video",
+    "no_video_label": "Bez videa",
+    "no_video_hint": "Pro tento projekt není dostupné video — zobrazen je náhledový obrázek.",
     "description_section": "Popis",
     "project_section": "Projekt",
     "team_members_section": "Členové týmu",
@@ -283,7 +290,10 @@
     "already_rated_desc": "Tento projekt jste již ohodnotili.",
     "not_found": "Projekt nebyl nalezen.",
     "id_missing": "Chybí ID projektu.",
-    "load_error": "Chyba při načítání projektu."
+    "load_error": "Chyba při načítání projektu.",
+    "webgl_section": "WebGL Hra",
+    "webgl_play": "Hrát v prohlížeči",
+    "webgl_open": "Otevřít novém okně"
   },
   "add_project": {
     "add_title": "Přidat nový projekt",
@@ -375,13 +385,30 @@
     "choose_folder_btn": "Vybrat složku (max. 20MB)",
     "choose_apk_btn": "Vybrat APK",
     "choose_ios_btn": "Vybrat iOS build",
-    "export_hint": "ZIP, RAR, EXE, APK nebo IPA \u2022 Max. velikost: 500MB",
+    "export_hint": "ZIP, RAR, EXE, APK nebo IPA • Max. velikost: 500MB",
     "apk_label": "APK soubor",
     "ios_label": "iOS build",
     "tech_stack_hint": "(odděleno čárkou)",
     "tech_stack_hint_semi": "(odděleno čárkou nebo ;)",
     "response_error": "Chyba odpovědi",
-    "response_error_desc": "Server vrátil neplatnou odpověď. Zkuste to znovu."
+    "response_error_desc": "Server vrátil neplatnou odpověď. Zkuste to znovu.",
+    "add_subtitle": "Vyplňte detaily a publikujte svůj projekt na portálu.",
+    "edit_subtitle": "Aktualizujte informace o projektu.",
+    "basic_section": "Základní informace",
+    "media_section": "Média",
+    "required_note": "Pole označená * jsou povinná.",
+    "webgl_source_label": "Jak hru zobrazit",
+    "webgl_mode_build": "Nahrát build",
+    "webgl_mode_url": "Externí URL",
+    "webgl_build_label": "WebGL build (ZIP archiv)",
+    "webgl_build_btn": "Vybrat soubor",
+    "webgl_build_hint": "Nahrajte ZIP archiv s exportovaným WebGL buildem. Archiv musí obsahovat index.html. Max velikost: 100 MB.",
+    "webgl_url_label": "URL adresa WebGL hry",
+    "webgl_url_hint": "Adresa, kde je hra hostována. Bude vložena přímo do portálu.",
+    "missing_desc_title": "Popis je příliš krátký",
+    "missing_desc_desc": "Popis musí obsahovat alespoň 10 slov.",
+    "missing_splash_title": "Chybí náhled projektu",
+    "missing_splash_desc": "Nahrajte plakát (thumbnail) pro projekt. Bude zobrazen na kartě projektu."
   },
   "admin": {
     "title": "Admin panel",
@@ -450,5 +477,22 @@
     "next": "Další stránka",
     "page_of": "Stránka {current} z {total}",
     "rating_aria": "Hodnocení"
+  },
+  "guide": {
+    "guest_title": "Návod pro hosty",
+    "user_title": "Návod pro uživatele",
+    "guest_steps": [
+      "Procházej projekty na domovské stránce. Použij filtry pro vyhledání podle typu, školy nebo předmětu.",
+      "Klikni na kartu projektu a zobraz detail, popis, video a soubory ke stažení.",
+      "Ohodnoť projekt kliknutím na hvězdu (1 hodnocení na projekt).",
+      "Přihlas se nebo zaregistruj pro plný přístup."
+    ],
+    "user_steps": [
+      "Zaregistruj se, ověř e-mail a přihlas se.",
+      "Vytvoř tým (jako Scrum Master) nebo se přidej pomocí pozývacího kódu.",
+      "Jako Scrum Master: klikni na \"Přidat projekt\" a zveřejni projekt svého týmu.",
+      "Procházej a hodnoť projekty ostatních týmů.",
+      "Spravuj účet kliknutím na avatar vpravo nahoře."
+    ]
   }
 }

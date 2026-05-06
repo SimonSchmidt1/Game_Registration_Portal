@@ -1,0 +1,32 @@
+sequenceDiagram
+    autonumber
+    actor U as Používateľ (Scrum Master)
+    participant F as Frontend (Vue 3 SPA)
+    participant C as ProjectController
+    participant S as ProjectService
+    participant FS as Lokálne úložisko (Storage)
+    participant DB as Databáza (MySQL)
+
+    U->>F: Vyplnenie údajov projektu + súbory
+    F->>C: POST /api/projects (FormData)
+    activate C
+    C->>C: Validácia FormRequest (MIME typy, max veľkosti)
+    C->>S: createProject(User, DTO + Súbory)
+    activate S
+    
+    S->>DB: Kontrola: Tím existuje? Je SC Master?
+    DB-->>S: Áno (Autorizácia úspešná)
+    
+    S->>FS: Uloženie Uploadov (Video, Source, Exports, Splash)
+    FS-->>S: Návrat lokálnych relatívnych ciest (paths)
+    
+    S->>DB: BEGIN TRANSACTION
+    S->>DB: INSERT do tabuľky PROJECTS
+    DB-->>S: Inštancia Project
+    S->>DB: COMMIT
+    
+    S-->>C: ProjectResource (Dáta úspešne uložené)
+    deactivate S
+    C-->>F: 201 Created (Koniec procesu)
+    deactivate C
+    F-->>U: Zobrazenie detailu pre nový projekt

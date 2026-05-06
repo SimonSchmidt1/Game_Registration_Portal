@@ -13,17 +13,17 @@ import it from './locales/it.json'
 import nl from './locales/nl.json'
 
 export const SUPPORTED_LOCALES = [
-  { code: 'sk', label: 'Slovenčina', flag: '🇸🇰' },
-  { code: 'en', label: 'English',    flag: '🇬🇧' },
-  { code: 'cs', label: 'Čeština',    flag: '🇨🇿' },
-  { code: 'pl', label: 'Polski',     flag: '🇵🇱' },
-  { code: 'hu', label: 'Magyar',     flag: '🇭🇺' },
-  { code: 'de', label: 'Deutsch',    flag: '🇩🇪' },
-  { code: 'fr', label: 'Français',   flag: '🇫🇷' },
-  { code: 'it', label: 'Italiano',   flag: '🇮🇹' },
-  { code: 'es', label: 'Español',    flag: '🇪🇸' },
-  { code: 'pt', label: 'Português',  flag: '🇵🇹' },
-  { code: 'nl', label: 'Nederlands', flag: '🇳🇱' },
+  { code: 'sk', label: 'Slovenčina', country: 'sk' },
+  { code: 'en', label: 'English',    country: 'gb' },
+  { code: 'cs', label: 'Čeština',    country: 'cz' },
+  { code: 'pl', label: 'Polski',     country: 'pl' },
+  { code: 'hu', label: 'Magyar',     country: 'hu' },
+  { code: 'de', label: 'Deutsch',    country: 'de' },
+  { code: 'fr', label: 'Français',   country: 'fr' },
+  { code: 'it', label: 'Italiano',   country: 'it' },
+  { code: 'es', label: 'Español',    country: 'es' },
+  { code: 'pt', label: 'Português',  country: 'pt' },
+  { code: 'nl', label: 'Nederlands', country: 'nl' },
 ]
 
 const LOCALE_CODES = SUPPORTED_LOCALES.map(l => l.code)

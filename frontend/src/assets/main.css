@@ -2,6 +2,47 @@
 @tailwind components;
 @tailwind utilities;
 
+html.scroll-locked,
+body.scroll-locked {
+  overflow: hidden !important;
+  touch-action: none;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   GLOBAL BACK BUTTON — use class="back-btn" everywhere
+   ═══════════════════════════════════════════════════════════ */
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 14px 6px 10px;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+}
+
+.back-btn:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  background: rgba(var(--color-accent-rgb), 0.06);
+}
+
+.back-btn i {
+  font-size: 0.75rem;
+  transition: transform 0.15s;
+}
+
+.back-btn:hover i {
+  transform: translateX(-2px);
+}
+
 /* ═══════════════════════════════════════════════════════════
    THEME TOKENS (default: dark)
    ═══════════════════════════════════════════════════════════ */
@@ -136,6 +177,82 @@ video {
   background: var(--color-surface);
   color: var(--color-text-subtle);
   position: relative;
+}
+
+.footer-inner {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+}
+
+.footer-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.footer-logo {
+  height: 40px;
+  width: auto;
+  object-fit: contain;
+  opacity: 0.9;
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
+}
+
+.footer-desc {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  opacity: 0.55;
+  line-height: 1.65;
+  max-width: 380px;
+  margin: 0;
+}
+
+.footer-divider {
+  width: 40px;
+  height: 1px;
+  background: var(--color-accent);
+  opacity: 0.4;
+  border-radius: 1px;
+}
+
+.footer-uni {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.footer-uni-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  opacity: 0.7;
+  margin: 0;
+}
+
+.footer-uni-sub {
+  font-size: 0.76rem;
+  color: var(--color-text-muted);
+  opacity: 0.45;
+  margin: 0;
+}
+
+.footer-copy {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  opacity: 0.3;
+  margin: 0;
+  padding-top: 4px;
+}
+
+@media (max-width: 640px) {
+  .footer-inner { padding: 16px 20px; }
 }
 .app-footer::before {
   content: '';
@@ -494,6 +611,53 @@ html[data-theme='light'] .border-slate-700\/30 { border-color: rgba(var(--color-
 .p-select .p-select-label,
 .p-dropdown .p-dropdown-label {
   background: transparent !important;
+}
+
+/* Dropdown filter input (search box inside dropdown popup)
+   The popup is teleported to <body>, so theme-class scoping
+   doesn't reach it — these rules use CSS variables which
+   auto-adapt to light / dark theme. */
+.p-dropdown-panel .p-dropdown-header,
+.p-select-overlay .p-select-header,
+.p-multiselect-panel .p-multiselect-header,
+.p-multiselect-overlay .p-multiselect-header {
+  background: var(--color-surface) !important;
+  border-bottom: 1px solid var(--color-border) !important;
+}
+
+.p-dropdown-panel .p-dropdown-filter,
+.p-dropdown-panel input.p-dropdown-filter,
+.p-select-overlay .p-select-filter,
+.p-select-overlay input.p-select-filter,
+.p-multiselect-panel .p-multiselect-filter,
+.p-multiselect-overlay .p-multiselect-filter {
+  background: var(--color-bg) !important;
+  color: var(--color-text) !important;
+  border: 1px solid var(--color-border) !important;
+  caret-color: var(--color-text) !important;
+}
+
+.p-dropdown-panel .p-dropdown-filter::placeholder,
+.p-select-overlay .p-select-filter::placeholder,
+.p-multiselect-panel .p-multiselect-filter::placeholder,
+.p-multiselect-overlay .p-multiselect-filter::placeholder {
+  color: var(--color-text-muted) !important;
+  opacity: 0.85;
+}
+
+.p-dropdown-panel .p-dropdown-filter:focus,
+.p-select-overlay .p-select-filter:focus,
+.p-multiselect-panel .p-multiselect-filter:focus,
+.p-multiselect-overlay .p-multiselect-filter:focus {
+  outline: none !important;
+  border-color: var(--color-accent) !important;
+  box-shadow: 0 0 0 2px rgba(var(--color-accent-rgb), 0.2) !important;
+}
+
+/* Filter container icon (magnifier / clear) */
+.p-dropdown-panel .p-dropdown-filter-icon,
+.p-select-overlay .p-select-filter-icon {
+  color: var(--color-text-muted) !important;
 }
 
 /* ═══════════════════════════════════════════════════════════

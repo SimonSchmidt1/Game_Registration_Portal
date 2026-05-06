@@ -14,11 +14,12 @@
 
         <div class="auth-field">
           <label class="auth-label">Email (UCM študentský)</label>
-          <InputText 
-            v-model="email" 
-            type="email" 
-            class="dlg-input" 
+          <InputText
+            v-model="email"
+            type="email"
+            class="dlg-input"
             placeholder="1234567@ucm.sk"
+            @input="email = email.trim()"
             pattern="[0-9]{7}@ucm\.sk"
             title="Email musí byť v tvare: 7 číslic@ucm.sk (napr. 1234567@ucm.sk)"
             required 
@@ -289,16 +290,10 @@ async function register() {
       student_type: studentType.value
     })
 
-    // Toast upozornenie
-    toast.add({ 
-      severity: 'success', 
-      summary: t('toast.success'), 
-      detail: response.data.message || 'Skontrolujte e-mail a dokončite overenie.', 
-      life: 5000 
-    })
-
-    // Redirect to verify-email page (not home, since user has no token yet)
-    redirectTimer = setTimeout(() => router.push('/verify-email'), 2000)
+    // Redirect immediately to verify-email page.
+    // If the account existed but was unverified, server re-sends the token and flags resent=true.
+    const resent = response.data?.resent === true
+    router.push(`/verify-email?email=${encodeURIComponent(email.value)}${resent ? '&resent=true' : ''}`)
 
   } catch (error) {
     const errorMessage = error.response?.data?.errors 

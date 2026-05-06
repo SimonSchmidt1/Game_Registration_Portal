@@ -1,0 +1,35 @@
+sequenceDiagram
+    autonumber
+    actor U as Používateľ
+    participant F as Frontend (Vue 3 SPA)
+    participant C as AuthController
+    participant S as AuthService
+    participant DB as Databáza (MySQL)
+    participant M as Mail Server (SMTP)
+
+    U->>F: Vyplnenie registračného formulára
+    F->>C: POST /api/register (email, heslo, meno)
+    activate C
+    C->>C: Validácia vstupov a formátu (@ucm.sk)
+    C->>S: register(DTO Dáta)
+    activate S
+    S->>DB: Vytvorenie používateľa s verification_token
+    DB-->>S: Inštancia modelu User
+    S->>M: Odoslanie verifikačného emailu
+    M-->>U: Doručenie emailu s overovacím odkazom
+    S-->>C: Úspech (Void)
+    deactivate S
+    C-->>F: 201 Created (JSON Response)
+    deactivate C
+    F-->>U: Zobrazenie inštrukcií k overeniu emailu
+
+    U->>F: Kliknutie na verifikačný odkaz
+    F->>C: POST /api/verify-email (token)
+    activate C
+    C->>S: verifyToken(token)
+    S->>DB: Zápis timestampu do email_verified_at
+    DB-->>S: Úspech (záznam aktualizovaný)
+    S-->>C: Odozva s úspechom
+    C-->>F: 200 OK (JSON Response)
+    deactivate C
+    F-->>U: Presmerovanie na prihlasovacie okno

@@ -3,27 +3,56 @@
         Options -MultiViews -Indexes
     </IfModule>
 
+    Options +FollowSymLinks
+
     RewriteEngine On
 
-    # Handle Authorization Header
+    # Handle Authorization / CSRF Headers
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
-
-    # Handle X-XSRF-Token Header
     RewriteCond %{HTTP:x-xsrf-token} .
     RewriteRule .* - [E=HTTP_X_XSRF_TOKEN:%{HTTP:X-XSRF-Token}]
 
-    # Redirect Trailing Slashes If Not A Folder...
+    # Redirect Trailing Slashes If Not A Folder
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_URI} (.+)/$
     RewriteRule ^ %1 [L,R=301]
 
-    # Force storage requests through Laravel for byte-range support
+    # IF the request is for a real file (like an image in /storage or WebGL file), serve it directly
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^ - [L]
+
+    # IF the request is for /api, /sanctum, /video, or /storage, send directly to Laravel (index.php)
+    RewriteCond %{REQUEST_URI} ^/api/ [OR]
+    RewriteCond %{REQUEST_URI} ^/sanctum/ [OR]
+    RewriteCond %{REQUEST_URI} ^/video/ [OR]
     RewriteCond %{REQUEST_URI} ^/storage/
     RewriteRule ^ index.php [L]
 
-    # Send Requests To Front Controller...
+    # OTHERWISE (Vue frontend routing), if it's not a real folder, load index.html
     RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteRule ^ index.php [L]
+    RewriteRule ^ index.html [L]
+
+    # Set priority
+    DirectoryIndex index.html index.php
+</IfModule>
+
+# ── Unity WebGL MIME types ───────────────────────────────────
+<IfModule mod_mime.c>
+    AddType application/wasm                    .wasm
+    AddType application/octet-stream            .unityweb .data
+    AddType application/javascript              .js .mjs
+    AddType text/html                           .html .htm
+
+    # Brotli-compressed Unity files
+    AddEncoding br                              .br
+    AddType application/wasm                   .wasm.br
+    AddType application/octet-stream           .data.br .unityweb.br
+    AddType application/javascript             .js.br .framework.js.br .loader.js.br
+
+    # Gzip-compressed Unity files
+    AddEncoding gzip                            .gz
+    AddType application/wasm                   .wasm.gz
+    AddType application/octet-stream           .data.gz .unityweb.gz
+    AddType application/javascript             .js.gz .framework.js.gz .loader.js.gz
 </IfModule>

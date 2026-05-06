@@ -16,13 +16,12 @@
       <form class="auth-form" @submit.prevent="showTemporaryLogin ? loginWithTemporaryPassword() : (isAdminEmail(email) ? adminLogin() : login())">
         <div class="auth-field">
           <label class="auth-label">{{ t('auth.email_label') }}</label>
-          <InputText 
-            v-model="email" 
-            :type="isAdminEmail(email) ? 'text' : 'email'" 
-            class="dlg-input" 
-            placeholder="1234567@ucm.sk"
-            :pattern="isAdminEmail(email) ? undefined : '[0-9]{7}@ucm\\.sk'"
-            :title="isAdminEmail(email) ? 'Admin email - žiadne obmedzenia formátu' : 'Email musí byť v tvare: 7 číslic@ucm.sk (napr. 1234567@ucm.sk)'"
+          <InputText
+            v-model="email"
+            :type="isAdminEmail(email) ? 'text' : 'email'"
+            class="dlg-input"
+             placeholder="napr. 1234567@ucm.sk"
+            @input="email = email.trim()"
             required 
           />
           <span v-if="isAdminEmail(email)" class="auth-hint auth-hint-accent">{{ t('auth.admin_detected') }}</span>
@@ -341,7 +340,7 @@ async function login() {
     })
 
     // Redirect after user data is loaded
-    router.push('/')
+    router.push('/home')
 
   } catch (error) {
     const data = error.response?.data || {}
@@ -352,6 +351,17 @@ async function login() {
     console.log('Response data keys:', Object.keys(data))
     console.log('verification_resent:', data.verification_resent)
     console.log('temporary_password_sent:', data.temporary_password_sent)
+
+    // Account deactivated by admin
+    if (status === 403 && data.account_inactive) {
+      toast.add({
+        severity: 'error',
+        summary: 'Účet deaktivovaný',
+        detail: 'Nemôžete sa prihlásiť. Váš účet bol deaktivovaný administrátorom.',
+        life: 0
+      })
+      return
+    }
 
     // Email not verified - block login
     if (status === 403 && data.requires_verification) {
@@ -388,7 +398,7 @@ async function login() {
         toast.add({
           severity: 'info',
           summary: 'Dočasné heslo odoslané',
-          detail: data.message || 'Poslali sme ti e-mail s dočasným heslom. Skontroluj si schránku (vrátane priečinka SPAM).',
+          detail: data.message || 'Poslali sme vám e-mail s dočasným heslom. Skontrolujte si schránku (vrátane priečinka SPAM).',
           life: 7000
         })
         showTemporaryLogin.value = true
@@ -489,15 +499,15 @@ async function loginWithTemporaryPassword() {
       toast.add({
         severity: 'warn',
         summary: 'Odporúčame',
-        detail: 'Zmeň si heslo v nastaveniach profilu',
+        detail: 'Zmeňte si heslo v nastaveniach profilu',
         life: 6000,
       })
     }
 
-    router.push('/')
+    router.push('/home')
   } catch (error) {
     const data = error.response?.data || {}
-    
+
     toast.add({
       severity: 'error',
       summary: 'Chyba',
@@ -544,7 +554,7 @@ async function adminLogin() {
     })
 
     // Redirect after user data is loaded
-    router.push('/')
+    router.push('/admin')
   } catch (error) {
     const data = error.response?.data || {}
     const status = error.response?.status

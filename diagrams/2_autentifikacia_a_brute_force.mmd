@@ -1,0 +1,41 @@
+sequenceDiagram
+    autonumber
+    actor U as Používateľ
+    participant F as Frontend (Vue 3 SPA)
+    participant C as AuthController
+    participant S as AuthService
+    participant DB as Databáza (MySQL)
+    participant M as Mail Server (SMTP)
+
+    U->>F: Zadanie prihlasovacích údajov
+    F->>C: POST /api/login (email, heslo)
+    activate C
+    C->>S: attemptLogin(email, heslo)
+    activate S
+    S->>DB: Vyhľadanie používateľa a verifikácia hash-u
+    
+    alt Úspešné prihlásenie
+        DB-->>S: Validný Hash
+        S->>DB: Reset failed_login_attempts na 0
+        S->>S: Vygenerovanie Sanctum Tokenu
+        S-->>C: Objekt Používateľ + Token
+        C-->>F: 200 OK (User + Bearer Token)
+        F->>F: Uloženie tokenu a nastavenie Axios interceptoru
+        F-->>U: Presmerovanie na Dashboard
+    else Nesprávne heslo (< 5 pokusov)
+        DB-->>S: Heslo sa nezhoduje
+        S->>DB: Inkrementácia failed_login_attempts
+        S-->>C: Výnimka (Nesprávne heslo)
+        C-->>F: 401 Unauthorized (Zostávajúce pokusy)
+        F-->>U: Zobrazenie chyby
+    else Nesprávne heslo (5. pokus)
+        DB-->>S: Heslo sa nezhoduje
+        S->>DB: Inkrementácia failov = 5, vygenerovanie temp hesla
+        S->>M: Odoslanie jednorazového hesla
+        M-->>U: Doručenie emailu s dočasným heslom
+        S-->>C: Zablokované pre štandardné heslo
+        C-->>F: 401 Unauthorized (Zadajte dočasné heslo z emailu)
+        F-->>U: Zobrazenie formulára pre jednorazové heslo
+    end
+    deactivate S
+    deactivate C

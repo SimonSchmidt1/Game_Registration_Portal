@@ -13,9 +13,7 @@
             v-model="email" 
             type="email" 
             class="dlg-input" 
-            placeholder="1234567@ucm.sk"
-            pattern="[0-9]{7}@ucm\.sk"
-            title="Email musí byť v tvare: 7 číslic@ucm.sk"
+            placeholder="email (napr. 1234567@ucm.sk)"
             required
             :disabled="loading"
           />
@@ -104,7 +102,7 @@ async function sendResetLink() {
       toast.add({
         severity: 'success',
         summary: t('toast.success'),
-        detail: 'Skontroluj svoju schránku',
+        detail: 'Skontrolujte si schránku',
         life: 5000,
       })
     } else {
@@ -119,7 +117,7 @@ async function sendResetLink() {
     toast.add({
       severity: 'error',
       summary: t('common.network_error'),
-      detail: 'Skontroluj pripojenie',
+      detail: 'Skontrolujte pripojenie',
       life: 4000,
     })
   } finally {
@@ -144,7 +142,7 @@ async function resendResetLink() {
       toast.add({
         severity: 'success',
         summary: t('toast.success'),
-        detail: 'Odoslali sme nový email na reset hesla. Skontroluj schránku (aj SPAM).',
+        detail: 'Odoslali sme nový e-mail na reset hesla. Skontrolujte schránku (aj SPAM).',
         life: 5000,
       })
       // Start a cooldown to match backend throttle (at least 60s)
@@ -169,7 +167,7 @@ async function resendResetLink() {
     toast.add({
       severity: 'error',
       summary: t('common.network_error'),
-      detail: 'Skontroluj pripojenie',
+      detail: 'Skontrolujte pripojenie',
       life: 4000,
     })
   } finally {

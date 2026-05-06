@@ -1,0 +1,1 @@
+<?php $projectId = 2; $destPathNormalized = "/web/storage/webgl/2"; $indexDirNormalized = "/web/storage/webgl/2/Build_Dir"; $storedPath = "webgl/" . $projectId . ($indexDirNormalized !== rtrim($destPathNormalized, "/") ? "/" . ltrim(substr($indexDirNormalized, strlen(rtrim($destPathNormalized, "/"))), "/") : ""); echo $storedPath . "\n";

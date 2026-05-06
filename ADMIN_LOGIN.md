@@ -96,6 +96,16 @@ The admin user is automatically created on first successful login with these def
 - **Email Verified**: Automatically set to current timestamp
 - **Failed Login Attempts**: 0
 
+## Admin Panel Access
+
+After successful admin login, admins can access the Admin Panel at `/admin`. The panel provides comprehensive controls over:
+- Team management (view, create, edit, delete, approve/reject)
+- User management (register, move between teams)
+- Project management (view, edit, delete)
+- Team member management (remove, change Scrum Master, move users)
+
+See `ADMIN_TEAM_MANAGEMENT.md` and `ADMIN_USER_MANAGEMENT.md` for detailed documentation.
+
 ## Token Expiration
 
 - **Regular Users**: 2 hours

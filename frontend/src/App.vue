@@ -6,8 +6,16 @@
       <router-view />
     </main>
 
-    <footer ref="footerEl" class="app-footer py-5 text-center">
-      <p class="text-sm">© 2026 Portál Projektov &mdash; UCM</p>
+    <footer ref="footerEl" class="app-footer">
+      <div class="footer-inner">
+
+        <!-- University info -->
+        <div class="footer-uni">
+          <p class="footer-uni-name">Univerzita sv. Cyrila a Metoda v Trnave</p>
+          <p class="footer-uni-sub">Fakulta prírodných vied &nbsp;·&nbsp; Nám. J. Herdu 2, 917 01 Trnava</p>
+        </div>
+
+      </div>
     </footer>
   </div>
 </template>
@@ -35,67 +43,62 @@ function onScroll() {
 const INACTIVITY_TIMEOUT = 5 * 60 * 1000 // 5 minutes in milliseconds
 let inactivityTimer = null
 
-const resetInactivityTimer = () => {
-  // Clear existing timer
-  if (inactivityTimer) {
-    clearTimeout(inactivityTimer)
-  }
-
-  // Only set timer if user is logged in
-  const token = localStorage.getItem('access_token')
-  if (!token) {
-    return
-  }
-
-  // Set new timer
-  inactivityTimer = setTimeout(() => {
-    logout()
-  }, INACTIVITY_TIMEOUT)
-}
-
 const logout = () => {
-  // Clear stored data
   localStorage.removeItem('access_token')
   localStorage.removeItem('user')
-  
-  // Show notification
+  localStorage.removeItem('last_activity')
+  window.dispatchEvent(new Event('logout'))
   toast.add({
     severity: 'warn',
     summary: 'Automatické odhlásenie',
     detail: 'Boli ste odhlásení kvôli neaktivite.',
     life: 5000
   })
-
-  // Redirect to login
   router.push('/login')
+}
+
+const checkInactivity = () => {
+  if (!localStorage.getItem('access_token')) return
+  const last = parseInt(localStorage.getItem('last_activity') || '0', 10)
+  if (last && Date.now() - last >= INACTIVITY_TIMEOUT) {
+    logout()
+  }
+}
+
+const resetInactivityTimer = () => {
+  if (!localStorage.getItem('access_token')) return
+  localStorage.setItem('last_activity', Date.now().toString())
+  clearTimeout(inactivityTimer)
+  inactivityTimer = setTimeout(logout, INACTIVITY_TIMEOUT)
+}
+
+const onVisibilityChange = () => {
+  if (document.visibilityState === 'visible') {
+    checkInactivity()
+    if (localStorage.getItem('access_token')) {
+      resetInactivityTimer()
+    }
+  }
 }
 
 const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click']
 
 onMounted(() => {
-  // Set initial timer
+  // Check if already expired from a previous closed tab
+  checkInactivity()
+
   resetInactivityTimer()
 
-  // Add event listeners for user activity
-  activityEvents.forEach(event => {
-    window.addEventListener(event, resetInactivityTimer)
-  })
-
-  // Footer glow on scroll
+  activityEvents.forEach(event => window.addEventListener(event, resetInactivityTimer))
+  document.addEventListener('visibilitychange', onVisibilityChange)
   window.addEventListener('scroll', onScroll)
 })
 
 onUnmounted(() => {
-  // Clean up timer
-  if (inactivityTimer) {
-    clearTimeout(inactivityTimer)
-  }
+  clearTimeout(inactivityTimer)
   clearTimeout(footerGlowTimer)
-
-  // Remove event listeners
-  activityEvents.forEach(event => {
-    window.removeEventListener(event, resetInactivityTimer)
-  })
+  activityEvents.forEach(event => window.removeEventListener(event, resetInactivityTimer))
+  document.removeEventListener('visibilitychange', onVisibilityChange)
   window.removeEventListener('scroll', onScroll)
 })
 </script>

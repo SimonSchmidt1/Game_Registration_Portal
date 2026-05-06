@@ -48,7 +48,45 @@ class AppServiceProvider extends ServiceProvider
 
     // ✅ Rate limiting pre hodnotenie projektov
     RateLimiter::for('ratings', function (Request $request) {
-        return Limit::perMinute(30)->by($request->user()?->id ?: $request->ip());
+        if ($request->user()) {
+            return Limit::perMinute(60)->by('rating:user:' . $request->user()->id);
+        }
+
+        $guestId = (string) ($request->cookie('guest_rating_id') ?? '');
+        $projectId = (string) ($request->route('id') ?? 'unknown');
+        $uaHash = substr(sha1((string) ($request->userAgent() ?? 'unknown')), 0, 16);
+        $key = $guestId !== ''
+            ? 'rating:guest:' . $projectId . ':' . $guestId
+            : 'rating:fallback:' . $projectId . ':' . $request->ip() . ':' . $uaHash;
+
+        return Limit::perMinute(20)->by($key);
+    });
+
+    // ✅ Rate limiting pre zobrazenia projektov
+    // Auth users: no throttle — each visit counts
+    // Guests: limit per project by guest cookie (fallback to IP+UA)
+    RateLimiter::for('views', function (Request $request) {
+        if ($request->user()) {
+            return Limit::none();
+        }
+
+        $projectId = $request->route('id') ?? 'unknown';
+        $guestId = (string) ($request->cookie('guest_rating_id') ?? '');
+        $uaHash = substr(sha1((string) ($request->userAgent() ?? 'unknown')), 0, 16);
+        $key = $guestId !== ''
+            ? 'view:guest:' . $projectId . ':' . $guestId
+            : 'view:fallback:' . $projectId . ':' . $request->ip() . ':' . $uaHash;
+
+        return Limit::perMinute(6)->by($key);
+    });
+
+    // ✅ Rate limiting pre resend verification email (1/min, 5/hour per email+IP)
+    RateLimiter::for('resend-verification', function (Request $request) {
+        $email = Str::lower((string) $request->email);
+        return [
+            Limit::perMinute(1)->by($email . $request->ip()),
+            Limit::perHour(5)->by($email . $request->ip()),
+        ];
     });
 
     // ✅ Rate limiting pre zabudnuté heslo / resend reset email

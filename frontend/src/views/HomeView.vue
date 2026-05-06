@@ -104,6 +104,17 @@
     <!-- ═══════════════════════════════════════════════════════ -->
     <div class="content-wrap">
 
+      <section v-if="token && (topRatedProjects.length || loadingTopRated)" class="top-rated-section">
+        <TopRatedCarousel
+          v-if="topRatedProjects.length"
+          :projects="topRatedProjects"
+          @select="viewProjectDetail"
+        />
+        <div v-else-if="loadingTopRated" class="top-rated-loading">
+          <span>{{ t('common.loading_top') }}</span>
+        </div>
+      </section>
+
       <!-- ── FILTER TOOLBAR ── -->
       <section v-if="token" class="filter-toolbar">
         <div class="filter-toolbar-top">
@@ -122,7 +133,7 @@
             <button
               v-if="showingMyProjects && !isAdmin"
               class="steam-btn steam-btn-dark steam-btn-sm"
-              @click="loadAllGames"
+              @click="showAllProjects"
             >
               {{ t('filter.all_projects_btn') }}
             </button>
@@ -159,20 +170,20 @@
               optionValue="value"
               :placeholder="t('filter.all_types')"
               class="filter-dropdown"
-              @change="applyFilters"
             />
           </div>
           <div class="filter-item">
             <label class="filter-label">{{ t('filter.year_label') }}</label>
             <Dropdown
               v-model="filterYearOfStudy"
-              :options="filterYears"
+              :options="availableFilterYears"
               optionLabel="label"
               optionValue="value"
               :placeholder="t('filter.all_years')"
               class="filter-dropdown"
-              @change="applyFilters"
+              :disabled="!filterSchoolType"
             />
+            <small v-if="!filterSchoolType" class="filter-help-warning">{{ t('filter.select_school_type_first') }}</small>
           </div>
           <div class="filter-item">
             <label class="filter-label">{{ t('filter.subject_label') }}</label>
@@ -183,7 +194,6 @@
               optionValue="value"
               :placeholder="t('filter.all_subjects')"
               class="filter-dropdown"
-              @change="applyFilters"
             />
           </div>
           <div class="filter-item">
@@ -195,20 +205,8 @@
               optionValue="value"
               :placeholder="t('filter.all_types')"
               class="filter-dropdown"
-              @change="applyFilters"
             />
           </div>
-        </div>
-      </section>
-
-      <section v-if="token && (topRatedProjects.length || loadingTopRated)" class="top-rated-section">
-        <TopRatedCarousel
-          v-if="topRatedProjects.length"
-          :projects="topRatedProjects"
-          @select="viewProjectDetail"
-        />
-        <div v-else-if="loadingTopRated" class="top-rated-loading">
-          <span>{{ t('common.loading_top') }}</span>
         </div>
       </section>
 
@@ -216,20 +214,24 @@
       <section v-if="!token" class="landing-section">
         <div class="landing-card">
           <img
-            src="@/assets/logo/ucm_logoNOBG.png"
+            :src="landingLogoSrc"
             alt="UCM Logo"
             class="landing-logo"
           />
-          <h2 class="landing-heading">{{ t('landing.title') }} <span class="landing-heading-accent">UCM</span></h2>
+          <h2 class="landing-heading">
+            {{ t('landing.title') }}
+            <span class="landing-heading-ucm">UCM</span>
+            <span class="landing-heading-accent"> FPV</span>
+          </h2>
           <p class="landing-text">{{ t('landing.desc') }}</p>
           <div class="landing-actions">
             <button class="steam-btn steam-btn-accent steam-btn-lg" @click="$router.push('/login')">
               {{ t('landing.login_btn') }}
             </button>
-            <button class="steam-btn steam-btn-dark steam-btn-lg" @click="$router.push('/guest')">
+            <button class="steam-btn steam-btn-accent steam-btn-lg" @click="$router.push('/guest')">
               {{ t('landing.guest_btn') }}
             </button>
-            <button class="steam-btn steam-btn-dark steam-btn-lg" @click="$router.push('/register')">
+            <button class="steam-btn steam-btn-accent steam-btn-lg" @click="$router.push('/register')">
               {{ t('landing.register_btn') }}
             </button>
           </div>
@@ -284,7 +286,13 @@
               >
                 {{ getSchoolTypeLabel(game.school_type) }}
               </span>
-              <span v-if="game.year_of_study" class="card-tag">
+              <span
+                v-if="game.year_of_study"
+                class="card-tag card-tag-static"
+                @click.stop
+                @keydown.enter.stop
+                @keydown.space.stop
+              >
                 {{ game.year_of_study }}{{ t('common.year_suffix') }}
               </span>
               <span
@@ -332,44 +340,53 @@
 
       <!-- ── PAGINATION ── -->
       <div v-if="lastPage > 1" class="pagination-bar">
-        <button class="page-btn" :disabled="currentPage === 1" @click="goToPage(currentPage - 1)">
-          Prev
+        <button class="page-btn page-btn-nav" :disabled="currentPage === 1" @click="goToPage(currentPage - 1)">
+          <i class="pi pi-arrow-left"></i>
         </button>
         <template v-for="p in pageNumbers" :key="p">
           <span v-if="p === '...'" class="page-ellipsis">…</span>
           <button v-else class="page-btn" :class="{ 'page-btn-active': p === currentPage }" @click="goToPage(p)">{{ p }}</button>
         </template>
-        <button class="page-btn" :disabled="currentPage === lastPage" @click="goToPage(currentPage + 1)">
-          Next
+        <button class="page-btn page-btn-nav" :disabled="currentPage === lastPage" @click="goToPage(currentPage + 1)">
+          <i class="pi pi-arrow-right"></i>
         </button>
-        <span class="page-info">{{ (currentPage - 1) * 20 + 1 }}–{{ Math.min(currentPage * 20, totalProjects) }} / {{ totalProjects }}</span>
+        <input
+          v-model="pageJumpInput"
+          type="number"
+          class="page-jump-input"
+          :placeholder="String(currentPage)"
+          :min="1"
+          :max="lastPage"
+          @keyup.enter="jumpToPage"
+        />
+        <span class="page-info">{{ (currentPage - 1) * 21 + 1 }}–{{ Math.min(currentPage * 21, totalProjects) }} / {{ totalProjects }}</span>
       </div>
     </div>
 
     <!-- ═══════════════════════════════════════════════════════ -->
     <!-- DIALOG: CREATE TEAM -->
     <!-- ═══════════════════════════════════════════════════════ -->
-    <Dialog v-model:visible="showCreateTeam" :modal="true" :closable="false" :draggable="false" class="dialog-shell" :contentStyle="dialogContentStyle" :headerStyle="dialogHeaderStyle" :style="dialogStyle">
+    <Dialog v-model:visible="showCreateTeam" :modal="true" :closable="false" :draggable="false" :dismissableMask="true" :blockScroll="true" class="dialog-shell" :contentStyle="dialogContentStyle" :headerStyle="dialogHeaderStyle" :style="dialogStyle">
       <template #header>
         <div class="dlg-header">
-          <span class="dlg-title">Vytvoriť Nový Tím</span>
-          <button class="dlg-close" @click="showCreateTeam = false">×</button>
+          <span class="dlg-title" v-if="!teamCreatedSuccess">Vytvoriť Nový Tím</span>
+          <button class="dlg-close" @click="closeCreateTeamDialog">×</button>
         </div>
       </template>
 
       <div v-if="!teamCreatedSuccess">
         <form @submit.prevent="createTeam" class="dlg-form">
           <div class="dlg-field">
-            <label>Názov tímu</label>
-            <InputText v-model="teamName" placeholder="Zadajte názov tímu" required class="dlg-input" />
+            <label for="createTeamName">Názov tímu</label>
+            <InputText id="createTeamName" name="teamName" v-model="teamName" placeholder="Zadajte názov tímu" required class="dlg-input" />
           </div>
           <div class="dlg-field">
-            <label>Akademický rok</label>
-            <Dropdown v-model="academicYear" :options="academicYears" optionLabel="name" optionValue="id" placeholder="Vyber akademický rok" class="dlg-dropdown" />
+            <label for="createTeamAcademicYear">Akademický rok</label>
+            <Dropdown id="createTeamAcademicYear" name="academicYear" v-model="academicYear" :options="academicYears" optionLabel="name" optionValue="id" placeholder="Vyber akademický rok" class="dlg-dropdown" />
           </div>
           <div class="dlg-field">
-            <label>Povolanie</label>
-            <Dropdown v-model="createTeamOccupation" :options="occupations" optionLabel="label" optionValue="value" placeholder="Vyber povolanie" class="dlg-dropdown" />
+            <label for="createTeamOccupation">Povolanie</label>
+            <Dropdown id="createTeamOccupation" name="createTeamOccupation" v-model="createTeamOccupation" :options="occupations" optionLabel="label" optionValue="value" placeholder="Vyber povolanie" class="dlg-dropdown" />
           </div>
           <button type="submit" class="steam-btn steam-btn-accent w-full mt-3" :disabled="loadingCreate">
             {{ loadingCreate ? 'Vytváram...' : 'Vytvoriť Tím' }}
@@ -378,12 +395,15 @@
       </div>
 
       <div v-else class="dlg-success">
-        <h3>Tím bol úspešne vytvorený!</h3>
+        <h3 class="mb-2">Tím bol úspešne vytvorený!</h3>
+        <p class="text-green-400 font-semibold text-center mb-6 px-4">
+          Pošli kód svojím kamarátom, aby sa vedeli pripojiť do tvojho tímu
+        </p>
         <div class="dlg-code-box">
           <p class="dlg-code-label">Kód pre pripojenie členov:</p>
           <span class="dlg-code">{{ team.invite_code }}</span>
         </div>
-        <button class="steam-btn steam-btn-dark w-full" @click="copyTeamCode(team.invite_code)">Kopírovať Kód</button>
+        <button class="steam-btn steam-btn-dark w-full mb-3" @click="copyTeamCode(team.invite_code)">Kopírovať Kód</button>
         <button class="steam-btn steam-btn-ghost w-full" @click="closeCreateTeamDialog">Zavrieť</button>
       </div>
 
@@ -393,7 +413,7 @@
     <!-- ═══════════════════════════════════════════════════════ -->
     <!-- DIALOG: JOIN TEAM -->
     <!-- ═══════════════════════════════════════════════════════ -->
-    <Dialog v-model:visible="showJoinTeam" :modal="true" :closable="false" :draggable="false" class="dialog-shell dialog-sm" :contentStyle="dialogContentStyle" :headerStyle="dialogHeaderStyle" :style="dialogStyle">
+    <Dialog v-model:visible="showJoinTeam" :modal="true" :closable="false" :draggable="false" :dismissableMask="true" :blockScroll="true" class="dialog-shell dialog-sm" :contentStyle="dialogContentStyle" :headerStyle="dialogHeaderStyle" :style="dialogStyle">
       <template #header>
         <div class="dlg-header">
           <span class="dlg-title">Pripojiť sa k tímu</span>
@@ -420,7 +440,7 @@
     <!-- ═══════════════════════════════════════════════════════ -->
     <!-- DIALOG: MY TEAMS -->
     <!-- ═══════════════════════════════════════════════════════ -->
-    <Dialog v-model:visible="showTeamStatusDialog" :modal="true" :closable="false" :draggable="false" class="dialog-shell dialog-md" :contentStyle="dialogContentStyle" :headerStyle="dialogHeaderStyle" :style="dialogStyle">
+    <Dialog v-model:visible="showTeamStatusDialog" :modal="true" :closable="false" :draggable="false" :dismissableMask="true" :blockScroll="true" class="dialog-shell dialog-md" :contentStyle="dialogContentStyle" :headerStyle="dialogHeaderStyle" :style="dialogStyle">
       <template #header>
         <div class="dlg-header">
           <span class="dlg-title">Moje Tímy</span>
@@ -430,7 +450,6 @@
 
       <div v-if="teams.length > 0" class="dlg-teams-list">
         <div v-for="t in teams" :key="t.id" :class="['dlg-team-card', t.status === 'pending' ? 'dlg-team-pending' : t.status === 'suspended' ? 'dlg-team-suspended' : '']">
-          <!-- Header -->
           <div class="dlg-team-head">
             <div>
               <h3 class="dlg-team-name">{{ t.name }}</h3>
@@ -441,15 +460,18 @@
                 <span v-else-if="t.status === 'active'" class="steam-badge badge-active">Aktívny</span>
               </div>
             </div>
-            <span v-if="t.is_scrum_master" class="steam-badge badge-sm">SM</span>
+            <div class="flex flex-col items-end gap-2">
+              <span v-if="t.is_scrum_master" class="steam-badge badge-sm">SM</span>
+              <button v-if="t.is_scrum_master" @click="openRenameTeamDialog(t)" class="rename-btn">
+                <i class="pi pi-pencil"></i>
+              </button>
+            </div>
           </div>
 
-          <!-- Pending warning -->
           <div v-if="t.status === 'pending'" class="dlg-team-notice notice-pending">
             Tím čaká na schválenie. Kód pre pripojenie je zatiaľ neaktívny.
           </div>
 
-          <!-- Invite code -->
           <div :class="['dlg-invite-row', t.status === 'pending' ? 'opacity-40' : '']">
             <span class="text-xs text-slate-500">Kód{{ t.status === 'pending' ? ' (neaktívny)' : '' }}:</span>
             <div class="flex items-center gap-2">
@@ -458,10 +480,9 @@
             </div>
           </div>
 
-          <!-- Members -->
           <div class="dlg-members">
             <span class="text-xs text-slate-500 mb-1 block">Členovia ({{ t.members?.length || 0 }}/10):</span>
-            <div v-for="member in t.members" :key="member.id" class="dlg-member-row">
+            <div v-for="member in t.members" :key="member.id" :class="['dlg-member-row', isUserDeactivated(member) ? 'dlg-member-row-deactivated' : '']">
               <div class="flex flex-col truncate flex-1">
                 <div class="flex items-center gap-2">
                   <span :class="member.is_absolvent ? 'text-slate-600' : 'text-slate-200'" class="truncate text-sm">{{ member.name }}</span>
@@ -475,29 +496,68 @@
             </div>
           </div>
         </div>
-
-        <button class="steam-btn steam-btn-ghost w-full mt-3" @click="showTeamStatusDialog = false">Zavrieť</button>
       </div>
 
       <div v-else class="dlg-empty">
         <p>Nie ste členom žiadneho tímu</p>
       </div>
     </Dialog>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- DIALOG: RENAME TEAM -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <Dialog v-model:visible="showRenameTeamDialog" :modal="true" :closable="false" :draggable="false" :dismissableMask="true" :blockScroll="true" class="dialog-shell" :contentStyle="dialogContentStyle" :headerStyle="dialogHeaderStyle" :style="dialogStyle">
+      <template #header>
+        <div class="dlg-header">
+          <span class="dlg-title">Zmeniť názov tímu</span>
+          <button class="dlg-close" @click="showRenameTeamDialog = false">×</button>
+        </div>
+      </template>
+
+      <form @submit.prevent="renameTeam" class="dlg-form">
+        <div class="dlg-field">
+          <label for="renameTeamInput">Nový názov tímu</label>
+          <InputText id="renameTeamInput" v-model="newTeamName" placeholder="Zadajte názov tímu" required class="dlg-input" />
+        </div>
+        <button type="submit" class="steam-btn steam-btn-accent w-full mt-3" :disabled="loadingRename">
+          {{ loadingRename ? 'Vytváram...' : 'Zmeniť názov' }}
+        </button>
+      </form>
+    </Dialog>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- CUSTOM CONFIRM DIALOG                                  -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <Dialog v-model:visible="confirmDialog.visible" :modal="true" :closable="false" :draggable="false" :showHeader="false" :blockScroll="true" :style="{ borderRadius: '12px', overflow: 'hidden', width: '340px' }" :contentStyle="{ padding: '0', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: '12px' }">
+      <div class="conf-dialog">
+        <h3 class="conf-title">{{ confirmDialog.title }}</h3>
+        <p class="conf-message">{{ confirmDialog.message }}</p>
+        <div class="conf-actions">
+          <button class="conf-btn conf-btn-ghost" @click="confirmDialog.visible = false">Zrušiť</button>
+          <button class="conf-btn" :class="confirmDialog.danger ? 'conf-btn-danger' : 'conf-btn-warn'" @click="confirmDialog.onConfirm(); confirmDialog.visible = false">{{ confirmDialog.confirmLabel }}</button>
+        </div>
+      </div>
+    </Dialog>
+
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
+import { apiFetch } from '@/utils/apiFetch'
 import InputText from 'primevue/inputtext'
 import Dropdown from 'primevue/dropdown'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import Tooltip from 'primevue/tooltip'
 import TopRatedCarousel from '@/components/TopRatedCarousel.vue'
+import { isUserDeactivated } from '../utils/userStatus.js'
+import logoDark from '@/assets/logo/ucm_logoNOBG.png'
+import logoLight from '@/assets/logo/ucm_logo_black.png'
 
 const vTooltip = Tooltip
 
@@ -506,9 +566,18 @@ const { t } = useI18n()
 const toast = useToast()
 const router = useRouter()
 
+const isLightTheme = ref(false)
+const landingLogoSrc = computed(() => (isLightTheme.value ? logoLight : logoDark))
+let themeObserver = null
+
+function syncThemeFromDom() {
+  const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark'
+  isLightTheme.value = currentTheme === 'light'
+}
+
 // ── shared dialog styles (passed as props) ──
 const dialogContentStyle = { backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', padding: '1.5rem', border: 'none' }
-const dialogHeaderStyle  = { backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', borderBottom: '1px solid var(--color-border)', padding: '1rem 1.5rem', position: 'relative' }
+const dialogHeaderStyle  = { backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', borderBottom: '2px solid var(--color-accent)', padding: '1rem 1.5rem', position: 'relative' }
 const dialogStyle         = { borderRadius: '4px', overflow: 'hidden' }
 
 // -------------------------
@@ -575,6 +644,54 @@ const joinTeamOccupation = ref(null)
 const joinTeamError = ref('')
 const loadingJoin = ref(false)
 
+// -------------------------
+// Rename Team
+// -------------------------
+const showRenameTeamDialog = ref(false)
+const renameTeamObj = ref(null)
+const newTeamName = ref('')
+const loadingRename = ref(false)
+
+function openRenameTeamDialog(team) {
+  renameTeamObj.value = team
+  newTeamName.value = team.name
+  showRenameTeamDialog.value = true
+}
+
+async function renameTeam() {
+  if (!newTeamName.value.trim() || !renameTeamObj.value) return
+  loadingRename.value = true
+  const tk = localStorage.getItem('access_token')
+
+  try {
+    const response = await apiFetch(`${API_URL}/api/teams/${renameTeamObj.value.id}/rename`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${tk}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ name: newTeamName.value.trim() })
+    })
+    
+    if (response.ok) {
+      toast.add({ severity: 'success', summary: 'Úspech', detail: 'Názov tímu bol zmenený.', life: 4000 })
+      renameTeamObj.value.name = newTeamName.value.trim()
+      showRenameTeamDialog.value = false
+    } else {
+      const data = await response.json()
+      let msg = data.message || 'Nepodarilo sa zmeniť názov tímu.'
+      if (data.errors && data.errors.name && data.errors.name[0].includes('taken')) {
+        msg = 'Tento názov tímu je už obsadený.'
+      }
+      toast.add({ severity: 'warn', summary: 'Chyba', detail: msg, life: 4000 })
+    }
+  } catch (e) {
+    toast.add({ severity: 'error', summary: 'Chyba', detail: 'Problém pri spojení so serverom.', life: 4000 })
+  } finally {
+    loadingRename.value = false
+  }
+}
+
 async function joinTeam() {
   joinTeamError.value = ''
   if (!joinTeamCode.value) { joinTeamError.value = 'Kód tímu nemôže byť prázdny.'; return }
@@ -582,7 +699,7 @@ async function joinTeam() {
   loadingJoin.value = true
   const cleanCode = joinTeamCode.value.trim()
   try {
-    const res = await fetch(`${API_URL}/api/teams/join`, {
+    const res = await apiFetch(`${API_URL}/api/teams/join`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' },
       body: JSON.stringify({ invite_code: cleanCode, occupation: joinTeamOccupation.value })
@@ -612,6 +729,7 @@ async function joinTeam() {
 // Create Team
 // -------------------------
 const showCreateTeam = ref(false)
+
 const teamName = ref('')
 const academicYear = ref(null)
 const createTeamOccupation = ref(null)
@@ -641,7 +759,7 @@ async function createTeam() {
     formData.append('name', teamName.value)
     formData.append('academic_year_id', academicYear.value)
     formData.append('occupation', createTeamOccupation.value)
-    const res = await fetch(`${API_URL}/api/teams`, {
+    const res = await apiFetch(`${API_URL}/api/teams`, {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' },
       body: formData
@@ -655,10 +773,19 @@ async function createTeam() {
       await loadTeamStatus()
       loadAllGames()
     } else {
-      let msg = data.message || 'Chyba pri vytváraní tímu.'
-      if (data.errors) msg += ' ' + Object.values(data.errors).map(e => e.join(', ')).join('. ')
-      teamMessage.value = '❌ ' + msg
-      toast.add({ severity: 'error', summary: 'Chyba', detail: msg, life: 8000 })
+      let isNameTaken = false;
+      if (data.errors?.name?.[0]?.includes('taken')) {
+        isNameTaken = true;
+      }
+      let msg = data.message || 'Chyba pri vytváraní tímu.';
+      if (msg.includes('taken') || isNameTaken) {
+        msg = 'Tento názov tímu je už obsadený.';
+      } else if (data.errors) {
+        msg += ' ' + Object.values(data.errors).map(e => e.join(', ')).join('. ');
+      }
+      
+      teamMessage.value = '❌ ' + msg;
+      toast.add({ severity: 'error', summary: 'Chyba', detail: msg, life: 8000 });
     }
   } catch (err) {
     teamMessage.value = 'Server nedostupný.'
@@ -699,6 +826,7 @@ const loadingGames = ref(true)
 const loadingTopRated = ref(false)
 const showingMyProjects = ref(false)
 const currentPage = ref(1)
+const pageJumpInput = ref('')
 const lastPage = ref(1)
 const totalProjects = ref(0)
 const searchDebounce = ref(null)
@@ -725,13 +853,17 @@ const filterSubjects = ref([
   { label: 'Chémia', value: 'Chémia' },
   { label: 'Fyzika', value: 'Fyzika' }
 ])
-const filterYears = ref([
-  { label: 'Všetky ročníky', value: null },
-  ...Array.from({ length: 9 }, (_, i) => ({ label: `${i + 1}. ročník`, value: i + 1 }))
-])
+const availableFilterYears = computed(() => {
+  if (!filterSchoolType.value) return [{ label: 'Všetky ročníky', value: null }]
+  const maxYear = filterSchoolType.value === 'zs' ? 9 : 5
+  return [
+    { label: 'Všetky ročníky', value: null },
+    ...Array.from({ length: maxYear }, (_, i) => ({ label: `${i + 1}. ročník`, value: i + 1 }))
+  ]
+})
 
 const hasActiveFilters = computed(() =>
-  filterSchoolType.value !== null || filterYearOfStudy.value !== null || filterSubject.value !== null || filterAcademicYear.value !== null || selectedType.value !== 'all' || search.value !== ''
+  filterSchoolType.value !== null || filterYearOfStudy.value !== null || filterSubject.value !== null || filterAcademicYear.value !== null || selectedType.value !== 'all' || search.value !== '' || showingMyProjects.value
 )
 
 const filteredGames = computed(() => games.value)
@@ -756,12 +888,17 @@ function goToPage(page) {
   document.querySelector('.project-grid, .state-message')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
-function resetFilters() { filterSchoolType.value = null; filterYearOfStudy.value = null; filterSubject.value = null; filterAcademicYear.value = null; selectedType.value = 'all'; search.value = ''; currentPage.value = 1; loadAllGames() }
+function jumpToPage() {
+  const p = parseInt(pageJumpInput.value)
+  if (!isNaN(p)) goToPage(Math.max(1, Math.min(p, lastPage.value)))
+  pageJumpInput.value = ''
+}
+
+function resetFilters() { filterSchoolType.value = null; filterYearOfStudy.value = null; filterSubject.value = null; filterAcademicYear.value = null; selectedType.value = 'all'; search.value = ''; showingMyProjects.value = false; currentPage.value = 1; loadAllGames() }
 function filterByType(type) { selectedType.value = type; currentPage.value = 1; loadAllGames() }
 function filterBySchoolType(st) { filterSchoolType.value = st; currentPage.value = 1; loadAllGames() }
 function filterBySubject(sub) { filterSubject.value = sub; currentPage.value = 1; loadAllGames() }
 function filterByAcademicYear(id) { filterAcademicYear.value = id; currentPage.value = 1; loadAllGames() }
-function applyFilters() { currentPage.value = 1; loadAllGames() }
 const viewProjectDetail = (project) => { router.push({ name: 'ProjectDetail', params: { id: project.id } }) }
 
 // -------------------------
@@ -769,20 +906,20 @@ const viewProjectDetail = (project) => { router.push({ name: 'ProjectDetail', pa
 // -------------------------
 async function loadAcademicYears() {
   if (!token.value) return
-  try { const res = await fetch(`${API_URL}/api/academic-years`, { headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' } }); if (res.ok) academicYears.value = await res.json() }
+  try { const res = await apiFetch(`${API_URL}/api/academic-years`, { headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' } }); if (res.ok) academicYears.value = await res.json() }
   catch {}
 }
 
 async function loadCurrentUser() {
   if (!token.value) return
-  try { const res = await fetch(`${API_URL}/api/user`, { headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' } }); if (res.ok) { const data = await res.json(); currentUserId.value = data.id } }
+  try { const res = await apiFetch(`${API_URL}/api/user`, { headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' } }); if (res.ok) { const data = await res.json(); currentUserId.value = data.id } }
   catch {}
 }
 
 async function loadTeamStatus() {
   if (!token.value) return
   try {
-    const res = await fetch(`${API_URL}/api/user/team`, { headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' } })
+    const res = await apiFetch(`${API_URL}/api/user/team`, { headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' } })
     let data = {}
     if (res.headers.get('content-type')?.includes('application/json')) data = await res.json()
     if (res.ok && data.teams?.length > 0) {
@@ -802,7 +939,7 @@ async function loadTopRatedProjects() {
   if (!token.value) return
   loadingTopRated.value = true
   try {
-    const res = await fetch(`${API_URL}/api/projects/top-rated`, { headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' } })
+    const res = await apiFetch(`${API_URL}/api/projects/top-rated`, { headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' } })
     if (res.ok) topRatedProjects.value = await res.json()
     else toast.add({ severity: 'warn', summary: 'Chyba', detail: `Nepodarilo sa načítať top projekty (${res.status}).`, life: 5000 })
   } catch (err) {
@@ -811,7 +948,6 @@ async function loadTopRatedProjects() {
 }
 
 async function loadAllGames() {
-  showingMyProjects.value = false
   if (!token.value) { loadingGames.value = false; return }
   loadingGames.value = true
   try {
@@ -822,9 +958,14 @@ async function loadAllGames() {
     if (filterYearOfStudy.value) params.append('year_of_study', filterYearOfStudy.value)
     if (filterSubject.value) params.append('subject', filterSubject.value)
     if (filterAcademicYear.value) params.append('academic_year_id', filterAcademicYear.value)
+    if (showingMyProjects.value) {
+      params.append('my_projects', '1')
+      if (selectedTeam.value?.id) params.append('team_id', selectedTeam.value.id)
+    }
+    params.append('per_page', '21')
     params.append('page', currentPage.value)
     const query = params.toString() ? `?${params.toString()}` : ''
-    const res = await fetch(`${API_URL}/api/projects${query}`, { headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' } })
+    const res = await apiFetch(`${API_URL}/api/projects${query}`, { headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' } })
     if (res.ok) {
       const data = await res.json()
       games.value = data.data ?? data
@@ -838,22 +979,54 @@ async function loadAllGames() {
 
 async function loadMyProjects() {
   if (!token.value || !selectedTeam.value) return
-  showingMyProjects.value = true; loadingGames.value = true
-  try {
-    const res = await fetch(`${API_URL}/api/projects/my?team_id=${selectedTeam.value.id}`, { headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' } })
-    if (res.ok) { const data = await res.json(); games.value = data.projects || []; toast.add({ severity: 'success', summary: 'Filtrované', detail: `${games.value.length} projektov vášho tímu.`, life: 3000 }) }
-    else { const ed = await res.json().catch(() => ({})); toast.add({ severity: 'warn', summary: 'Chyba', detail: ed.message || 'Nepodarilo sa načítať projekty.', life: 4000 }) }
-  } catch { toast.add({ severity: 'error', summary: 'Chyba siete', detail: 'Server je nedostupný.', life: 5000 }) }
-  finally { loadingGames.value = false }
+  showingMyProjects.value = true
+  currentPage.value = 1
+  await loadAllGames()
 }
 
-function confirmRemoveMember(team, member) { if (removingMember.value) return; if (window.confirm(`Odstrániť "${member.name}" z "${team.name}"?`)) removeMember(team, member) }
-function confirmLeaveTeam(team) { if (removingMember.value) return; if (window.confirm(`Opustiť tím "${team.name}"?`)) leaveTeam(team) }
+async function showAllProjects() {
+  showingMyProjects.value = false
+  currentPage.value = 1
+  await loadAllGames()
+}
+
+const confirmDialog = ref({ visible: false, title: '', message: '', confirmLabel: '', danger: false, onConfirm: () => {} })
+
+// Lock body scroll whenever any dialog is open
+watch([showTeamStatusDialog, showJoinTeam, showCreateTeam, () => confirmDialog.value.visible], (vals) => {
+  const locked = vals.some(Boolean)
+  document.documentElement.classList.toggle('scroll-locked', locked)
+  document.body.classList.toggle('scroll-locked', locked)
+})
+
+function confirmRemoveMember(team, member) {
+  if (removingMember.value) return
+  confirmDialog.value = {
+    visible: true,
+    title: 'Odstrániť člena',
+    message: `Naozaj chcete odstrániť "${member.name}" z tímu "${team.name}"?`,
+    confirmLabel: 'Odstrániť',
+    danger: true,
+    onConfirm: () => removeMember(team, member)
+  }
+}
+
+function confirmLeaveTeam(team) {
+  if (removingMember.value) return
+  confirmDialog.value = {
+    visible: true,
+    title: 'Opustiť tím',
+    message: `Naozaj chcete opustiť tím "${team.name}"?`,
+    confirmLabel: 'Opustiť',
+    danger: false,
+    onConfirm: () => leaveTeam(team)
+  }
+}
 
 async function removeMember(team, member) {
   removingMember.value = true
   try {
-    const res = await fetch(`${API_URL}/api/teams/${team.id}/members/${member.id}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' } })
+    const res = await apiFetch(`${API_URL}/api/teams/${team.id}/members/${member.id}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' } })
     try { const data = await res.clone().json(); if (data?.team?.members) team.members = data.team.members } catch {}
     if (res.ok) toast.add({ severity: 'success', summary: 'Člen odstránený', detail: `${member.name} bol odstránený.`, life: 4000 })
     else toast.add({ severity: 'warn', summary: 'Zlyhalo', detail: 'Nepodarilo sa odstrániť člena.', life: 6000 })
@@ -864,23 +1037,46 @@ async function removeMember(team, member) {
 async function leaveTeam(team) {
   removingMember.value = true
   try {
-    const res = await fetch(`${API_URL}/api/teams/${team.id}/leave`, { method: 'POST', headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' } })
-    if (res.ok) { toast.add({ severity: 'success', summary: 'Tím opustený', life: 4000 }); await loadTeamStatus(); setActiveTeam(teams.value[0] || null); showTeamStatusDialog.value = false }
+    const res = await apiFetch(`${API_URL}/api/teams/${team.id}/leave`, { method: 'POST', headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' } })
+    if (res.ok) { toast.add({ severity: 'success', summary: 'Opustili ste tím', life: 4000 }); await loadTeamStatus(); setActiveTeam(teams.value[0] || null); showTeamStatusDialog.value = false }
     else toast.add({ severity: 'warn', summary: 'Zlyhalo', life: 6000 })
   } catch { toast.add({ severity: 'error', summary: 'Chyba siete', life: 6000 }) }
   finally { removingMember.value = false }
 }
 
-onMounted(() => { loadAcademicYears(); loadTeamStatus(); loadAllGames(); loadTopRatedProjects(); loadCurrentUser() })
+onMounted(() => {
+  syncThemeFromDom()
+  themeObserver = new MutationObserver(syncThemeFromDom)
+  themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+
+  loadAcademicYears(); loadTeamStatus(); loadAllGames(); loadTopRatedProjects(); loadCurrentUser()
+})
+onBeforeUnmount(() => {
+  if (themeObserver) {
+    themeObserver.disconnect()
+    themeObserver = null
+  }
+})
 watch(selectedTeam, (val) => { setActiveTeam(val) })
+watch(selectedTeam, () => {
+  if (showingMyProjects.value) {
+    currentPage.value = 1
+    loadAllGames()
+  }
+})
 watch(selectedType, () => { currentPage.value = 1; loadAllGames() })
+watch(filterSchoolType, () => { filterYearOfStudy.value = null })
 watch([filterSchoolType, filterYearOfStudy, filterSubject, filterAcademicYear], () => { currentPage.value = 1; loadAllGames() })
 watch(search, () => { clearTimeout(searchDebounce.value); searchDebounce.value = setTimeout(() => { currentPage.value = 1; loadAllGames() }, 400) })
 
 // ── Helpers ──
 function getSchoolTypeLabel(type) { return { 'zs': 'ZŠ', 'ss': 'SŠ', 'vs': 'VŠ' }[type] || type }
 function getSplashUrl(path) { if (!path) return ''; if (path.startsWith('http')) return path; return `${API_URL}/storage/${path}` }
-function formatProjectType(type) { return { game: 'Hra', web_app: 'Web App', mobile_app: 'Mobile App', library: 'Knižnica', other: 'Iné' }[type] || type }
+function formatProjectType(type) {
+  const normalizedType = String(type || '').trim().toLowerCase()
+  const valid = ['game', 'web_app', 'mobile_app', 'library', 'webgl', 'other']
+  return valid.includes(normalizedType) ? t(`project_types.${normalizedType}`) : t('project_types.other')
+}
 function goToTeam(teamId) { if (teamId) router.push(`/team/${teamId}`) }
 </script>
 
@@ -1172,6 +1368,11 @@ function goToTeam(teamId) { if (teamId) router.push(`/team/${teamId}`) }
 }
 .filter-item { display: flex; flex-direction: column; gap: 4px; }
 .filter-label { font-size: 0.75rem; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.filter-help-warning {
+  color: var(--color-warning);
+  font-size: 0.72rem;
+  margin-top: 2px;
+}
 
 /* ═══════════════════════════════════════════════════════════ */
 /* TOP RATED CAROUSEL                                         */
@@ -1200,7 +1401,8 @@ function goToTeam(teamId) { if (teamId) router.push(`/team/${teamId}`) }
 }
 .landing-card {
   text-align: center;
-  max-width: 480px;
+  width: 100%;
+  max-width: 760px;
 }
 .landing-logo {
   height: 100px;
@@ -1215,8 +1417,13 @@ function goToTeam(teamId) { if (teamId) router.push(`/team/${teamId}`) }
   margin-bottom: 14px;
   letter-spacing: -0.02em;
 }
+.landing-heading-ucm {
+  color: var(--color-text-strong);
+  font-weight: 900;
+}
 .landing-heading-accent {
   color: var(--color-accent);
+  font-weight: 900;
 }
 .landing-text {
   color: var(--color-text-muted);
@@ -1225,9 +1432,22 @@ function goToTeam(teamId) { if (teamId) router.push(`/team/${teamId}`) }
   line-height: 1.6;
 }
 .landing-actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
-  justify-content: center;
+}
+.landing-actions .steam-btn {
+  width: 100%;
+  border: 1px solid rgba(var(--color-accent-rgb), 0.7);
+  box-shadow: 0 6px 20px rgba(var(--color-accent-rgb), 0.28);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.12s, color 0.12s, opacity 0.12s;
+}
+.landing-actions .steam-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 28px rgba(var(--color-accent-rgb), 0.35);
+}
+.landing-actions .steam-btn:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 /* ═══════════════════════════════════════════════════════════ */
@@ -1298,16 +1518,40 @@ function goToTeam(teamId) { if (teamId) router.push(`/team/${teamId}`) }
   color: #fff !important;
   font-weight: 600;
 }
+.page-btn-nav {
+  min-width: 36px;
+  width: 36px;
+  padding: 0;
+  font-size: 0.8rem;
+}
 .page-ellipsis {
   color: var(--color-text-muted);
   padding: 0 4px;
   user-select: none;
 }
 .page-info {
-  margin-left: 12px;
+  margin-left: 4px;
   font-size: 0.8rem;
   color: var(--color-text-muted);
 }
+.page-jump-input {
+  width: 52px;
+  height: 36px;
+  padding: 0 6px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  color: var(--color-text);
+  font-size: 0.875rem;
+  text-align: center;
+  outline: none;
+  transition: border-color 0.15s;
+  -moz-appearance: textfield;
+}
+.page-jump-input::-webkit-outer-spin-button,
+.page-jump-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.page-jump-input:focus { border-color: var(--color-accent); }
+.page-jump-input::placeholder { color: var(--color-text-muted); }
 
 /* ── Card ── */
 .project-card {
@@ -1389,6 +1633,13 @@ function goToTeam(teamId) { if (teamId) router.push(`/team/${teamId}`) }
   font-weight: 500;
 }
 .card-tag:hover { background: var(--color-border); color: var(--color-text); }
+.card-tag.card-tag-static {
+  cursor: default;
+}
+.card-tag.card-tag-static:hover {
+  background: var(--color-elevated);
+  color: var(--color-text-muted);
+}
 .card-tag-accent {
   background: rgba(var(--color-accent-rgb), 0.12);
   border-color: rgba(var(--color-accent-rgb), 0.3);
@@ -1535,7 +1786,11 @@ function goToTeam(teamId) { if (teamId) router.push(`/team/${teamId}`) }
   display: flex; align-items: center; justify-content: center; width: 100%; position: relative;
 }
 .dlg-title {
-  font-size: 1rem; font-weight: 600; color: var(--color-text);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 .dlg-close {
   position: absolute; right: -8px; top: 50%; transform: translateY(-50%);
@@ -1570,6 +1825,22 @@ function goToTeam(teamId) { if (teamId) router.push(`/team/${teamId}`) }
 .dlg-team-pending { border-color: rgba(var(--color-warning-rgb), 0.3); background: rgba(var(--color-warning-rgb), 0.04); }
 .dlg-team-suspended { border-color: rgba(var(--color-danger-rgb), 0.3); background: rgba(var(--color-danger-rgb), 0.04); }
 .dlg-team-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--color-border); }
+.rename-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  border: 1px solid rgba(var(--color-accent-rgb), 0.25);
+  background: rgba(var(--color-accent-rgb), 0.07);
+  color: var(--color-accent);
+  font-size: 0.65rem;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+.rename-btn:hover { background: rgba(var(--color-accent-rgb), 0.18); border-color: rgba(var(--color-accent-rgb), 0.5); }
 .dlg-team-name { font-size: 1rem; font-weight: 600; color: var(--color-text); }
 .dlg-team-notice { font-size: 0.78rem; padding: 8px 12px; border-radius: 3px; margin-bottom: 10px; }
 .notice-pending { background: rgba(var(--color-warning-rgb), 0.06); border: 1px solid rgba(var(--color-warning-rgb), 0.2); color: var(--color-warning); }
@@ -1577,6 +1848,7 @@ function goToTeam(teamId) { if (teamId) router.push(`/team/${teamId}`) }
 .dlg-invite-code { font-family: monospace; font-size: 1.05rem; font-weight: 600; letter-spacing: 0.1em; color: var(--color-accent); }
 .dlg-members { margin-top: 4px; }
 .dlg-member-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; background: var(--color-surface-deep); border-radius: 3px; margin-top: 4px; }
+.dlg-member-row-deactivated { opacity: 0.45; filter: grayscale(0.6); }
 .dlg-empty { text-align: center; padding: 40px 0; color: var(--color-text-subtle); }
 
 /* ═══════════════════════════════════════════════════════════ */
@@ -1680,6 +1952,7 @@ function goToTeam(teamId) { if (teamId) router.push(`/team/${teamId}`) }
   .landing-actions {
     flex-direction: column;
     align-items: stretch;
+    display: flex;
   }
 
   .landing-actions .steam-btn {
@@ -1715,4 +1988,90 @@ function goToTeam(teamId) { if (teamId) router.push(`/team/${teamId}`) }
     width: 100%;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   CUSTOM CONFIRM DIALOG
+   ═══════════════════════════════════════════════════════════ */
+.conf-dialog {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 28px 24px 24px;
+  text-align: center;
+  gap: 8px;
+}
+
+.conf-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  margin-bottom: 4px;
+}
+
+.conf-icon-danger {
+  background: rgba(var(--color-danger-rgb), 0.12);
+  color: var(--color-danger);
+}
+
+.conf-icon-warn {
+  background: rgba(var(--color-warning-rgb), 0.12);
+  color: var(--color-warning);
+}
+
+.conf-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0;
+}
+
+.conf-message {
+  font-size: 0.84rem;
+  color: var(--color-text-muted);
+  margin: 0 0 8px;
+  line-height: 1.5;
+}
+
+.conf-actions {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.conf-btn {
+  flex: 1;
+  padding: 9px 16px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.conf-btn-ghost {
+  background: var(--color-border);
+  color: var(--color-text-muted);
+}
+.conf-btn-ghost:hover { opacity: 0.8; }
+
+.conf-btn-danger {
+  background: var(--color-danger);
+  color: #fff;
+}
+.conf-btn-danger:hover { opacity: 0.88; }
+
+.conf-btn-warn {
+  background: rgba(var(--color-warning-rgb), 0.15);
+  color: var(--color-warning);
+  border: 1px solid rgba(var(--color-warning-rgb), 0.3);
+}
+.conf-btn-warn:hover { background: rgba(var(--color-warning-rgb), 0.25); }
 </style>

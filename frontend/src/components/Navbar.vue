@@ -6,6 +6,7 @@
         <RouterLink to="/" class="nav-link">{{ t('nav.home') }}</RouterLink>
         <RouterLink v-if="canAddGame && !isAdmin" to="/add-project" class="nav-link">{{ t('nav.add_project') }}</RouterLink>
         <RouterLink v-if="isAdmin" to="/admin" class="nav-link nav-link-admin">{{ t('nav.admin_panel') }}</RouterLink>
+        <button class="nav-link nav-link-btn" @click="showGuideDialog = true">{{ t('nav.guide') }}</button>
       </div>
 
       <!-- Center: Logo -->
@@ -18,7 +19,7 @@
         <!-- Language Switcher -->
         <div class="nav-lang-switcher" v-click-outside="() => showLangMenu = false">
           <button class="nav-btn-ghost nav-lang-btn" @click="showLangMenu = !showLangMenu" :title="currentLocaleInfo.label">
-            <span class="nav-lang-flag">{{ currentLocaleInfo.flag }}</span>
+            <span :class="`fi fi-${currentLocaleInfo.country} nav-lang-flag`"></span>
             <span class="nav-lang-code">{{ currentLocaleInfo.code.toUpperCase() }}</span>
           </button>
           <div v-if="showLangMenu" class="nav-lang-menu">
@@ -29,14 +30,14 @@
               :class="{ active: loc.code === locale }"
               @click="switchLocale(loc.code)"
             >
-              <span>{{ loc.flag }}</span>
+              <span :class="`fi fi-${loc.country}`"></span>
               <span>{{ loc.label }}</span>
             </button>
           </div>
         </div>
 
-        <button class="nav-btn-ghost nav-theme-toggle" @click="toggleTheme">
-          <span class="nav-theme-label">{{ isLightTheme ? t('nav.dark_mode') : t('nav.light_mode') }}</span>
+        <button class="nav-btn-ghost nav-theme-toggle" @click="toggleTheme" :title="isLightTheme ? t('nav.dark_mode') : t('nav.light_mode')">
+          <i :class="isLightTheme ? 'pi pi-moon' : 'pi pi-sun'"></i>
         </button>
         <template v-if="!isLoggedIn">
           <RouterLink to="/register">
@@ -56,11 +57,14 @@
               alt="Avatar"
               class="nav-avatar"
             />
-            <div v-else class="nav-avatar-placeholder" :style="{ background: avatarColor }">{{ userName?.charAt(0).toUpperCase() }}</div>
+            <div v-else class="nav-avatar-placeholder" :style="{ background: avatarColor }">
+              <span class="avatar-letter">{{ userName?.charAt(0).toUpperCase() }}</span>
+            </div>
             <span class="nav-user-name">{{ userName }}</span>
           </button>
           <button @click="logout" class="nav-btn-ghost nav-btn-logout">
             <span>{{ t('nav.logout') }}</span>
+            <i class="pi pi-sign-out"></i>
           </button>
         </template>
       </div>
@@ -75,10 +79,11 @@
     :modal="true" 
     :closable="false" 
     :draggable="false"
+    :blockScroll="true"
     class="w-11/12 md:w-[450px]"
-    :contentStyle="{ backgroundColor: 'var(--color-surface)', color: 'var(--color-text)', padding: '0', border: '1px solid var(--color-border)', borderRadius: '16px' }"
+    :contentStyle="{ backgroundColor: 'var(--color-surface)', color: 'var(--color-text)', padding: '0', border: 'none' }"
     :showHeader="false"
-    :style="{ borderRadius: '16px', overflow: 'hidden' }"
+    :style="{ borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--color-border)' }"
   >
     <div v-if="currentUser" class="relative flex flex-col pt-10">
       <button 
@@ -92,31 +97,31 @@
       <div class="px-8 pb-8 relative flex flex-col items-center">
         <!-- Avatar Section -->
         <div class="relative mb-4 group cursor-pointer shadow-lg rounded-full">
-          <img 
-            v-if="currentUser.avatar_path" 
+          <img
+            v-if="currentUser.avatar_path"
             :key="currentUser.avatar_path"
-            :src="getAvatarUrl(currentUser.avatar_path)" 
+            :src="getAvatarUrl(currentUser.avatar_path)"
             alt="Avatar"
             class="w-32 h-32 rounded-full object-cover"
             style="background-color: var(--color-surface);"
           />
-          <div 
-            v-else 
-            class="w-32 h-32 rounded-full flex items-center justify-center text-white font-bold text-5xl transition-transform duration-300 group-hover:scale-105"
+          <div
+            v-else
+            class="w-32 h-32 rounded-full relative flex items-center justify-center overflow-hidden text-white font-bold transition-transform duration-300 group-hover:scale-105"
             :style="{ background: avatarColor }"
           >
-            {{ currentUser.name?.charAt(0).toUpperCase() }}
+            <span class="avatar-letter-large">{{ currentUser.name?.charAt(0).toUpperCase() }}</span>
           </div>
-          
+
           <!-- Upload overlay -->
           <label class="absolute inset-x-0 bottom-0 top-0 m-auto w-32 h-32 flex items-center justify-center bg-black/60 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer backdrop-blur-sm">
             <div class="flex flex-col items-center gap-1 text-white">
               <span class="text-xs font-medium tracking-wide">{{ t('profile.change_btn') }}</span>
             </div>
-            <input 
-              type="file" 
-              accept="image/*" 
-              class="hidden" 
+            <input
+              type="file"
+              accept="image/*"
+              class="hidden"
               @change="handleAvatarUpload"
             />
           </label>
@@ -152,19 +157,27 @@
         <!-- Action Buttons -->
         <div class="flex flex-col gap-3 w-full">
           <template v-if="!editMode">
-            <button 
+            <button
               class="w-full py-3 rounded-xl font-bold transition-all duration-200 flex items-center justify-center gap-2"
               style="background: var(--color-accent); color: var(--color-accent-contrast);"
-              @click="startEdit" 
+              @click="startEdit"
             >
               Zmeniť meno
             </button>
-            <button 
+            <button
               class="w-full py-3 rounded-xl font-semibold transition-all duration-200 hover:bg-black/5 flex items-center justify-center gap-2 border"
               style="border-color: var(--color-border); color: var(--color-text);"
-              @click="openPasswordDialog" 
+              @click="openPasswordDialog"
             >
               <i class="pi pi-lock"></i> {{ t('profile.change_password_btn') }}
+            </button>
+            <button
+              v-if="currentUser.avatar_path"
+              class="w-full py-3 rounded-xl font-semibold transition-all duration-200 hover:bg-black/5 flex items-center justify-center gap-2 border"
+              style="border-color: var(--color-border); color: var(--color-text);"
+              @click="handleRemoveAvatar"
+            >
+              <i class="pi pi-user"></i> {{ t('profile.remove_avatar_btn') }}
             </button>
           </template>
           
@@ -195,6 +208,7 @@
     :modal="true"
     :closable="false"
     :draggable="false"
+    :blockScroll="true"
     class="w-11/12 md:w-[420px]"
     :contentStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', padding: '1.5rem', border: 'none' }" 
     :headerStyle="{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', borderBottom: '1px solid var(--color-border)', padding: '1rem 1.5rem', position: 'relative' }"
@@ -259,21 +273,93 @@
       </div>
     </div>
   </Dialog>
+
+  <!-- Guide Dialog -->
+  <Dialog
+    v-model:visible="showGuideDialog"
+    :modal="true"
+    :closable="false"
+    :draggable="false"
+    :blockScroll="true"
+    :dismissableMask="true"
+    class="w-11/12 md:w-[580px]"
+    :contentStyle="{ backgroundColor: 'var(--color-surface)', color: 'var(--color-text)', padding: '0', border: 'none' }"
+    :showHeader="false"
+    :style="{ borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--color-border)' }"
+  >
+    <div class="relative pt-8 pb-8" style="max-height: 80vh; overflow-y: auto;">
+      <button
+        class="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/20 text-gray-800 dark:text-white transition-colors z-10"
+        @click="showGuideDialog = false"
+      >
+        <span class="text-lg font-bold">✕</span>
+      </button>
+
+      <h2 class="text-center text-xl font-bold mb-4 px-8" style="color: var(--color-text-strong)">
+        <template v-if="isAdmin">Návod pre administrátorov</template>
+        <template v-else>{{ t(isLoggedIn ? 'guide.user_title' : 'guide.guest_title') }}</template>
+      </h2>
+
+      <div class="w-full border-b-2 mb-6" style="border-color: var(--color-accent);"></div>
+
+      <div class="px-8">
+        <ol class="guide-steps">
+          <!-- Admin: hardcoded Slovak -->
+          <template v-if="isAdmin">
+            <li v-for="(step, i) in adminGuideSteps" :key="i" class="guide-step">
+              <span class="guide-step-num">{{ i + 1 }}</span>
+              <span class="whitespace-pre-line">{{ step }}</span>
+            </li>
+          </template>
+          <!-- Logged-in user -->
+          <template v-else-if="isLoggedIn">
+            <li v-for="(step, i) in tm('guide.user_steps')" :key="i" class="guide-step">
+              <span class="guide-step-num">{{ i + 1 }}</span>
+              <!-- Rich format: object with title + lines -->
+              <span v-if="typeof step === 'object'" class="guide-step-rich">
+                <strong class="guide-step-title">{{ step.title }}</strong>
+                <span v-for="(line, j) in step.lines" :key="j" class="guide-step-line">{{ line }}</span>
+              </span>
+              <!-- Simple string format (other locales) -->
+              <span v-else>{{ step }}</span>
+            </li>
+          </template>
+          <!-- Guest -->
+          <template v-else>
+            <li v-for="(step, i) in tm('guide.guest_steps')" :key="i" class="guide-step">
+              <span class="guide-step-num">{{ i + 1 }}</span>
+              <span>{{ step }}</span>
+            </li>
+          </template>
+        </ol>
+      </div>
+    </div>
+  </Dialog>
 </template>
 
 <script setup>
 import { RouterLink, useRouter } from 'vue-router'
-import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import axios from 'axios'
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
 import { useI18n } from 'vue-i18n'
 import { SUPPORTED_LOCALES, setLocale } from '@/i18n'
 
-const { t, locale } = useI18n()
+const { t, locale, tm } = useI18n()
 const showLangMenu = ref(false)
+const showGuideDialog = ref(false)
+
+const adminGuideSteps = [
+  'Otvorte Admin Panel kliknutím na „Admin Panel" v navbare.',
+  'Schváľte alebo zamietnite tímy zobrazené pod dashboardom.',
+  'V záložke Prehľad Tímov prezerajte a spravujte tímy a projekty.\n\nPo kliknutí na jeden z tímov sa zobrazia jeho všetky a projekty a ich atribúty. Pre spravovanie jednotlivých projektov použite tlačidlá na pravej strane záložky projektu.\n\nDetail – zobrazí detail projektu\nUpraviť – umožní upraviť všetky atribúty projektu\nVymazať – umožní vymazať projekt\n\nPre správu tímov používajte tlačidlá na pravej strane záložky tímu.\n\nTlačidlo Detail zobrazí členov tímu – tu môžete pomocou tlačidiel na pravej strane záložiek každého člena spravovať vybraného člena – deaktivovať ho(nemôže sa už prihlásiť), presunúť ho do iného tímu, odstrániť ho z tímu(nie z portálu), zmeniť jeho okupáciu.\n\nTlačidlo Upraviť povolí zmeniť názov tímu, jeho akademický rok a stav.\n\nTlačidlo vymazať spôsobí soft delete tímu – na portále už nebude viditeľný(Treba najprv vymazať všetky projekty daného tímu).',
+  'Tlačidlo Registrovať používateľa v hornej časti admin panelu dovoľuje zaregistrovať a okamžite overiť používateľa s akýmkoľvek emailom(po zaškrtnutí checkboxu).',
+  'Tlačidlo Vytvoriť tím umožňuje vytvoriť všetky typy tímov.',
+  'Tlačidlo Pridať akademický rok umožňuje pridať akademický rok do databázy.',
+  'Tlačidlo Správa používateľov umožňuje Pridávanie používateľov do tímov a ich hromadnú či individuálnu deaktiváciu.'
+]
 const currentLocaleInfo = computed(() => SUPPORTED_LOCALES.find(l => l.code === locale.value) || SUPPORTED_LOCALES[0])
 function switchLocale(code) {
   setLocale(code)
@@ -308,7 +394,7 @@ function handleScroll() {
   }
   lastScrollY = sy
 }
-const isLoggedIn = ref(!!localStorage.getItem('access_token'))
+const isLoggedIn = ref(false) // always false until API confirms — prevents stale localStorage flash
 const canAddGame = ref(false) // Derived from active team scrum master status (now for projects)
 const isAdmin = ref(false) // Whether current user is admin
 const userName = ref('')
@@ -319,7 +405,6 @@ const toast = ref(null)
 const toastService = useToast()
 const editMode = ref(false)
 const editName = ref('')
-const editEmail = ref('')
 const currentPassword = ref('')
 const newPassword = ref('')
 const newPasswordConfirm = ref('')
@@ -330,6 +415,12 @@ function generateRandomColor() {
 const avatarColor = ref(generateRandomColor())
 const themePreference = ref('dark')
 const isLightTheme = computed(() => themePreference.value === 'light')
+
+watch([showGuideDialog, showUserProfileDialog, showPasswordDialog], (vals) => {
+  const locked = vals.some(Boolean)
+  document.documentElement.classList.toggle('scroll-locked', locked)
+  document.body.classList.toggle('scroll-locked', locked)
+})
 
 function applyTheme(theme) {
   const resolved = theme === 'light' ? 'light' : 'dark'
@@ -397,6 +488,26 @@ async function handleAvatarUpload(event) {
     }
   } catch (err) {
     console.error('Error uploading avatar:', err)
+    toastService.add({ severity: 'error', summary: t('toast.error'), detail: t('profile.update_error_desc'), life: 3000 })
+  }
+}
+
+async function handleRemoveAvatar() {
+  try {
+    const token = localStorage.getItem('access_token')
+    const res = await fetch(`${API_URL}/api/user/avatar/remove`, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token }
+    })
+    const data = await res.json()
+    if (res.ok) {
+      currentUser.value = data.user
+      toastService.add({ severity: 'success', summary: t('profile.updated'), detail: t('profile.remove_avatar_success'), life: 3000 })
+    } else {
+      toastService.add({ severity: 'error', summary: t('toast.error'), detail: data.message || t('profile.update_error_desc'), life: 3000 })
+    }
+  } catch (err) {
+    console.error('Error removing avatar:', err)
     toastService.add({ severity: 'error', summary: t('toast.error'), detail: t('profile.update_error_desc'), life: 3000 })
   }
 }
@@ -525,7 +636,11 @@ onMounted(async () => {
   if (token) {
     try {
       const response = await axios.get(`${API_URL}/api/user`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Cache-Control': 'no-store',
+          Pragma: 'no-cache'
+        }
       })
       isLoggedIn.value = true
       currentUser.value = response.data
@@ -549,6 +664,7 @@ onMounted(async () => {
 
   // Add event listeners
   window.addEventListener('login', handleLoginEvent)
+  window.addEventListener('logout', handleLogoutEvent)
   window.addEventListener('team-changed', handleTeamChangedEvent)
   window.addEventListener('scroll', handleScroll, { passive: true })
 
@@ -556,11 +672,24 @@ onMounted(async () => {
   refreshActiveTeamStatus()
 })
 
+function handleLogoutEvent() {
+  isLoggedIn.value = false
+  isAdmin.value = false
+  canAddGame.value = false
+  currentUser.value = null
+  userName.value = ''
+  localStorage.removeItem('access_token')
+  localStorage.removeItem('user')
+}
+
 // Cleanup event listeners on unmount to prevent memory leaks
 onUnmounted(() => {
   window.removeEventListener('login', handleLoginEvent)
+  window.removeEventListener('logout', handleLogoutEvent)
   window.removeEventListener('team-changed', handleTeamChangedEvent)
   window.removeEventListener('scroll', handleScroll)
+  document.documentElement.classList.remove('scroll-locked')
+  document.body.classList.remove('scroll-locked')
 })
 
 function refreshActiveTeamStatus(detail) {
@@ -763,15 +892,30 @@ async function saveProfile() {
   color: var(--color-text-muted);
   text-decoration: none;
   border-radius: 3px;
-  transition: color 0.12s, background 0.12s;
+  transition: color 0.15s, background 0.15s;
   text-transform: uppercase;
   letter-spacing: 0.03em;
   white-space: nowrap;
+  position: relative;
 }
 .nav-link:hover { color: var(--color-text); background: var(--color-hover-bg); }
-.nav-link.router-link-active { color: var(--color-accent); }
+.nav-link.router-link-active {
+  color: var(--color-accent);
+}
+.nav-link.router-link-active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 14px;
+  right: 14px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--color-accent);
+  opacity: 0.8;
+}
 .nav-link-admin { color: var(--color-danger); }
 .nav-link-admin:hover { color: var(--color-danger-hover); background: rgba(var(--color-danger-rgb), 0.1); }
+.nav-link-btn { background: none; border: none; cursor: pointer; font-family: inherit; }
 
 /* ── Right: Auth ── */
 .nav-right {
@@ -787,7 +931,9 @@ async function saveProfile() {
   padding: 6px 12px; font-size: 0.82rem; font-weight: 600;
   color: var(--color-text-muted); background: transparent; border: none;
   border-radius: 3px; cursor: pointer; transition: color 0.12s, background 0.12s;
+  line-height: 1;
 }
+.nav-btn-ghost i { line-height: 1; font-size: 0.85rem; }
 .nav-btn-ghost:hover { color: var(--color-text); background: var(--color-hover-bg-soft); }
 .nav-btn-logout:hover { color: var(--color-danger); background: rgba(var(--color-danger-rgb), 0.1); }
 
@@ -802,18 +948,40 @@ async function saveProfile() {
 /* User button */
 .nav-user-btn {
   display: flex; align-items: center; gap: 8px;
-  padding: 4px 10px 4px 4px; background: var(--color-user-btn-bg);
-  border: 1px solid var(--color-border); border-radius: 3px;
-  cursor: pointer; transition: background 0.12s, border-color 0.12s;
+  padding: 4px 12px 4px 4px; background: var(--color-user-btn-bg);
+  border: 1px solid var(--color-border); border-radius: 20px;
+  cursor: pointer; transition: background 0.15s, border-color 0.15s;
 }
 .nav-user-btn:hover { background: var(--color-user-btn-bg-hover); border-color: var(--color-accent); }
 
-.nav-avatar { width: 28px; height: 28px; border-radius: 3px; object-fit: cover; }
+.nav-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; }
 .nav-avatar-placeholder {
-  width: 28px; height: 28px; border-radius: 3px;
-  display: flex; align-items: center; justify-content: center;
-  line-height: 1;
+  width: 28px; height: 28px; border-radius: 50%;
+  position: relative;
+  display: grid;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
   color: #fff; font-weight: 700; font-size: 0.8rem;
+  line-height: 1;
+  text-align: center;
+}
+.avatar-letter {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  line-height: 1;
+  transform: translateY(0.5px);
+}
+.avatar-letter-large {
+  display: block;
+  font-size: 2.5rem;
+  margin: 0;
+  padding: 0;
+  line-height: 1;
+  text-align: center;
+  transform: translateY(1px);
 }
 .nav-user-name {
   font-size: 0.82rem; font-weight: 600; color: var(--color-text);
@@ -822,11 +990,21 @@ async function saveProfile() {
 @media (min-width: 640px) { .nav-user-name { display: inline; } }
 
 .nav-theme-toggle {
-  min-width: 120px;
+  width: 34px;
+  height: 34px;
+  padding: 0;
   justify-content: center;
+  border-radius: 50%;
+  font-size: 1rem;
 }
-.nav-theme-label {
-  letter-spacing: 0.01em;
+
+.nav-btn-icon {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 0.95rem;
 }
 
 /* ═══ Language Switcher ═══ */
@@ -837,7 +1015,7 @@ async function saveProfile() {
   display: flex; align-items: center; gap: 5px;
   padding: 6px 10px; min-width: unset;
 }
-.nav-lang-flag { font-size: 1.1rem; line-height: 1; }
+.nav-lang-flag { width: 1.2em; height: 0.9em; border-radius: 2px; }
 .nav-lang-code { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.03em; }
 .nav-lang-menu {
   position: absolute;
@@ -1027,9 +1205,8 @@ async function saveProfile() {
   }
 
   .nav-avatar-placeholder {
-    display: grid;
-    place-items: center;
-    line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0;
   }
 }
 
@@ -1115,10 +1292,63 @@ async function saveProfile() {
   }
 
   .nav-avatar-placeholder {
-    display: grid;
-    place-items: center;
+    display: flex; align-items: center; justify-content: center;
     font-size: 0.72rem;
-    line-height: 1;
+    padding: 0;
   }
+}
+
+/* ── Guide Dialog ── */
+.guide-divider {
+  width: 40px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--color-accent);
+  margin: 8px 0 24px;
+}
+.guide-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.guide-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--color-text);
+}
+.guide-step-rich {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.guide-step-title {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--color-text-strong);
+}
+.guide-step-line {
+  font-size: 0.83rem;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+.guide-step-num {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  margin-top: 2px;
 }
 </style>

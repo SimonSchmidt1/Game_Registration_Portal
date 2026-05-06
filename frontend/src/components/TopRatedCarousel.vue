@@ -160,16 +160,17 @@ onUnmounted(() => {
   padding: 0 40px;
 }
 .top-rated-title {
-  font-size: 1.05rem;
-  font-weight: 700;
+  font-size: 1.5rem;
+  font-weight: 800;
   color: var(--color-text);
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  margin-bottom: 6px;
 }
 .top-rated-sub {
-  font-size: 0.82rem;
+  font-size: 1rem;
   color: var(--color-text-muted);
-  margin-top: 4px;
+  margin-top: 0;
 }
 .carousel {
   position: relative;

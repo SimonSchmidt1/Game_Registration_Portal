@@ -288,7 +288,7 @@ class AdminController extends Controller
             $users = User::where(function ($q) {
                     $q->where('role', '!=', 'admin')->orWhereNull('role');
                 })
-                ->select(['id', 'name', 'email', 'role', 'status', 'is_absolvent', 'student_type', 'email_verified_at', 'created_at'])
+                ->select(['id', 'name', 'email', 'role', 'status', 'is_absolvent', 'student_type', 'avatar_path', 'email_verified_at', 'created_at'])
                 ->orderBy('name')
                 ->get();
 
@@ -483,8 +483,9 @@ class AdminController extends Controller
     public function updateTeam(Request $request, Team $team)
     {
         $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'status' => 'sometimes|string|in:active,pending,suspended',
+            'name'             => 'sometimes|string|max:255',
+            'status'           => 'sometimes|string|in:active,pending,suspended',
+            'academic_year_id' => 'sometimes|integer|exists:academic_years,id',
         ]);
 
         try {
@@ -494,6 +495,9 @@ class AdminController extends Controller
                 }
                 if ($request->has('status') && Schema::hasColumn('teams', 'status')) {
                     $team->status = $request->status;
+                }
+                if ($request->has('academic_year_id')) {
+                    $team->academic_year_id = (int) $request->academic_year_id;
                 }
                 $team->save();
             });
@@ -518,13 +522,21 @@ class AdminController extends Controller
         try {
             $teamName = $team->name;
             $teamId = $team->id;
-            
+
             // Check if team is already deleted
             if ($team->trashed()) {
                 return response()->json([
                     'message' => "Tím '{$teamName}' už bol zmazaný",
                     'deleted' => true
                 ]);
+            }
+
+            // Block deletion if team has projects — delete projects first
+            if ($team->projects()->exists()) {
+                $projectCount = $team->projects()->count();
+                return response()->json([
+                    'error' => "Tím '{$teamName}' má {$projectCount} projekt(ov). Pred zmazaním tímu najprv zmažte všetky projekty tímu.",
+                ], 409);
             }
 
             DB::transaction(function () use ($team, $teamId, $teamName) {
@@ -738,29 +750,40 @@ class AdminController extends Controller
             $userName = $user->name;
             $teamName = $team->name;
             
+            $isLastMember  = $team->members()->count() === 1;
+            $hasProjects   = $team->projects()->exists();
+            $shouldDelete  = $isLastMember && !$hasProjects;
+
             // Admin can remove anyone, including Scrum Master
-            DB::transaction(function () use ($team, $user) {
-                // Detach the member
+            DB::transaction(function () use ($team, $user, $isLastMember, $shouldDelete) {
                 $team->members()->detach($user->id);
-                
-                // If the removed user was Scrum Master, set scrum_master_id to null
-                if ($team->scrum_master_id == $user->id) {
+
+                if ($shouldDelete) {
+                    // Team is now empty and has no projects — delete it
+                    $team->delete();
+                } elseif ($team->scrum_master_id == $user->id) {
                     $team->scrum_master_id = null;
                     $team->save();
                 }
             });
 
             Log::info('Admin removed team member', [
-                'team_id' => $team->id,
-                'team_name' => $teamName,
-                'user_id' => $user->id,
-                'user_name' => $userName,
-                'admin_id' => auth()->id()
+                'team_id'        => $team->id,
+                'team_name'      => $teamName,
+                'user_id'        => $user->id,
+                'user_name'      => $userName,
+                'admin_id'       => auth()->id(),
+                'team_deleted'   => $shouldDelete,
             ]);
 
+            $message = $shouldDelete
+                ? "Člen '{$userName}' bol odstránený. Tím '{$teamName}' bol zmazaný, pretože bol prázdny a nemal žiadny projekt."
+                : "Člen '{$userName}' bol odstránený z tímu '{$teamName}'";
+
             return response()->json([
-                'message' => "Člen '{$userName}' bol odstránený z tímu '{$teamName}'",
-                'removed' => true
+                'message'      => $message,
+                'removed'      => true,
+                'team_deleted' => $shouldDelete,
             ]);
         } catch (\Exception $e) {
             Log::error('Admin remove member error: ' . $e->getMessage());
@@ -843,6 +866,47 @@ class AdminController extends Controller
     }
 
     /**
+     * Change a team member's occupation (admin override).
+     */
+    public function changeMemberOccupation(Request $request, Team $team, User $user)
+    {
+        $request->validate([
+            'occupation' => ['required', 'string', Rule::in(Occupation::values())],
+        ]);
+
+        try {
+            if (!$team->members()->where('user_id', $user->id)->exists()) {
+                return response()->json([
+                    'error' => 'Používateľ nie je členom tohto tímu',
+                ], 404);
+            }
+
+            $team->members()->updateExistingPivot($user->id, [
+                'occupation' => $request->occupation,
+            ]);
+
+            Log::info('Admin changed member occupation', [
+                'team_id'     => $team->id,
+                'user_id'     => $user->id,
+                'user_name'   => $user->name,
+                'occupation'  => $request->occupation,
+                'admin_id'    => auth()->id(),
+            ]);
+
+            return response()->json([
+                'message'    => "Povolanie používateľa '{$user->name}' bolo zmenené na '{$request->occupation}'",
+                'occupation' => $request->occupation,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Admin change occupation error: ' . $e->getMessage());
+            return response()->json([
+                'error'   => 'Nepodarilo sa zmeniť povolanie',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
      * Delete a project (admin can delete any project).
      */
     public function deleteProject(Project $project)
@@ -854,7 +918,40 @@ class AdminController extends Controller
             DB::transaction(function () use ($project, $projectId, $projectTitle) {
                 // Delete associated ratings
                 $project->ratings()->delete();
-                
+
+                // Delete splash screen
+                if ($project->splash_screen_path) {
+                    \Storage::disk('public')->delete($project->splash_screen_path);
+                }
+
+                // Delete video file (if stored locally)
+                if ($project->video_path) {
+                    \Storage::disk('public')->delete($project->video_path);
+                }
+
+                // Delete files stored in the JSON 'files' column
+                $projectFiles = $project->files ?? [];
+                foreach (['documentation', 'presentation', 'source_code', 'export', 'apk_file', 'ios_file'] as $key) {
+                    if (!empty($projectFiles[$key])) {
+                        \Storage::disk('public')->delete($projectFiles[$key]);
+                    }
+                }
+
+                // Delete WebGL build directory if this is a WebGL project
+                if ($project->type === 'webgl') {
+                    $webglPath = storage_path('app/public/webgl/' . $projectId);
+                    if (is_dir($webglPath)) {
+                        $files = new \RecursiveIteratorIterator(
+                            new \RecursiveDirectoryIterator($webglPath, \RecursiveDirectoryIterator::SKIP_DOTS),
+                            \RecursiveIteratorIterator::CHILD_FIRST
+                        );
+                        foreach ($files as $file) {
+                            $file->isDir() ? rmdir($file->getRealPath()) : unlink($file->getRealPath());
+                        }
+                        rmdir($webglPath);
+                    }
+                }
+
                 // Delete the project
                 $deleted = $project->delete();
                 
@@ -950,6 +1047,74 @@ class AdminController extends Controller
      * Move a user from one team to another (admin-only).
      * Auto-demotes user if they are Scrum Master in source team.
      */
+    /**
+     * Add a user directly to a team (no source team required).
+     * Used for users who are not yet in any team.
+     */
+    public function addUserToTeam(Request $request, User $user)
+    {
+        $request->validate([
+            'team_id'    => ['required', 'integer', 'exists:teams,id'],
+            'occupation' => ['required', 'string', Rule::in(Occupation::values())],
+        ]);
+
+        $team = Team::findOrFail($request->team_id);
+
+        // Already a member of that team
+        if ($team->members()->where('user_id', $user->id)->exists()) {
+            return response()->json([
+                'error' => "Používateľ '{$user->name}' je už členom tímu '{$team->name}'.",
+            ], 409);
+        }
+
+        // Team capacity check
+        if ($team->members()->count() >= 10) {
+            return response()->json([
+                'error' => "Tím '{$team->name}' je plný (maximálne 10 členov).",
+            ], 403);
+        }
+
+        // Student type compatibility check
+        $prefix = substr($team->invite_code, 0, 3);
+        $targetType = match($prefix) {
+            'DEN' => 'denny',
+            'EXT' => 'externy',
+            default => null,   // SPE (international) — accepts anyone
+        };
+
+        if ($targetType && $user->student_type !== $targetType) {
+            $userLabel   = $user->student_type === 'denny' ? 'denný' : 'externý';
+            $targetLabel = $targetType === 'denny' ? 'denný' : 'externý';
+            return response()->json([
+                'error' => "Tento používateľ je {$userLabel} študent a nemôže byť pridaný do {$targetLabel}ho tímu.",
+            ], 400);
+        }
+
+        DB::transaction(function () use ($team, $user, $request) {
+            $team->members()->attach($user->id, [
+                'role_in_team' => 'member',
+                'occupation'   => $request->occupation,
+            ]);
+        });
+
+        Log::info('Admin added user to team', [
+            'user_id'    => $user->id,
+            'user_name'  => $user->name,
+            'team_id'    => $team->id,
+            'team_name'  => $team->name,
+            'occupation' => $request->occupation,
+            'admin_id'   => auth()->id(),
+        ]);
+
+        return response()->json([
+            'message' => "Používateľ '{$user->name}' bol pridaný do tímu '{$team->name}'.",
+        ]);
+    }
+
+    /**
+     * Move a user from one team to another (admin-only).
+     * Auto-demotes user if they are Scrum Master in source team.
+     */
     public function moveUserBetweenTeams(Request $request, User $user)
     {
         $request->validate([
@@ -962,6 +1127,13 @@ class AdminController extends Controller
             $fromTeamId = (int) $request->from_team_id;
             $toTeamId = (int) $request->to_team_id;
             $occupation = $request->occupation;
+
+            // Cannot move to the same team
+            if ($fromTeamId === $toTeamId) {
+                return response()->json([
+                    'error' => 'Zdrojový a cieľový tím nemôžu byť rovnaké.',
+                ], 400);
+            }
 
             // Load teams
             $fromTeam = Team::findOrFail($fromTeamId);
@@ -993,10 +1165,10 @@ class AdminController extends Controller
             $targetType = ($toCodePrefix === 'DEN') ? 'denny' : (($toCodePrefix === 'EXT') ? 'externy' : null);
             
             if ($targetType && $user->student_type !== $targetType) {
+                $userLabel   = $user->student_type === 'denny' ? 'denný' : 'externý';
+                $targetLabel = $targetType === 'denny' ? 'denný' : 'externý';
                 return response()->json([
-                    'error' => 'Typ študenta používateľa sa nezhoduje s typom cieľového tímu',
-                    'user_type' => $user->student_type,
-                    'target_type' => $targetType,
+                    'error' => "Tento používateľ je {$userLabel} študent a nemôže byť presunutý do {$targetLabel}ho tímu.",
                 ], 400);
             }
 
@@ -1007,8 +1179,12 @@ class AdminController extends Controller
                 $isSourceScrumMaster = $sourcePivot && $sourcePivot->pivot->role_in_team === 'scrum_master';
                 $isSourceScrumMasterById = (int) $fromTeam->scrum_master_id === (int) $user->id;
 
+                $isLastMember   = $fromTeam->members()->count() === 1;
+                $fromHasProjects = $fromTeam->projects()->exists();
+                $shouldDeleteFrom = $isLastMember && !$fromHasProjects;
+
                 // Auto-demote if Scrum Master
-                if ($isSourceScrumMaster || $isSourceScrumMasterById) {
+                if (!$shouldDeleteFrom && ($isSourceScrumMaster || $isSourceScrumMasterById)) {
                     // Find next member to promote to SM (oldest member by pivot created_at)
                     $nextSM = $fromTeam->members()
                         ->where('user_id', '!=', $user->id)
@@ -1016,13 +1192,11 @@ class AdminController extends Controller
                         ->first();
 
                     if ($nextSM) {
-                        // Promote next member to SM
                         $fromTeam->members()->updateExistingPivot($nextSM->id, [
                             'role_in_team' => 'scrum_master'
                         ]);
                         $fromTeam->scrum_master_id = $nextSM->id;
                     } else {
-                        // No other members - clear SM
                         $fromTeam->scrum_master_id = null;
                     }
                     $fromTeam->save();
@@ -1031,6 +1205,11 @@ class AdminController extends Controller
                 // Detach from source team
                 $fromTeam->members()->detach($user->id);
 
+                // If source team is now empty and has no projects, delete it
+                if ($shouldDeleteFrom) {
+                    $fromTeam->delete();
+                }
+
                 // Attach to target team as member
                 $toTeam->members()->attach($user->id, [
                     'role_in_team' => 'member',
@@ -1038,9 +1217,10 @@ class AdminController extends Controller
                 ]);
 
                 return [
-                    'from_team' => $fromTeam->fresh(['members']),
-                    'to_team' => $toTeam->fresh(['members']),
+                    'from_team'        => $shouldDeleteFrom ? null : $fromTeam->fresh(['members']),
+                    'to_team'          => $toTeam->fresh(['members']),
                     'was_scrum_master' => $isSourceScrumMaster || $isSourceScrumMasterById,
+                    'source_deleted'   => $shouldDeleteFrom,
                 ];
             });
 
@@ -1055,17 +1235,23 @@ class AdminController extends Controller
                 'admin_id' => auth()->id(),
             ]);
 
+            $message = "Používateľ '{$user->name}' bol presunutý z tímu '{$fromTeam->name}' do tímu '{$toTeam->name}'";
+            if ($result['source_deleted']) {
+                $message .= ". Zdrojový tím bol zmazaný, pretože zostal prázdny bez projektu.";
+            }
+
             return response()->json([
-                'message' => "Používateľ '{$user->name}' bol presunul z tímu '{$fromTeam->name}' do tímu '{$toTeam->name}'",
+                'message'                => $message,
                 'user' => [
-                    'id' => $user->id,
-                    'name' => $user->name,
+                    'id'    => $user->id,
+                    'name'  => $user->name,
                     'email' => $user->email,
                 ],
                 'was_scrum_master_in_source' => $result['was_scrum_master'],
-                'new_sm_in_source' => $result['from_team']->scrum_master_id ? [
-                    'id' => $result['from_team']->scrum_master_id,
-                    'name' => $result['from_team']->members->firstWhere('id', $result['from_team']->scrum_master_id)->name ?? 'Unknown',
+                'source_deleted'             => $result['source_deleted'],
+                'new_sm_in_source' => (!$result['source_deleted'] && $result['from_team']?->scrum_master_id) ? [
+                    'id'   => $result['from_team']->scrum_master_id,
+                    'name' => $result['from_team']->members->firstWhere('id', $result['from_team']->scrum_master_id)?->name ?? 'Unknown',
                 ] : null,
             ]);
         } catch (\Exception $e) {
@@ -1106,11 +1292,25 @@ class AdminController extends Controller
         }
 
         try {
-            $user->status = 'inactive';
-            $user->save();
+            DB::transaction(function () use ($user) {
+                $user->status = 'inactive';
+                $user->save();
 
-            // Revoke all active tokens to force immediate logout
-            $user->tokens()->delete();
+                // Clear Scrum Master role from all teams where this user is SM
+                $smTeams = Team::where('scrum_master_id', $user->id)->get();
+                foreach ($smTeams as $smTeam) {
+                    // Demote pivot role to member
+                    $smTeam->members()->updateExistingPivot($user->id, [
+                        'role_in_team' => 'member'
+                    ]);
+                    // Clear the SM slot on the team
+                    $smTeam->scrum_master_id = null;
+                    $smTeam->save();
+                }
+
+                // Revoke all active tokens to force immediate logout
+                $user->tokens()->delete();
+            });
 
             Log::info('Admin deactivated user', [
                 'user_id' => $user->id,
@@ -1136,6 +1336,54 @@ class AdminController extends Controller
                 'message' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Bulk deactivate multiple user accounts (admin-only).
+     */
+    public function bulkDeactivateUsers(Request $request)
+    {
+        $request->validate(['user_ids' => 'required|array|min:1', 'user_ids.*' => 'integer']);
+
+        $users = User::whereIn('id', $request->user_ids)
+            ->where('role', '!=', 'admin')
+            ->where('status', 'active')
+            ->get();
+
+        if ($users->isEmpty()) {
+            return response()->json(['message' => 'Žiadni používatelia na deaktiváciu', 'deactivated' => 0]);
+        }
+
+        $deactivatedIds = $users->pluck('id');
+
+        DB::transaction(function () use ($deactivatedIds) {
+            // Clear Scrum Master role for any of these users who are SMs
+            $smTeams = Team::whereIn('scrum_master_id', $deactivatedIds)->get();
+            foreach ($smTeams as $smTeam) {
+                $smTeam->members()->updateExistingPivot($smTeam->scrum_master_id, [
+                    'role_in_team' => 'member'
+                ]);
+                $smTeam->scrum_master_id = null;
+                $smTeam->save();
+            }
+
+            User::whereIn('id', $deactivatedIds)->update(['status' => 'inactive']);
+            \Laravel\Sanctum\PersonalAccessToken::whereIn('tokenable_id', $deactivatedIds)
+                ->where('tokenable_type', User::class)
+                ->delete();
+        });
+
+        Log::info('Admin bulk deactivated users', [
+            'user_ids' => $deactivatedIds,
+            'count' => $users->count(),
+            'admin_id' => auth()->id(),
+        ]);
+
+        return response()->json([
+            'message' => "Deaktivovaných {$users->count()} používateľov",
+            'deactivated' => $users->count(),
+            'user_ids' => $deactivatedIds,
+        ]);
     }
 
     /**

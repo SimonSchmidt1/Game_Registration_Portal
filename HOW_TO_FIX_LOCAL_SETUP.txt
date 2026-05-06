@@ -1,0 +1,39 @@
+HOW TO FIX LOCAL SETUP (Laravel + Vue)
+=========================================
+
+1. Update CORS settings (backend/config/cors.php):
+--------------------------------------------------
+'allowed_origins' => [
+    'http://127.0.0.1:5173',
+],
+
+2. Clear Laravel config and cache (run in backend directory):
+------------------------------------------------------------
+php artisan config:clear
+php artisan cache:clear
+php artisan route:clear
+php artisan view:clear
+php artisan config:cache
+
+3. Run migrations:
+------------------
+php artisan migrate
+
+4. (Optional) Create an admin user with tinker:
+-----------------------------------------------
+php artisan tinker
+
+Then in tinker:
+---------------
+\App\Models\User::create([
+    'name' => 'Admin',
+    'email' => 'admin@example.com',
+    'password' => bcrypt('yourpassword'),
+    'role' => 'admin',
+    'status' => 'active'
+]);
+
+5. Restart both backend and frontend servers.
+---------------------------------------------
+
+Keep this file for reference whenever you need to set up your local environment!

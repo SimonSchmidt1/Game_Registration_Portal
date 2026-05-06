@@ -1,0 +1,1 @@
+<?php $app = require "bootstrap/app.php"; $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap(); $destPath = rtrim(Storage::disk("public")->path("webgl/2"), "/\\\\"); echo $destPath . "\n"; $it = new \RecursiveDirectoryIterator($destPath); $it->rewind(); $first = $it->current()->getRealPath(); echo dirname($first) . "\n"; 

@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1000" width="1200" height="1000" style="background: #ffffff; font-family: sans-serif; color: #333;">
+  <style>
+    .box { fill: none; stroke: #4a5568; stroke-width: 2; rx: 4px; }
+    .filled { fill: #e2e8f0; stroke: #4a5568; stroke-width: 2; rx: 4px; }
+    .text { fill: #2d3748; font-size: 16px; font-weight: bold; }
+    .text-sm { fill: #4a5568; font-size: 14px; }
+    .line { stroke: #cbd5e0; stroke-width: 2; }
+  </style>
+
+  <!-- Navbar -->
+  <rect x="50" y="20" width="1100" height="60" class="box" />
+  <text x="70" y="55" class="text">DOMOV   PRIDAŤ PROJEKT   NÁVOD</text>
+  <circle cx="600" cy="50" r="25" class="filled" />
+  <text x="578" y="55" class="text">LOGO</text>
+  <text x="950" y="55" class="text-sm">SK   (O) Šimon Schmidt   Odhlásiť -></text>
+
+  <!-- Active Team -->
+  <rect x="50" y="100" width="1100" height="60" class="box" />
+  <text x="70" y="135" class="text">AKTÍVNY TÍM</text>
+  <rect x="180" y="115" width="200" height="30" class="box" />
+  <text x="190" y="135" class="text-sm">Tím Simon2               v</text>
+  <rect x="400" y="115" width="110" height="30" class="filled" />
+  <text x="410" y="135" class="text-sm">Scrum Master</text>
+
+  <rect x="850" y="115" width="90" height="30" class="box" />
+  <text x="860" y="135" class="text-sm">Moje Tímy</text>
+  <rect x="950" y="115" width="90" height="30" class="box" />
+  <text x="960" y="135" class="text-sm">Pripojiť sa</text>
+  <rect x="1050" y="115" width="100" height="30" class="filled" />
+  <text x="1055" y="135" class="text">Vytvoriť Tím</text>
+
+  <!-- Best Projects -->
+  <rect x="50" y="180" width="1100" height="320" class="box" />
+  <text x="70" y="220" class="text" style="font-size: 20px;">NAJLEPŠIE HODNOTENÉ PROJEKTY</text>
+  <text x="70" y="245" class="text-sm">Výber najlepších študentských projektov podľa hodnotenia.</text>
+
+  <circle cx="80" cy="350" r="15" class="box" />
+  <text x="75" y="355" class="text-sm">&lt;</text>
+  <circle cx="1120" cy="350" r="15" class="box" />
+  <text x="1115" y="355" class="text-sm">&gt;</text>
+
+  <!-- Card 1 -->
+  <rect x="120" y="270" width="300" height="210" class="box" />
+  <rect x="120" y="270" width="300" height="110" class="filled" />
+  <line x1="120" y1="270" x2="420" y2="380" class="line" />
+  <line x1="120" y1="380" x2="420" y2="270" class="line" />
+  <text x="140" y="415" class="text">Test Project 66</text>
+  <text x="140" y="435" class="text-sm">Dummy project for pagination testing.</text>
+  <text x="140" y="465" class="text-sm">★★★★★ 5.0   (O) 6</text>
+  <rect x="375" y="448" width="35" height="22" class="box" />
+  <text x="380" y="463" class="text-sm">HRA</text>
+
+  <!-- Card 2 -->
+  <rect x="450" y="270" width="300" height="210" class="box" />
+  <rect x="450" y="270" width="300" height="110" class="filled" />
+  <line x1="450" y1="270" x2="750" y2="380" class="line" />
+  <line x1="450" y1="380" x2="750" y2="270" class="line" />
+  <text x="470" y="415" class="text">Kybo</text>
+  <text x="470" y="435" class="text-sm">sda das das dasd asd as das</text>
+  <text x="470" y="465" class="text-sm">★★★★★ 5.0   (O) 25</text>
+  <rect x="705" y="448" width="35" height="22" class="box" />
+  <text x="710" y="463" class="text-sm">HRA</text>
+
+  <!-- Card 3 -->
+  <rect x="780" y="270" width="300" height="210" class="box" />
+  <rect x="780" y="270" width="300" height="110" class="filled" />
+  <line x1="780" y1="270" x2="1080" y2="380" class="line" />
+  <line x1="780" y1="380" x2="1080" y2="270" class="line" />
+  <text x="800" y="415" class="text">Riderz</text>
+  <text x="800" y="435" class="text-sm">sad asdas dasd asd asd asd</text>
+  <text x="800" y="465" class="text-sm">★★★★☆ 4.0   (O) 20</text>
+  <rect x="1015" y="448" width="55" height="22" class="box" />
+  <text x="1020" y="463" class="text-sm">WEBGL</text>
+
+  <!-- Filter -->
+  <rect x="50" y="520" width="1100" height="180" class="box" />
+  <text x="70" y="555" class="text" style="font-size: 18px;">FILTER PROJEKTOV</text>
+  <rect x="1000" y="535" width="130" height="30" class="filled" />
+  <text x="1015" y="555" class="text-sm">Moje Projekty</text>
+
+  <rect x="70" y="575" width="1060" height="40" class="box" />
+  <text x="85" y="600" class="text-sm">Hľadať podľa názvu projektu...</text>
+
+  <text x="70" y="640" class="text-sm" style="font-weight: bold;">TYP ŠKOLY</text>
+  <rect x="70" y="650" width="250" height="35" class="box" />
+  <text x="80" y="672" class="text-sm">Všetky typy              v</text>
+  
+  <text x="340" y="640" class="text-sm" style="font-weight: bold;">ROČNÍK</text>
+  <rect x="340" y="650" width="250" height="35" class="box" />
+  <text x="350" y="672" class="text-sm">Všetky ročníky           v</text>
+  
+  <text x="610" y="640" class="text-sm" style="font-weight: bold;">PREDMET</text>
+  <rect x="610" y="650" width="250" height="35" class="box" />
+  <text x="620" y="672" class="text-sm">Všetky predmety          v</text>
+  
+  <text x="880" y="640" class="text-sm" style="font-weight: bold;">TYP PROJEKTU</text>
+  <rect x="880" y="650" width="250" height="35" class="box" />
+  <text x="890" y="672" class="text-sm">Všetky                   v</text>
+
+  <!-- Project Grid -->
+  <!-- Item 1 -->
+  <rect x="50" y="730" width="350" height="250" class="box" />
+  <rect x="50" y="730" width="350" height="140" class="filled" />
+  <line x1="50" y1="730" x2="400" y2="870" class="line" />
+  <line x1="50" y1="870" x2="400" y2="730" class="line" />
+  <text x="70" y="895" class="text">Test Project 52</text>
+  <rect x="70" y="905" width="35" height="20" class="box" />
+  <text x="75" y="920" class="text-sm" style="font-size: 12px;">HRA</text>
+  <text x="70" y="945" class="text-sm">Dummy project for pagination testing.</text>
+  <text x="70" y="965" class="text-sm">★★★★★ 0.0   (O) 1               Tim Omega</text>
+
+  <!-- Item 2 -->
+  <rect x="425" y="730" width="350" height="250" class="box" />
+  <rect x="425" y="730" width="350" height="140" class="filled" />
+  <line x1="425" y1="730" x2="775" y2="870" class="line" />
+  <line x1="425" y1="870" x2="775" y2="730" class="line" />
+  <text x="445" y="895" class="text">Test Project 53</text>
+  <rect x="445" y="905" width="35" height="20" class="box" />
+  <text x="450" y="920" class="text-sm" style="font-size: 12px;">HRA</text>
+  <text x="445" y="945" class="text-sm">Dummy project for pagination testing.</text>
+  <text x="445" y="965" class="text-sm">★★★★★ 0.0   (O) 0               Tim Omega</text>
+
+  <!-- Item 3 -->
+  <rect x="800" y="730" width="350" height="250" class="box" />
+  <rect x="800" y="730" width="350" height="140" class="filled" />
+  <line x1="800" y1="730" x2="1150" y2="870" class="line" />
+  <line x1="800" y1="870" x2="1150" y2="730" class="line" />
+  <text x="820" y="895" class="text">Test Project 54</text>
+  <rect x="820" y="905" width="35" height="20" class="box" />
+  <text x="825" y="920" class="text-sm" style="font-size: 12px;">HRA</text>
+  <text x="820" y="945" class="text-sm">Dummy project for pagination testing.</text>
+  <text x="820" y="965" class="text-sm">★★★★★ 0.0   (O) 0               Tim Omega</text>
+
+</svg>

@@ -1,7 +1,9 @@
 ## Game Registration Portal
 
+**Current Version:** 1.5.0
+
 ### Overview
-A web-based platform for UCM university students to register, showcase, and rate academic projects. Features team management with admin approval, project submissions with multimedia assets, and a modern dark-themed UI.
+A web-based platform for UCM university students to register, showcase, and rate academic projects. Features team management with admin approval, project submissions with multimedia assets, international team support, and a modern dark-themed UI.
 
 **Supported Project Types:**
 - game
@@ -67,6 +69,20 @@ npm run dev
 - **Occupations:** All members select their role (Programátor, Grafik 2D/3D, Tester, Animátor)
 - **Scrum Master:** Team creator becomes Scrum Master with project publishing rights
 
+#### Project Submissions
+Teams can upload comprehensive project materials:
+- **Universal Files (all project types):**
+  - **Documentation:** PDF, DOCX, ZIP, or RAR files (max 10MB) - project documentation, guides, manuals
+  - **Presentation:** PDF, PPT, or PPTX files (max 15MB) - project presentations
+  - **Source Code:** ZIP or RAR files (max 200MB) - full project source code
+  - **Export:** ZIP, RAR, EXE, APK, or IPA files (max 500MB) - compiled builds/executables
+    - Export Type: standalone app, WebGL build, mobile game, or executable
+  - **Project Folder:** ZIP or RAR files (max 20MB) - complete project directory structure
+- **Media Assets:**
+  - **Splash Screen:** JPG/PNG images for project thumbnails
+  - **Video:** Upload video files or provide YouTube/external URLs
+- **Metadata:** School type, year of study, subject, academic year, release date
+
 #### Team Approval Workflow
 New teams are created with `pending` status:
 - ⏳ **Pending Teams:** Cannot publish projects, invite code inactive, orange visual indicators
@@ -77,11 +93,18 @@ See [TEAM_APPROVAL_WORKFLOW.md](TEAM_APPROVAL_WORKFLOW.md) for details.
 
 #### Admin Panel
 - Access at `/admin` (admin login required)
-- View/approve/reject pending teams
-- Manage all teams and projects
-- Statistics dashboard
+- **Full Admin Capabilities:**
+  - Create teams directly (with name, academic year, type, status)
+  - Add academic years (format YYYY/YYYY, auto-suggested)
+  - Register verified student accounts
+  - Move users between teams (automatic Scrum Master handling)
+  - Remove team members and reassign Scrum Masters
+  - Manage all projects (view, edit, delete)
+  - View/approve/reject pending teams
+  - Dashboard with team, project, and user statistics
+- **Permissions:** Admin overrides all team status restrictions and permission checks
 
-See [ADMIN_LOGIN.md](ADMIN_LOGIN.md) for admin credentials.
+See [ADMIN_LOGIN.md](ADMIN_LOGIN.md) and [ADMIN_USER_MANAGEMENT.md](ADMIN_USER_MANAGEMENT.md) for detailed documentation.
 
 ### API Endpoints
 
@@ -104,16 +127,27 @@ POST   /api/teams                       # Create team (becomes pending)
 POST   /api/teams/join                  # Join via invite code
 DELETE /api/teams/{id}/members/{userId} # Remove member (active teams only)
 POST   /api/teams/{id}/leave            # Leave team (active teams only)
+GET    /api/academic-years              # List academic years
 ```
 
 #### Admin
 ```
-POST   /api/admin/login                 # Admin authentication
-GET    /api/admin/stats                 # Dashboard statistics
-GET    /api/admin/teams                 # List all teams
-POST   /api/admin/teams/{id}/approve    # Approve pending team
-POST   /api/admin/teams/{id}/reject     # Reject pending team
-DELETE /api/admin/teams/{id}            # Delete team
+POST   /api/admin/login                       # Admin authentication
+GET    /api/admin/stats                       # Dashboard statistics
+GET    /api/admin/teams                       # List all teams
+POST   /api/admin/teams                       # Create team
+GET    /api/admin/teams/{team}                # Team detail
+PUT    /api/admin/teams/{team}                # Update team
+DELETE /api/admin/teams/{team}                # Delete team
+POST   /api/admin/teams/{team}/approve        # Approve pending team
+POST   /api/admin/teams/{team}/reject         # Reject pending team
+GET    /api/admin/teams/{team}/projects       # Team projects
+DELETE /api/admin/teams/{team}/members/{user} # Remove member (admin bypass)
+POST   /api/admin/teams/{team}/scrum-master   # Change Scrum Master
+POST   /api/admin/academic-years              # Create academic year (YYYY/YYYY)
+DELETE /api/admin/projects/{project}          # Delete project
+POST   /api/admin/users                       # Register verified student
+POST   /api/admin/users/{user}/move-team      # Move user between teams
 ```
 
 ### Project Categorization
@@ -123,11 +157,14 @@ Projects are categorized by:
 - **Subject:** Slovenský jazyk, Matematika, Informatika, etc.
 
 ### UI Design
-Modern dark-themed interface with:
-- Glass-morphism card effects
-- Indigo-violet gradient accents
-- Seamless background across all components
-- Responsive design for all screen sizes
+Steam-inspired interface with full light/dark mode support:
+- Slate/blue surfaces (dark) or clean white/gray surfaces (light)
+- Muted green accents adapting to each mode
+- Flat cards, subtle borders, and compact typography
+- Minimal iconography (text-first UI)
+- Responsive layouts for all screen sizes
+- Theme toggle in the Navbar; preference stored in `localStorage`
+- All Tailwind overrides centralised in `main.css` via `.steam-theme` class
 
 ### Environment Variables
 
@@ -160,6 +197,11 @@ VITE_ADMIN_EMAIL=admin@gameportal.local
 3. Ensure admin user exists: `php artisan db:seed`
 
 #### Migration Errors (Duplicate Column)
+#### Password Reset Email Issues
+- Use the link in the reset email within 1 hour.
+- If your reset token is invalid or expired, the reset page now lets you resend the email directly. Enter your school email and click "Poslať znovu".
+- Resend is rate‑limited (e.g., once per minute). If you see a "Príliš veľa pokusov" message, wait for the countdown and try again.
+
 Migrations are now idempotent - they check for column existence before modifications.
 
 ### Documentation

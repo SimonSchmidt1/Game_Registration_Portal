@@ -34,7 +34,7 @@
             v-model="resendEmail"
             type="email"
             class="dlg-input"
-            placeholder="1234567@ucm.sk"
+            placeholder="email (napr. 1234567@ucm.sk)"
             :disabled="resendLoading || resendCooldown > 0"
           />
         </div>
@@ -191,7 +191,7 @@ async function resetPassword() {
     toast.add({
       severity: 'error',
       summary: t('common.network_error'),
-      detail: 'Skontroluj pripojenie',
+      detail: 'Skontrolujte pripojenie',
       life: 4000,
     })
   } finally {
@@ -200,11 +200,11 @@ async function resetPassword() {
 }
 
 async function resendResetEmail() {
-  if (!resendEmail.value || !/^[0-9]{7}@ucm\.sk$/.test(resendEmail.value)) {
+  if (!resendEmail.value) {
     toast.add({
       severity: 'warn',
       summary: 'Neplatný email',
-      detail: 'Email musí byť v tvare 7 číslic@ucm.sk (napr. 1234567@ucm.sk)',
+      detail: 'Zadaj platný email',
       life: 4000,
     })
     return
@@ -224,7 +224,7 @@ async function resendResetEmail() {
       toast.add({
         severity: 'success',
         summary: 'Email odoslaný',
-        detail: data.message || 'Odoslali sme ti nový email na obnovu hesla. Skontroluj schránku (aj SPAM).',
+        detail: data.message || 'Odoslali sme vám nový e-mail na obnovu hesla. Skontrolujte schránku (aj SPAM).',
         life: 5000,
       })
       // Start cooldown to match backend throttle (60s minimal)
@@ -255,7 +255,7 @@ async function resendResetEmail() {
       toast.add({
         severity: 'warn',
         summary: 'Príliš veľa pokusov',
-        detail: `Príliš veľa pokusov. Skús znova o ${cooldownSeconds} sekúnd.`,
+        detail: `Príliš veľa pokusov. Skúste znova o ${cooldownSeconds} sekúnd.`,
         life: 5000,
       })
     } else {
@@ -270,7 +270,7 @@ async function resendResetEmail() {
     toast.add({
       severity: 'error',
       summary: 'Chyba siete',
-      detail: 'Skontroluj pripojenie',
+      detail: 'Skontrolujte pripojenie',
       life: 4000,
     })
   } finally {

@@ -210,4 +210,24 @@ class TeamController extends Controller
             ]);
         });
     }
+
+    public function rename(Request $request, Team $team)
+    {
+        $user = auth()->user();
+        if ($team->scrum_master_id !== $user->id && $user->role !== 'admin') {
+            return response()->json(['message' => 'Len Scrum Master alebo Admin môže meniť názov tímu.'], 403);
+        }
+
+        $request->validate([
+            'name' => 'required|string|max:255|unique:teams,name,' . $team->id,
+        ]);
+
+        $team->name = $request->name;
+        $team->save();
+
+        return response()->json([
+            'message' => 'Názov tímu bol úspešne zmenený.',
+            'team' => $team
+        ]);
+    }
 }

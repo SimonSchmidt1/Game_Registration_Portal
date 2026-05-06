@@ -22,7 +22,7 @@
 
       <!-- Top bar -->
       <div class="pv-topbar">
-        <button class="pv-back-btn" @click="goBack">{{ t('project.back_btn') }}</button>
+        <button class="back-btn" @click="goBack"><i class="pi pi-arrow-left"></i><span>{{ t('project.back_btn') }}</span></button>
         <button v-if="isCurrentUserScrumMaster" class="pv-edit-btn" @click="editProject">{{ t('project.edit_btn') }}</button>
       </div>
 
@@ -52,33 +52,43 @@
               >★</span>
             </div>
             <span class="pv-rating-value">{{ formatRating(project.rating) }} / 5</span>
-            <span class="pv-rating-count" v-if="userHasRated">{{ t('project.rated_thanks', { n: project.rating_count || 0 }) }}</span>
-            <span class="pv-rating-count" v-else>{{ t('project.rate_prompt', { n: project.rating_count || 0 }) }}</span>
           </div>
+          <span class="pv-rating-count">Hlasov: {{ project.rating_count || 0 }}</span>
 
           <!-- Tags row -->
           <div class="pv-tags">
             <span class="pv-tag pv-tag-team" @click="goToTeam(project.team?.id)">{{ project.team?.name || t('common.unknown_team') }}</span>
             <span v-if="project.academic_year" class="pv-tag">{{ project.academic_year.name }}</span>
             <span v-if="project.release_date" class="pv-tag">{{ formatDate(project.release_date) }}</span>
-            <span class="pv-tag pv-tag-accent">{{ project.type.replace('_', ' ') }}</span>
-            <span class="pv-tag pv-tag-views"><i class="pi pi-eye" aria-hidden="true"></i> {{ project.views || 0 }} {{ t('project.views_label') }}</span>
+            <span class="pv-tag pv-tag-accent">{{ t('project_types.' + project.type) || project.type }}</span>
+            <span class="pv-tag pv-tag-views"><i class="pi pi-eye" aria-hidden="true"></i> {{ formatViews(project.views) }}</span>
           </div>
         </div>
       </section>
 
-      <!-- ── VIDEO / SPLASH ───────────────────────────── -->
-      <section v-if="project.video_path || project.splash_screen_path" class="pv-card pv-animate" style="--delay:1">
+      <!-- ── VIDEO / SPLASH ────────────────────────────── -->
+      <section v-if="project.video_path || project.splash_screen_path || (project.video_url && !project.type === 'webgl')" class="pv-card pv-animate" style="--delay:1">
         <h2 class="pv-section-title">{{ t('project.video_section') }}</h2>
+
         <div v-if="isYouTubeUrl(project.video_url)" class="pv-media-frame">
-          <iframe :src="getYouTubeEmbedUrl(project.video_url)" class="w-full h-full" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          <!-- Splash screen with play button — opens YouTube in new tab -->
+          <div v-if="project.splash_screen_path" class="w-full h-full relative cursor-pointer" @click="openYouTube(project.video_url)">
+            <img :src="getImageUrl(project.splash_screen_path)" :alt="project.title" class="w-full h-full object-cover" />
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="pv-play-circle">
+                <i class="pi pi-play" style="font-size:1.3rem; margin-left:2px; margin-top:1px;"></i>
+              </div>
+            </div>
+          </div>
+          <!-- No splash screen — embed directly -->
+          <iframe v-else :src="getYouTubeEmbedUrl(project.video_url)" class="w-full h-full" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
         </div>
         <div v-else-if="project.video_path" class="pv-media-frame pv-video-wrap" ref="videoContainer" tabindex="0">
           <video ref="videoPlayer" class="w-full h-full cursor-pointer" :src="getVideoUrl(project.video_path)" :poster="project.splash_screen_path ? getImageUrl(project.splash_screen_path) : ''" playsinline preload="metadata" @loadedmetadata="onLoadedMetadata" @timeupdate="onTimeUpdate" @play="videoPlaying = true" @pause="videoPlaying = false" @click="togglePlay"></video>
           <!-- Big play button overlay -->
           <div v-if="!videoPlaying" class="pv-play-overlay" @click="togglePlay">
             <div class="pv-play-circle">
-              <span>Play</span>
+              <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28" style="margin-left:3px"><path d="M8 5v14l11-7z"/></svg>
             </div>
           </div>
           <!-- Controls bar -->
@@ -111,8 +121,48 @@
             </div>
           </div>
         </div>
-        <div v-else-if="project.splash_screen_path" class="pv-media-frame">
-          <img :src="getImageUrl(project.splash_screen_path)" :alt="project.title" class="w-full h-full object-cover" />
+        <div v-else-if="project.splash_screen_path && project.type !== 'webgl'" class="pv-media-frame pv-no-video">
+          <img :src="getImageUrl(project.splash_screen_path)" :alt="project.title" class="w-full h-full object-cover pv-no-video-img" />
+          <div class="pv-no-video-overlay" :title="t('project.no_video_hint')">
+            <div class="pv-no-video-icon-wrap" aria-hidden="true">
+              <i class="pi pi-video pv-no-video-icon"></i>
+              <span class="pv-no-video-slash"></span>
+            </div>
+            <span class="pv-no-video-label">{{ t('project.no_video_label') }}</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── WEBGL GAME ──────────────────────────────────── -->
+      <section v-if="project.type === 'webgl' && webglSrc" class="pv-card pv-animate" style="--delay:2">
+        <h2 class="pv-section-title">{{ t('project.webgl_section') }}</h2>
+        <div class="pv-webgl-container">
+          <!-- Splash / placeholder before activating -->
+          <div v-if="!webglActive" class="pv-media-frame pv-webgl-preview cursor-pointer" @click="webglActive = true">
+            <img v-if="project.splash_screen_path" :src="getImageUrl(project.splash_screen_path)" :alt="project.title" class="w-full h-full object-cover" />
+            <div v-else class="w-full h-full flex items-center justify-center pv-webgl-placeholder">
+              <i class="pi pi-desktop" style="font-size:3rem; opacity:0.3;"></i>
+            </div>
+            <div class="absolute inset-0 flex flex-col items-center justify-center gap-3">
+              <div class="pv-play-circle">
+                <i class="pi pi-play" style="font-size:1.3rem; margin-left:2px; margin-top:1px;"></i>
+              </div>
+              <span class="pv-webgl-play-label">{{ t('project.webgl_play') }}</span>
+            </div>
+          </div>
+          <!-- Embedded game iframe -->
+          <iframe
+            v-else
+            :src="webglSrc"
+            class="pv-webgl-frame"
+            allow="fullscreen; autoplay; gamepad"
+            allowfullscreen
+          ></iframe>
+          <div class="pv-webgl-actions">
+            <button class="pv-webgl-btn" @click="openWebGL(webglSrc)">
+              <i class="pi pi-external-link"></i> {{ t('project.webgl_open') }}
+            </button>
+          </div>
         </div>
       </section>
 
@@ -169,9 +219,10 @@
       <section v-if="project.team?.members && project.team.members.length > 0" class="pv-card pv-animate" style="--delay:4">
         <h2 class="pv-section-title">{{ t('project.team_members_section') }}</h2>
         <div class="pv-members-grid">
-          <div v-for="member in project.team.members" :key="member.id" class="pv-member" :class="{ 'pv-member-sm': member.pivot?.role_in_team === 'scrum_master' }">
+          <div v-for="member in project.team.members" :key="member.id" class="pv-member pv-member-clickable" :class="{ 'pv-member-sm': member.pivot?.role_in_team === 'scrum_master', 'pv-member-deactivated': isUserDeactivated(member) }" @click="selectedMember = member">
             <div class="pv-member-avatar" :class="{ 'pv-avatar-sm': member.pivot?.role_in_team === 'scrum_master' }">
-              {{ memberInitials(member.name) }}
+              <img v-if="member.avatar_path" :src="getImageUrl(member.avatar_path)" :alt="member.name" class="pv-member-avatar-img" />
+              <template v-else>{{ memberInitials(member.name) }}</template>
             </div>
             <div class="pv-member-info">
               <div class="pv-member-name-row">
@@ -188,6 +239,40 @@
           </div>
         </div>
       </section>
+
+      <!-- ── MEMBER POPUP ──────────────────────────────── -->
+      <Teleport to="body">
+        <div v-if="selectedMember" class="pv-member-overlay" @click.self="selectedMember = null">
+          <div class="pv-member-popup">
+            <button class="pv-popup-close" @click="selectedMember = null">×</button>
+            <div class="pv-popup-avatar" :class="{ 'pv-popup-avatar-deactivated': isUserDeactivated(selectedMember) }">
+              <img v-if="selectedMember.avatar_path" :src="getImageUrl(selectedMember.avatar_path)" :alt="selectedMember.name" class="pv-popup-avatar-img" />
+              <template v-else>{{ memberInitials(selectedMember.name) }}</template>
+            </div>
+            <div class="pv-popup-name">{{ selectedMember.name }}</div>
+            <div v-if="selectedMember.is_absolvent" class="pv-grad-badge" style="margin: 0 auto 0.5rem;">{{ t('common.graduate') }}</div>
+            <div v-if="isUserDeactivated(selectedMember)" class="pv-deactivated-notice">
+              Používateľ bol deaktivovaný adminom. Pravdepodobne už neštuduje na UCM.
+            </div>
+            <div class="pv-popup-row">
+              <span class="pv-popup-label">E-mail</span>
+              <span class="pv-popup-value">{{ selectedMember.email }}</span>
+            </div>
+            <div class="pv-popup-row" v-if="selectedMember.pivot?.occupation">
+              <span class="pv-popup-label">Rola v tíme</span>
+              <span class="pv-popup-value">{{ formatOccupation(selectedMember.pivot.occupation) || selectedMember.pivot.occupation }}</span>
+            </div>
+            <div class="pv-popup-row" v-if="selectedMember.pivot?.role_in_team === 'scrum_master'">
+              <span class="pv-popup-label">Pozícia</span>
+              <span class="pv-popup-value">Scrum Master</span>
+            </div>
+            <div class="pv-popup-row" v-if="selectedMember.student_type">
+              <span class="pv-popup-label">Typ štúdia</span>
+              <span class="pv-popup-value">{{ selectedMember.student_type === 'denny' ? 'Denné' : 'Externé' }}</span>
+            </div>
+          </div>
+        </div>
+      </Teleport>
 
       <!-- ── DOWNLOADS ────────────────────────────────── -->
       <section class="pv-card pv-animate" style="--delay:5">
@@ -228,6 +313,10 @@ import { useI18n } from 'vue-i18n'
 import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
 import Button from 'primevue/button'
+import { apiFetch } from '@/utils/apiFetch'
+import { isUserDeactivated } from '../utils/userStatus.js'
+import { viewCounts } from '@/utils/viewCountStore'
+import { formatViews } from '@/utils/formatViews'
 
 const route = useRoute();
 const router = useRouter();
@@ -246,6 +335,18 @@ const isCurrentUserScrumMaster = ref(false)
 const videoContainer = ref(null)
 const videoPlayer = ref(null)
 const videoPlaying = ref(false)
+const webglActive = ref(false)
+
+const webglSrc = computed(() => {
+  const meta = project.value?.metadata
+  if (!meta) return null
+  // Prefer URL if explicitly set (user chose URL mode), otherwise use local build
+  if (meta.webgl_url) return meta.webgl_url
+  if (meta.webgl_local_path)
+    return `${API_URL}/storage/${meta.webgl_local_path.replace(/\/+$/, '')}/index.html`
+  return null
+})
+const selectedMember = ref(null)
 const currentTime = ref(0)
 const duration = ref(0)
 const isMuted = ref(false)
@@ -281,14 +382,14 @@ async function loadProject() {
   try {
     const url = isGuest.value ? `${API_URL}/api/public/projects/${id}` : `${API_URL}/api/projects/${id}`
     const headers = isGuest.value ? { 'Accept': 'application/json' } : { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' }
-    const res = await fetch(url, { headers })
+    const res = await apiFetch(url, { headers })
     const data = await res.json()
     if (res.ok && data.project) {
       project.value = data.project
       prepareMetadata()
       await incrementViews(id)
       if (isGuest.value) {
-        userHasRated.value = getGuestRatingFlag(id)
+        userHasRated.value = false
         isCurrentUserScrumMaster.value = false
       } else {
         await loadUserRating(id)
@@ -303,7 +404,7 @@ async function loadProject() {
 async function loadCurrentUser() {
   if (!token.value) return
   try {
-    const res = await fetch(`${API_URL}/api/user`, {
+    const res = await apiFetch(`${API_URL}/api/user`, {
       headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' }
     })
     if (res.ok) {
@@ -334,7 +435,7 @@ function editProject() {
 async function loadUserRating(id) {
   if (isGuest.value) return
   try {
-    const res = await fetch(`${API_URL}/api/projects/${id}/user-rating`, { headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' } })
+    const res = await apiFetch(`${API_URL}/api/projects/${id}/user-rating`, { headers: { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json' } })
     if (res.ok) {
       const data = await res.json();
       if (data.rating !== null) userHasRated.value = true
@@ -343,9 +444,25 @@ async function loadUserRating(id) {
 }
 
 async function incrementViews(id) {
+  // Optimistic update — user sees the new count immediately
+  const optimistic = (project.value?.views || 0) + 1
+  if (project.value) project.value.views = optimistic
+  viewCounts[id] = optimistic
+
   const url = isGuest.value ? `${API_URL}/api/public/projects/${id}/views` : `${API_URL}/api/projects/${id}/views`
   const headers = isGuest.value ? {} : { 'Authorization': 'Bearer ' + token.value }
-  try { await fetch(url, { method: 'POST', headers }) } catch (_) {}
+  try {
+    const res = await apiFetch(url, { method: 'POST', headers })
+    if (res.ok) {
+      const data = await res.json()
+      // Sync with real DB value
+      if (data.views !== undefined) {
+        if (project.value) project.value.views = data.views
+        viewCounts[id] = data.views
+      }
+    }
+    // If throttled we keep the optimistic value in the store
+  } catch (_) {}
 }
 
 function formatRating(val) { return Number(val || 0).toFixed(1) }
@@ -368,28 +485,35 @@ function ratingStarClass(star) {
     ? 'pv-star-filled'
     : 'pv-star-empty'
 }
-function getGuestRatingFlag(id) {
-  return localStorage.getItem(`guest_rated_${id}`) === '1'
-}
 function setGuestRatingFlag(id) {
   if (!id) return
   localStorage.setItem(`guest_rated_${id}`, '1')
 }
 async function submitRating(star) {
-  if (userHasRated.value) { toast.add({ severity: 'warn', summary: t('project.already_rated'), detail: t('project.already_rated_desc'), life: 4000 }); return }
+  if (!isGuest.value && userHasRated.value) { toast.add({ severity: 'warn', summary: t('project.already_rated'), detail: t('project.already_rated_desc'), life: 4000 }); return }
   try {
     const url = isGuest.value ? `${API_URL}/api/public/projects/${route.params.id}/rate` : `${API_URL}/api/projects/${route.params.id}/rate`
     const headers = isGuest.value
       ? { 'Accept': 'application/json', 'Content-Type': 'application/json' }
       : { 'Authorization': 'Bearer ' + token.value, 'Accept': 'application/json', 'Content-Type': 'application/json' }
-    const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify({ rating: star }) })
+    const res = await apiFetch(url, { method: 'POST', headers, body: JSON.stringify({ rating: star }) })
     const data = await res.json();
     if (res.ok) {
+      if (data.already_rated) {
+        userHasRated.value = true
+        if (isGuest.value) setGuestRatingFlag(route.params.id)
+        if (data.rating !== undefined && project.value) project.value.rating = data.rating
+        if (data.rating_count !== undefined && project.value) project.value.rating_count = data.rating_count
+        toast.add({ severity: 'warn', summary: t('project.already_rated'), detail: t('project.already_rated_desc'), life: 4000 })
+        return
+      }
+
       userHasRated.value = true
       if (isGuest.value) setGuestRatingFlag(route.params.id)
-      project.value.rating = data.rating
-      project.value.rating_count = data.rating_count
-      toast.add({ severity: 'success', summary: t('project.rating_saved'), detail: `Dal si ${star} hviezd.`, life: 4000 })
+      if (data.rating !== undefined && project.value) project.value.rating = data.rating
+      if (data.rating_count !== undefined && project.value) project.value.rating_count = data.rating_count
+      const starWord = star === 1 ? 'hviezdu' : star <= 4 ? 'hviezdy' : 'hviezd'
+      toast.add({ severity: 'success', summary: t('project.rating_saved'), detail: `Dal si ${star} ${starWord}.`, life: 4000 })
     } else {
       toast.add({ severity: 'error', summary: t('toast.error'), detail: data.message || t('project.rating_error'), life: 4000 })
     }
@@ -399,6 +523,8 @@ function formatDate(d) { if (!d) return 'Neznámy dátum'; return new Date(d).to
 function isYouTubeUrl(url){ return url && (url.includes('youtube.com')||url.includes('youtu.be')) }
 function getYouTubeEmbedUrl(url){ if(!url) return ''; let id=''; if(url.includes('watch?v=')) id=url.split('v=')[1]?.split('&')[0]; else if(url.includes('youtu.be/')) id=url.split('youtu.be/')[1]?.split('?')[0]; else if(url.includes('embed/')) return url; return id?`https://www.youtube.com/embed/${id}`:url }
 function getImageUrl(path){ if(!path) return ''; return path.startsWith('http')?path:`${API_URL}/storage/${path}` }
+function openYouTube(url){ window.open(url, '_blank') }
+function openWebGL(url){ window.open(url, '_blank') }
 function getVideoUrl(path){ if(!path) return ''; return path.startsWith('http')?path:`${API_URL}/video/${path}` }
 function downloadFile(path){ if(!path) return; const url=path.startsWith('http')?path:`${API_URL}/storage/${path}`; const a=document.createElement('a'); a.href=url; a.download=''; a.target='_blank'; document.body.appendChild(a); a.click(); document.body.removeChild(a); toast.add({severity:'success',summary:'Sťahovanie',detail:'Súbor sa sťahuje...',life:3000}) }
 function togglePlay(){ if(!videoPlayer.value) return; if(videoPlayer.value.paused){ videoPlayer.value.play().catch((e)=>{ console.error("Video Play Error:", e); }); } else { videoPlayer.value.pause(); } }
@@ -530,27 +656,26 @@ onUnmounted(()=>{ if(fsHandler) document.removeEventListener('fullscreenchange',
   justify-content: space-between;
 }
 
-.pv-back-btn,
 .pv-edit-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 7px 14px;
-  font-size: 0.82rem;
+  padding: 6px 14px 6px 10px;
+  font-size: 0.8rem;
   font-weight: 600;
-  border-radius: 8px;
+  border-radius: 20px;
   border: 1px solid var(--color-border);
   background: transparent;
   color: var(--color-text-muted);
   cursor: pointer;
   transition: all 0.15s;
+  letter-spacing: 0.02em;
 }
 
-.pv-back-btn:hover,
 .pv-edit-btn:hover {
-  background: var(--color-hover-bg);
-  color: var(--color-text);
-  border-color: var(--color-border-strong);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  background: rgba(var(--color-accent-rgb), 0.06);
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -644,9 +769,17 @@ onUnmounted(()=>{ if(fsHandler) document.removeEventListener('fullscreenchange',
   flex-wrap: wrap;
   align-items: center;
   gap: 12px;
-  padding-bottom: 20px;
-  margin-bottom: 20px;
+  padding-bottom: 6px;
+  margin-bottom: 4px;
+}
+
+.pv-rating-count {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  padding-bottom: 16px;
+  margin-bottom: 16px;
   border-bottom: 1px solid var(--color-border);
+  display: block;
 }
 
 .pv-stars {
@@ -679,11 +812,6 @@ onUnmounted(()=>{ if(fsHandler) document.removeEventListener('fullscreenchange',
   font-weight: 700;
   color: var(--color-text-strong);
   letter-spacing: -0.01em;
-}
-
-.pv-rating-count {
-  font-size: 0.78rem;
-  color: var(--color-text-muted);
 }
 
 /* ── Tags row ────────────────────────────────────────────── */
@@ -758,27 +886,95 @@ onUnmounted(()=>{ if(fsHandler) document.removeEventListener('fullscreenchange',
 }
 
 .pv-play-circle {
-  width: 72px;
-  height: 72px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
-  background: rgba(var(--color-accent-rgb), 0.85);
+  background: rgba(255, 255, 255, 0.15);
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  backdrop-filter: blur(6px);
-  transition: transform 0.2s, box-shadow 0.2s;
-  box-shadow: 0 0 30px rgba(var(--color-accent-rgb), 0.3);
+  backdrop-filter: blur(8px);
+  transition: background 0.2s, transform 0.2s;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
 }
 
-.pv-play-circle i {
+.pv-play-overlay:hover .pv-play-circle,
+.w-full:hover .pv-play-circle {
+  background: rgba(255, 255, 255, 0.28);
+  transform: scale(1.08);
+}
+
+/* No-video placeholder: splash shown with a clear "no video" indicator */
+.pv-no-video {
+  cursor: default;
+}
+.pv-no-video-img {
+  filter: brightness(0.55) saturate(0.85);
+}
+.pv-no-video-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
   color: #fff;
-  font-size: 1.6rem;
-  margin-left: 3px;
+  text-align: center;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center,
+              rgba(0, 0, 0, 0.05) 0%,
+              rgba(0, 0, 0, 0.55) 80%);
+  z-index: 2;
 }
-
-.pv-play-overlay:hover .pv-play-circle {
-  transform: scale(1.1);
-  box-shadow: 0 0 40px rgba(var(--color-accent-rgb), 0.5);
+.pv-no-video-icon-wrap {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  border: 2px solid rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+.pv-no-video-icon {
+  font-size: 1.9rem;
+  color: #fff;
+  opacity: 0.95;
+}
+.pv-no-video-slash {
+  position: absolute;
+  inset: 0;
+  display: block;
+  pointer-events: none;
+}
+.pv-no-video-slash::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 12%;
+  right: 12%;
+  height: 3px;
+  background: #ef4444; /* red-500 */
+  transform: rotate(-30deg);
+  transform-origin: center;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45);
+}
+.pv-no-video-label {
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(6px);
 }
 
 /* Controls bar */
@@ -998,13 +1194,182 @@ onUnmounted(()=>{ if(fsHandler) document.removeEventListener('fullscreenchange',
   transition: border-color 0.15s, transform 0.15s;
 }
 
-.pv-member:hover {
+/* ── WebGL ───────────────────────────────────────────── */
+.pv-webgl-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pv-webgl-preview {
+  position: relative;
+}
+
+.pv-webgl-placeholder {
+  background: var(--color-elevated);
+  color: var(--color-text-muted);
+}
+
+.pv-webgl-play-label {
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-shadow: 0 1px 6px rgba(0,0,0,0.6);
+}
+
+.pv-webgl-frame {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: none;
+  border-radius: 10px;
+  background: #000;
+  display: block;
+}
+
+.pv-webgl-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.pv-webgl-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.pv-webgl-btn:hover {
+  background: var(--color-hover-bg);
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+}
+
+.pv-member-clickable { cursor: pointer; }
+.pv-member-clickable:hover {
   border-color: var(--color-border-strong);
   transform: translateY(-1px);
 }
 
+.pv-member-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: pvFadeIn 0.15s ease-out both;
+}
+
+@keyframes pvFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.pv-member-popup {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  padding: 2rem 2rem 1.75rem;
+  width: 90%;
+  max-width: 340px;
+  position: relative;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+  animation: pvSlideIn 0.2s ease-out both;
+}
+
+.pv-popup-close {
+  position: absolute;
+  top: 1rem;
+  right: 1.1rem;
+  background: none;
+  border: none;
+  font-size: 1.4rem;
+  line-height: 1;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color 0.15s;
+  padding: 0;
+}
+.pv-popup-close:hover { color: var(--color-text); }
+
+.pv-popup-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(var(--color-accent-rgb), 0.12);
+  border: 2px solid rgba(var(--color-accent-rgb), 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.2rem;
+  margin: 0 auto 1rem;
+  color: var(--color-accent);
+  letter-spacing: 0.5px;
+  overflow: hidden;
+}
+
+.pv-popup-name {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 0.2rem;
+  text-align: center;
+}
+
+.pv-popup-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--color-border);
+  margin-top: 0.5rem;
+}
+
+.pv-popup-label {
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.pv-popup-value {
+  color: var(--color-text);
+  font-size: 0.92rem;
+  word-break: break-word;
+  line-height: 1.4;
+}
+
 .pv-member-sm {
   border-color: rgba(var(--color-accent-rgb), 0.2);
+}
+
+.pv-member-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  display: block;
+}
+
+.pv-popup-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
 }
 
 .pv-member-avatar {
@@ -1073,6 +1438,27 @@ onUnmounted(()=>{ if(fsHandler) document.removeEventListener('fullscreenchange',
   gap: 4px;
 }
 
+.pv-member-deactivated {
+  opacity: 0.45;
+  filter: grayscale(0.6);
+}
+
+.pv-popup-avatar-deactivated {
+  filter: grayscale(1);
+  opacity: 0.6;
+}
+
+.pv-deactivated-notice {
+  font-size: 0.78rem;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 6px;
+  padding: 8px 12px;
+  text-align: center;
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
 
 /* ═══════════════════════════════════════════════════════════
    DOWNLOADS

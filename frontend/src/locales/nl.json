@@ -8,7 +8,8 @@
     "logout": "Uitloggen",
     "dark_mode": "Donkere modus",
     "light_mode": "Lichte modus",
-    "my_profile": "Mijn profiel"
+    "my_profile": "Mijn profiel",
+    "guide": "Handleiding"
   },
   "common": {
     "loading": "Laden...",
@@ -110,7 +111,9 @@
     "current_password_label": "Huidig wachtwoord",
     "new_password_label": "Nieuw wachtwoord",
     "confirm_password_label": "Nieuw wachtwoord bevestigen",
-    "save_password_btn": "Wachtwoord wijzigen"
+    "save_password_btn": "Wachtwoord wijzigen",
+    "remove_avatar_btn": "Avatar verwijderen",
+    "remove_avatar_success": "Avatar verwijderd. Initialen worden weer getoond."
   },
   "filter": {
     "title": "Projecten filteren",
@@ -125,7 +128,8 @@
     "all_subjects": "Alle vakken",
     "all": "Alle",
     "my_projects_btn": "Mijn projecten",
-    "all_projects_btn": "Alle projecten"
+    "all_projects_btn": "Alle projecten",
+    "select_school_type_first": "Selecteer eerst het schooltype"
   },
   "school_types": {
     "zs": "Basisschool",
@@ -138,7 +142,8 @@
     "web_app": "Webapplicatie",
     "mobile_app": "Mobiele app",
     "library": "Bibliotheek",
-    "other": "Overig"
+    "other": "Overig",
+    "webgl": "WebGL Spel"
   },
   "subjects": {
     "all": "Alle vakken",
@@ -237,7 +242,7 @@
   },
   "landing": {
     "title": "Projectenportaal",
-    "desc": "U moet inloggen om projecten te bekijken en gebruik te maken van de portaalfuncties.",
+    "desc": "Blader, filter en download studentenprojecten zonder in te loggen.",
     "login_btn": "Inloggen",
     "guest_btn": "Doorgaan als gast",
     "register_btn": "Registreren"
@@ -256,6 +261,8 @@
     "rate_title": "Beoordeel {n} / 5",
     "views_label": "weergaven",
     "video_section": "Video",
+    "no_video_label": "Geen video",
+    "no_video_hint": "Voor dit project is geen video beschikbaar — de splash-afbeelding wordt getoond.",
     "description_section": "Beschrijving",
     "project_section": "Project",
     "team_members_section": "Teamleden",
@@ -283,7 +290,10 @@
     "already_rated_desc": "U heeft dit project al beoordeeld.",
     "not_found": "Project niet gevonden.",
     "id_missing": "Project-ID ontbreekt.",
-    "load_error": "Fout bij laden van project."
+    "load_error": "Fout bij laden van project.",
+    "webgl_section": "WebGL Spel",
+    "webgl_play": "Speel in browser",
+    "webgl_open": "Open in nieuw tabblad"
   },
   "add_project": {
     "add_title": "Nieuw project toevoegen",
@@ -375,13 +385,30 @@
     "choose_folder_btn": "Map kiezen (max. 20MB)",
     "choose_apk_btn": "APK kiezen",
     "choose_ios_btn": "iOS build kiezen",
-    "export_hint": "ZIP, RAR, EXE, APK of IPA \u2022 Max. grootte: 500MB",
+    "export_hint": "ZIP, RAR, EXE, APK of IPA • Max. grootte: 500MB",
     "apk_label": "APK-bestand",
     "ios_label": "iOS-build",
     "tech_stack_hint": "(door komma's gescheiden)",
     "tech_stack_hint_semi": "(door komma's of ; gescheiden)",
     "response_error": "Responsfout",
-    "response_error_desc": "De server gaf een ongeldige respons. Probeer het opnieuw."
+    "response_error_desc": "De server gaf een ongeldige respons. Probeer het opnieuw.",
+    "add_subtitle": "Vul je projectdetails in en publiceer het op de portal.",
+    "edit_subtitle": "Update je projectinformatie.",
+    "basic_section": "Basisinformatie",
+    "media_section": "Media",
+    "required_note": "Gemarkeerde velden * zijn verplicht.",
+    "webgl_source_label": "Hoe het spel weer te geven",
+    "webgl_mode_build": "Upload build",
+    "webgl_mode_url": "Externe URL",
+    "webgl_build_label": "WebGL build (ZIP archief)",
+    "webgl_build_btn": "Kies bestand",
+    "webgl_build_hint": "Upload een ZIP archief met je WebGL build. Moet index.html bevatten. Max grootte: 100 MB.",
+    "webgl_url_label": "WebGL spel URL",
+    "webgl_url_hint": "De URL waar het spel is gehost. Het spel wordt direct op de portal ingesloten.",
+    "missing_desc_title": "Beschrijving te kort",
+    "missing_desc_desc": "Beschrijving moet minstens 10 woorden bevatten.",
+    "missing_splash_title": "Ontbrekende project thumbnail",
+    "missing_splash_desc": "Upload een poster/thumbnail afbeelding voor het project."
   },
   "admin": {
     "title": "Beheerderspaneel",
@@ -450,5 +477,22 @@
     "next": "Volgende pagina",
     "page_of": "Pagina {current} van {total}",
     "rating_aria": "Beoordeling"
+  },
+  "guide": {
+    "guest_title": "Handleiding voor bezoekers",
+    "user_title": "Handleiding voor gebruikers",
+    "guest_steps": [
+      "Blader door projecten op de startpagina. Gebruik filters om te zoeken op type, school of vak.",
+      "Klik op een projectkaart om details, beschrijving, video en downloadbare bestanden te bekijken.",
+      "Beoordeel een project door op een ster te klikken (1 beoordeling per project).",
+      "Log in of registreer je voor volledige toegang."
+    ],
+    "user_steps": [
+      "Registreer je, verifieer je e-mail en log in.",
+      "Maak een team (als Scrum Master) of sluit je aan bij een bestaand team met een uitnodigingscode.",
+      "Als Scrum Master: klik op 'Project toevoegen' om het project van je team te publiceren.",
+      "Blader door en beoordeel projecten van andere teams.",
+      "Beheer je account door op de avatar rechtsboven te klikken."
+    ]
   }
 }

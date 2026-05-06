@@ -8,7 +8,8 @@
     "logout": "Sair",
     "dark_mode": "Modo escuro",
     "light_mode": "Modo claro",
-    "my_profile": "Meu Perfil"
+    "my_profile": "Meu Perfil",
+    "guide": "Guia"
   },
   "common": {
     "loading": "Carregando...",
@@ -110,7 +111,9 @@
     "current_password_label": "Senha atual",
     "new_password_label": "Nova senha",
     "confirm_password_label": "Confirmar nova senha",
-    "save_password_btn": "Alterar senha"
+    "save_password_btn": "Alterar senha",
+    "remove_avatar_btn": "Remover avatar",
+    "remove_avatar_success": "Avatar removido. As iniciais são mostradas novamente."
   },
   "filter": {
     "title": "Filtrar projetos",
@@ -125,7 +128,8 @@
     "all_subjects": "Todas as disciplinas",
     "all": "Todos",
     "my_projects_btn": "Meus projetos",
-    "all_projects_btn": "Todos os projetos"
+    "all_projects_btn": "Todos os projetos",
+    "select_school_type_first": "Selecione primeiro o tipo de escola"
   },
   "school_types": {
     "zs": "Escola Primária",
@@ -138,7 +142,8 @@
     "web_app": "App Web",
     "mobile_app": "App Mobile",
     "library": "Biblioteca",
-    "other": "Outro"
+    "other": "Outro",
+    "webgl": "Jogo WebGL"
   },
   "subjects": {
     "all": "Todas as disciplinas",
@@ -237,14 +242,14 @@
   },
   "landing": {
     "title": "Portal de Projetos",
-    "desc": "Você precisa entrar para ver projetos e usar as funcionalidades do portal.",
+    "desc": "Navegue, filtre e baixe projetos de estudantes sem fazer login.",
     "login_btn": "Entrar",
     "guest_btn": "Continuar como convidado",
     "register_btn": "Registrar"
   },
   "guest": {
     "hero_title": "Portal de Projetos UCM",
-    "hero_subtitle": "Explore, filtre e baixe projetos de estudantes sem fazer login.",
+    "hero_subtitle": "Navegue, filtre e baixe projetos de estudantes sem fazer login.",
     "login_btn": "Entrar"
   },
   "project": {
@@ -256,6 +261,8 @@
     "rate_title": "Avaliar {n} / 5",
     "views_label": "visualizações",
     "video_section": "Vídeo",
+    "no_video_label": "Sem vídeo",
+    "no_video_hint": "Não há vídeo disponível para este projeto — exibindo a imagem de apresentação.",
     "description_section": "Descrição",
     "project_section": "Projeto",
     "team_members_section": "Membros da equipe",
@@ -283,7 +290,10 @@
     "already_rated_desc": "Você já avaliou este projeto.",
     "not_found": "Projeto não encontrado.",
     "id_missing": "ID do projeto ausente.",
-    "load_error": "Erro ao carregar o projeto."
+    "load_error": "Erro ao carregar o projeto.",
+    "webgl_section": "Jogo WebGL",
+    "webgl_play": "Jogar no navegador",
+    "webgl_open": "Abrir em uma nova guia"
   },
   "add_project": {
     "add_title": "Adicionar novo projeto",
@@ -375,13 +385,30 @@
     "choose_folder_btn": "Escolher pasta (máx. 20MB)",
     "choose_apk_btn": "Escolher APK",
     "choose_ios_btn": "Escolher build iOS",
-    "export_hint": "ZIP, RAR, EXE, APK ou IPA \u2022 Tamanho máx.: 500MB",
+    "export_hint": "ZIP, RAR, EXE, APK ou IPA • Tamanho máx.: 500MB",
     "apk_label": "Ficheiro APK",
     "ios_label": "Build iOS",
     "tech_stack_hint": "(separado por vírgulas)",
     "tech_stack_hint_semi": "(separado por vírgulas ou ;)",
     "response_error": "Erro de resposta",
-    "response_error_desc": "O servidor retornou uma resposta inválida. Por favor, tente novamente."
+    "response_error_desc": "O servidor retornou uma resposta inválida. Por favor, tente novamente.",
+    "add_subtitle": "Preencha os detalhes do seu projeto e publique o no portal.",
+    "edit_subtitle": "Atualize as informações do seu projeto.",
+    "basic_section": "Informações básicas",
+    "media_section": "Mídia",
+    "required_note": "Campos marcados com * são obrigatórios.",
+    "webgl_source_label": "Como exibir o jogo",
+    "webgl_mode_build": "Enviar build",
+    "webgl_mode_url": "URL externa",
+    "webgl_build_label": "Build WebGL (arquivo ZIP)",
+    "webgl_build_btn": "Escolher arquivo",
+    "webgl_build_hint": "Envie um arquivo ZIP com sua build WebGL. O arquivo deve incluir um arquivo index.html. Tamanho máx: 100 MB.",
+    "webgl_url_label": "URL do jogo WebGL",
+    "webgl_url_hint": "A URL onde o jogo está hospedado. Será incorporado no portal.",
+    "missing_desc_title": "Descrição muito curta",
+    "missing_desc_desc": "A descrição deve conter pelo menos 10 palavras.",
+    "missing_splash_title": "Miniatura do projeto ausente",
+    "missing_splash_desc": "Faça upload de um pôster/miniatura. Ele é exibido no cartão do projeto."
   },
   "admin": {
     "title": "Painel Admin",
@@ -450,5 +477,22 @@
     "next": "Próxima página",
     "page_of": "Página {current} de {total}",
     "rating_aria": "Avaliação"
+  },
+  "guide": {
+    "guest_title": "Guia para visitantes",
+    "user_title": "Guia para utilizadores",
+    "guest_steps": [
+      "Explore projetos na página inicial. Use filtros para pesquisar por tipo, escola ou disciplina.",
+      "Clique em qualquer cartão de projeto para ver detalhes, descrição, vídeo e ficheiros para download.",
+      "Avalie um projeto clicando numa estrela (1 avaliação por projeto).",
+      "Inicie sessão ou registe-se para acesso completo."
+    ],
+    "user_steps": [
+      "Registe-se, verifique o seu email e inicie sessão.",
+      "Crie uma equipa (como Scrum Master) ou junte-se a uma existente com um código de convite.",
+      "Como Scrum Master: clique em \"Adicionar projeto\" para publicar o projeto da sua equipa.",
+      "Explore e avalie projetos de outras equipas.",
+      "Gira a sua conta clicando no avatar no canto superior direito."
+    ]
   }
 }

@@ -19,6 +19,7 @@ import TabPanel from 'primevue/tabpanel'
 import Toast from 'primevue/toast'
 import axios from 'axios'
 import 'primeicons/primeicons.css'
+import 'flag-icons/css/flag-icons.min.css'
 import router from './router'
 
 const storedTheme = localStorage.getItem('theme_preference')

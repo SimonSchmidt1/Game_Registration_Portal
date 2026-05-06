@@ -23,8 +23,34 @@ class AuthController extends Controller
     // Registrácia
     public function register(Request $request)
     {
+        // If the email already exists but is unverified, issue a fresh token and resend —
+        // instead of returning a "email already taken" validation error.
+        if ($request->email) {
+            $existingUnverified = User::where('email', strtolower(trim($request->email)))
+                ->whereNull('email_verified_at')
+                ->first();
+
+            if ($existingUnverified) {
+                $newToken = Str::random(64);
+                $existingUnverified->verification_token = $newToken;
+                $existingUnverified->save();
+
+                try {
+                    $existingUnverified->notify(new VerifyEmailNotification($newToken));
+                } catch (\Exception $e) {
+                    \Log::error('Re-register resend failed', ['user_id' => $existingUnverified->id]);
+                }
+
+                return response()->json([
+                    'message' => 'Tento e-mail bol zaregistrovaný, ale nebol ešte overený. Poslali sme nový overovací e-mail.',
+                    'requires_verification' => true,
+                    'resent' => true,
+                ], 200);
+            }
+        }
+
         // Check if registering for an international team (SPE code) - allows any email
-        $isInternational = $request->has('invite_code') && 
+        $isInternational = $request->has('invite_code') &&
                            str_starts_with(strtoupper($request->invite_code ?? ''), 'SPE');
 
         // Email validation - international teams can use any email
@@ -95,8 +121,13 @@ class AuthController extends Controller
             return $this->adminLogin($request);
         }
 
-        // Check if user exists and is in an international team (SPE code) - bypass UCM validation
+        // Look up the user first — needed for bypass checks below
         $user = \App\Models\User::where('email', trim(strtolower($request->email)))->first();
+
+        // Bypass UCM email format check if:
+        // (a) user already exists in DB (admin-created or international), OR
+        // (b) user is a member of an international team (SPE prefix)
+        $userExistsInDb = $user !== null;
         $isInternationalMember = false;
         if ($user) {
             $isInternationalMember = $user->teams()
@@ -107,8 +138,8 @@ class AuthController extends Controller
                 ->exists();
         }
 
-        // Regular users must have UCM email format (unless international team member)
-        if (!$isInternationalMember) {
+        // Enforce UCM email format only for unknown emails (not yet in DB)
+        if (!$userExistsInDb && !$isInternationalMember) {
             $request->validate([
                 'email' => ['email', 'regex:/^[0-9]{7}@ucm\.sk$/'],
             ], [
@@ -228,6 +259,32 @@ class AuthController extends Controller
         return response()->json($request->user());
     }
 
+    // Resend verification email
+    public function resendVerification(Request $request)
+    {
+        $request->validate(['email' => ['required', 'email']]);
+
+        $user = User::where('email', $request->email)->first();
+
+        // Always return success to avoid email enumeration
+        if (!$user || $user->email_verified_at) {
+            return response()->json(['message' => 'Ak účet existuje a nie je overený, bol odoslaný nový overovací e-mail.']);
+        }
+
+        // Generate a fresh token
+        $verificationToken = \Illuminate\Support\Str::random(64);
+        $user->verification_token = $verificationToken;
+        $user->save();
+
+        try {
+            $user->notify(new \App\Notifications\VerifyEmailNotification($verificationToken));
+        } catch (\Throwable $e) {
+            \Log::error('Failed to resend verification email', ['user_id' => $user->id, 'error' => $e->getMessage()]);
+        }
+
+        return response()->json(['message' => 'Ak účet existuje a nie je overený, bol odoslaný nový overovací e-mail.']);
+    }
+
     // Verify email with token
     public function verifyEmail(Request $request)
     {
@@ -267,6 +324,22 @@ class AuthController extends Controller
         ]);
     }
 
+    // Remove avatar (revert to initials)
+    public function removeAvatar(Request $request)
+    {
+        try {
+            $user = $request->user();
+            $this->authService->removeAvatar($user);
+            return response()->json([
+                'message' => 'Avatar bol odstránený',
+                'user' => $user
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('removeAvatar error', ['error' => $e->getMessage()]);
+            return response()->json(['message' => 'Nepodarilo sa odstrániť avatar: ' . $e->getMessage()], 500);
+        }
+    }
+
     // Update profile (name only; email change is not allowed)
     public function updateProfile(Request $request)
     {
@@ -280,7 +353,7 @@ class AuthController extends Controller
         // Explicitly forbid email change if provided
         if ($request->has('email') && $request->email !== $user->email) {
             return response()->json([
-                'message' => 'Zmena e-mailu nie je povolená. Účet je viazaný na UCM e-mail.'
+                'message' => 'Zmena e-mailu nie je povolená.'
             ], 422);
         }
 
@@ -337,14 +410,14 @@ class AuthController extends Controller
             ->where('type', 'reset')
             ->delete();
 
-        // Create new token
-        $token = Str::random(64);
-        
+        // Create new token — store as hash, send plain value in email only
+        $plainToken = Str::random(64);
+
         PasswordResetToken::updateOrCreate(
             ['email' => $user->email],
             [
                 'user_id' => $user->id,
-                'token' => $token,
+                'token' => Hash::make($plainToken),
                 'type' => 'reset',
                 'expires_at' => now()->addHour(),
                 'used' => false,
@@ -353,7 +426,7 @@ class AuthController extends Controller
             ]
         );
 
-        $resetUrl = config('app.frontend_url') . '/reset-password?token=' . $token;
+        $resetUrl = config('app.frontend_url') . '/reset-password?token=' . $plainToken;
         
         try {
             $user->notify(new PasswordResetNotification($resetUrl));
@@ -374,21 +447,35 @@ class AuthController extends Controller
     // Reset password with token
     public function resetPassword(ResetPasswordRequest $request)
     {
-        $resetToken = PasswordResetToken::where('token', $request->token)
-            ->where('type', 'reset')
+        // Tokens are now stored as hashes — find candidates by type/validity,
+        // then verify the plain token against each hash.
+        $candidates = PasswordResetToken::where('type', 'reset')
+            ->where('used', false)
+            ->where('expires_at', '>', now())
             ->with('user')
-            ->first();
+            ->get();
 
-        if (!$resetToken || !$resetToken->isValid()) {
+        $resetToken = $candidates->first(function ($t) use ($request) {
+            return Hash::check($request->token, $t->token);
+        });
+
+        if (!$resetToken) {
             return response()->json([
                 'message' => 'Neplatný alebo expirovaný odkaz na reset hesla.',
             ], 422);
         }
 
         $resetToken->markAsUsed();
-        
+
         $user = $resetToken->user;
-        
+
+        if ($user->status === 'inactive') {
+            return response()->json([
+                'message' => 'Váš účet bol deaktivovaný. Kontaktujte administrátora.',
+                'account_inactive' => true
+            ], 403);
+        }
+
         $user->update([
             'password' => Hash::make($request->password),
         ]);
@@ -410,6 +497,13 @@ class AuthController extends Controller
             return response()->json([
                 'message' => 'Nesprávny email alebo dočasné heslo.',
             ], 401);
+        }
+
+        if ($user->status === 'inactive') {
+            return response()->json([
+                'message' => 'Váš účet bol deaktivovaný. Kontaktujte administrátora.',
+                'account_inactive' => true
+            ], 403);
         }
 
         $tempToken = PasswordResetToken::where('user_id', $user->id)

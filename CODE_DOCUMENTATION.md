@@ -14,6 +14,12 @@
   - Handles authentication and email verification
   - Tracks failed login attempts for security
   - Methods to check if user is admin or Scrum Master
+  - `is_absolvent` boolean flag (default: `false`) - marks users not in latest CSV import
+- **Absolvent System**:
+  - When admin imports a CSV, all non-admin users NOT in the CSV are marked `is_absolvent = true`
+  - Users that ARE in the CSV have `is_absolvent` cleared to `false`
+  - Admin accounts are never affected
+  - Frontend shows gray shade + "Absolvent" badge on absolvent names in all views
 - **Relationships**: Can belong to multiple teams
 
 #### `Team.php`
@@ -44,7 +50,7 @@
 
 #### `AcademicYear.php`
 - **Purpose**: Represents a school year (e.g., "2024/2025")
-- **Main Features**: Just stores the year name
+- **Main Features**: Stores the year name in strict `YYYY/YYYY` format
 
 #### `GameRating.php`
 - **Purpose**: Stores user ratings for projects/games
@@ -92,11 +98,14 @@
 - **Purpose**: Manages all project types (games, web apps, mobile apps, libraries, other)
 - **Main Endpoints**:
   - `index()` - Lists all projects with optional filters (type, school_type, year_of_study, subject, search, academic year)
+  - `publicIndex()` - Public list for guest browsing (active teams only)
   - `store()` - Creates new project (only Scrum Master can do this, multiple projects per team allowed)
   - `show()` - Shows single project details
+  - `publicShow()` - Public single project detail (active teams only)
   - `update()` - Updates existing project (only Scrum Master of the project's team can edit)
   - `incrementViews()` - Increases view count when someone views project
   - `rate()` - User rates project (1-5 stars, only once per user)
+  - `ratePublic()` - Guest rating endpoint (no login, throttled)
   - `getUserRating()` - Checks if user already rated this project
   - `my()` - Returns all projects for a specific team
 
@@ -154,6 +163,11 @@
   - POST `/forgot-password` - Request password reset
   - POST `/reset-password` - Reset password with token
   - POST `/login-temporary` - Login with temporary password
+  - GET `/public/projects` - Public project list (active teams only)
+  - GET `/public/projects/top-rated` - Public top rated list
+  - GET `/public/projects/{id}` - Public project detail
+  - POST `/public/projects/{id}/views` - Public view count increment
+  - POST `/public/projects/{id}/rate` - Public rating (throttled)
 
 - **Protected Routes** (login required):
   - GET `/user` - Get current user info
@@ -177,7 +191,25 @@
   - GET `/academic-years` - Get all academic years
 
 - **Admin Routes** (admin role required):
-  - GET `/admin/dashboard` - Admin dashboard (placeholder for future features)
+  - GET `/admin/stats` - Dashboard statistics
+  - GET `/admin/teams` - List all teams
+  - POST `/admin/teams` - Create team
+  - GET `/admin/teams/{team}` - Team detail
+  - PUT `/admin/teams/{team}` - Update team
+  - DELETE `/admin/teams/{team}` - Delete team
+  - POST `/admin/teams/{team}/approve` - Approve pending team
+  - POST `/admin/teams/{team}/reject` - Reject pending team
+  - GET `/admin/teams/{team}/projects` - Team projects
+  - DELETE `/admin/teams/{team}/members/{user}` - Remove member (admin bypass)
+  - POST `/admin/teams/{team}/scrum-master` - Change Scrum Master
+  - GET `/admin/projects` - List all projects
+  - DELETE `/admin/projects/{project}` - Delete project
+  - GET `/admin/users` - List users
+  - POST `/admin/users` - Register verified student
+  - POST `/admin/users/{user}/move-team` - Move user between teams
+  - POST `/admin/users/{user}/deactivate` - Deactivate user
+  - POST `/admin/users/{user}/activate` - Reactivate user
+  - POST `/admin/academic-years` - Create academic year (YYYY/YYYY)
 
 #### `web.php`
 - **Purpose**: Defines web routes (currently minimal, API is primary)
@@ -257,10 +289,63 @@
 
 ### Main Entry Point - `frontend/src/`
 
+#### `i18n.js`
+- **Purpose**: Configures the `vue-i18n` internationalization library and provides the locale-switch helper
+- **Supported Locales (11):**
+
+  | Code | Language    | Flag |
+  |------|-------------|------|
+  | `sk` | Slovenčina  | 🇸🇰  |
+  | `en` | English     | 🇬🇧  |
+  | `cs` | Čeština     | 🇨🇿  |
+  | `pl` | Polski      | 🇵🇱  |
+  | `hu` | Magyar      | 🇭🇺  |
+  | `de` | Deutsch     | 🇩🇪  |
+  | `fr` | Français    | 🇫🇷  |
+  | `it` | Italiano    | 🇮🇹  |
+  | `es` | Español     | 🇪🇸  |
+  | `pt` | Português   | 🇵🇹  |
+  | `nl` | Nederlands  | 🇳🇱  |
+
+- **Default locale:** `sk`
+- **Fallback locale:** `en` (displayed when a key is missing in the active locale)
+- **Locale detection order:** `localStorage('locale_preference')` → `navigator.language` → `sk`
+- **`setLocale(code)`** — exported helper to switch locale at runtime; also updates `html[lang]` and persists to `localStorage`
+- **`SUPPORTED_LOCALES`** — exported array of `{ code, label, flag }` objects used by the language picker UI
+- **Mode:** `legacy: false` (composition API mode — `useI18n()` must be called per-component)
+
+> ⚠️ **Important:** Because `legacy: false` is set, `t()` is **not** available globally. Every `<script setup>` component that uses `t()` in its template **must** include:
+> ```javascript
+> import { useI18n } from 'vue-i18n'
+> const { t } = useI18n()
+> ```
+> Omitting these lines causes a **blank screen** at runtime with no build-time warning. See TROUBLESHOOTING.md → "Blank Screen After Login" for full details.
+
+---
+
+#### `locales/<code>.json`
+- **Purpose**: Translation message files, one per supported language
+- **Location**: `frontend/src/locales/`
+- **Format**: Flat or nested JSON with dot-notation keys
+- **Structure** (top-level namespaces):
+  - `nav` — navigation labels
+  - `auth` — login/register/verify text
+  - `team` — team management UI
+  - `filter` — filter toolbar labels
+  - `landing` — non-logged-in landing page
+  - `common` — generic actions (save, cancel, loading...)
+  - `toast` — toast notification messages
+  - `project` — project detail page
+  - `admin` — admin panel labels
+- **Adding a key**: Add the key to **all** locale files. If a key is missing in a non-fallback locale, vue-i18n silently uses `en.json`. If the key is also missing in `en.json`, the raw key string is rendered (e.g., `team.active_team`).
+
+---
+
 #### `main.js`
 - **Purpose**: Initializes the Vue application
 - **Main Features**:
   - Imports and configures Vue
+  - Registers `vue-i18n` via `app.use(i18n)` (must be registered before any component uses `useI18n()`)
   - Registers PrimeVue components globally
   - Sets up axios for API calls
   - Adds global error handler
@@ -284,6 +369,7 @@
 - **Purpose**: Defines all frontend routes (pages)
 - **Routes**:
   - `/` - Home page (project list)
+  - `/guest` - Guest browsing page (public project list)
   - `/login` - Login page
   - `/register` - Registration page
   - `/verify-email` - Email verification page
@@ -310,6 +396,19 @@
     - Upload/change avatar
     - Edit display name
     - Change password
+
+#### `TopRatedCarousel.vue`
+- **Purpose**: Carousel for top rated projects
+- **Main Features**:
+  - Manual arrows, no autoplay
+  - Responsive cards per slide (3/2/1)
+  - Swipe support and keyboard navigation
+
+#### `ProjectCard.vue`
+- **Purpose**: Reusable project card for carousel sections
+- **Main Features**:
+  - Thumbnail, title, short description
+  - Rating stars and type label
 
 ---
 
@@ -411,6 +510,7 @@
   - Shows project title, categorization (school type, year, subject), type, team, academic year
   - Rating system (1-5 stars, user can rate once)
   - View counter
+  - Supports guest mode via public endpoints
   - Video player with custom controls (if video uploaded) or YouTube embed
   - Splash screen image
   - Full project description
@@ -423,7 +523,6 @@
     - Volume control
     - Fullscreen toggle
     - Keyboard shortcuts (Space = play/pause, Arrow keys = skip)
-    - 10-second skip forward/backward buttons
 
 #### `GameView.vue` (LEGACY - kept for backward compatibility)
 - **Purpose**: Old single game detail page
@@ -438,12 +537,20 @@
 - **Main Features**:
   - Shows team name and info
   - Academic year
-  - Member count (max 4)
+  - Member count (max 10)
   - Project count
   - Invite code with copy button
   - List of team members with avatars and roles (Member or Scrum Master)
   - Grid of team's projects with cards
   - Links to project details
+
+#### `GuestView.vue`
+- **Purpose**: Public browsing page for guests (teachers, visitors)
+- **Main Features**:
+  - Top rated carousel and full project list
+  - Search and filter controls (type, school, year, subject)
+  - Project detail navigation and downloads
+  - No team actions or project creation
 
 ---
 
@@ -484,6 +591,12 @@
 #### `tailwind.config.js`
 - **Purpose**: Tailwind CSS configuration
 - **Main Features**: Defines custom colors, spacing, breakpoints
+
+#### `src/assets/main.css`
+- **Purpose**: Global stylesheet — Tailwind directives, CSS custom-property theme tokens, and centralised `.steam-theme` overrides
+- **Theme Tokens**: `:root` (dark default) and `html[data-theme='light']` define all `--color-*` variables
+- **`.steam-theme` Overrides**: Remap hardcoded Tailwind dark-colour utilities (`bg-gray-*`, `text-gray-*`, `border-gray-*`, gradients, hovers) to CSS variables so light mode works automatically
+- **PrimeVue Overrides**: Global styling for PrimeVue inputs, dropdowns, buttons, and panels inside `.steam-theme` containers
 
 #### `postcss.config.js`
 - **Purpose**: PostCSS configuration for CSS processing

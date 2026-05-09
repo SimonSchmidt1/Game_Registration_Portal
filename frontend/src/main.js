@@ -95,6 +95,10 @@ app.use(PrimeVue, {
     options: {
       darkModeSelector: 'html[data-theme="dark"]'
     }
+  },
+  locale: {
+    // Hide PrimeVue's default English "No file chosen" — our own file-name display below the FileUpload covers this state for all languages
+    noFileChosenMessage: ''
   }
 })
 app.use(ToastService) 

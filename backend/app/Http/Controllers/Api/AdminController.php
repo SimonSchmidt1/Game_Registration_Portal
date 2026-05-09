@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
 use App\Enums\Occupation;
+use App\Notifications\AdminRegisteredNotification;
 
 class AdminController extends Controller
 {
@@ -1020,6 +1021,12 @@ class AdminController extends Controller
                 'user_role' => $user->role,
                 'admin_id' => auth()->id()
             ]);
+
+            try {
+                $user->notify(new AdminRegisteredNotification($request->password));
+            } catch (\Exception $e) {
+                Log::warning('Admin registered notification failed: ' . $e->getMessage());
+            }
 
             return response()->json([
                 'message' => "Používateľ '{$user->name}' bol úspešne registrovaný",

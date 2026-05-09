@@ -1,6 +1,16 @@
 # 4. Implementácia
 
-V tejto kapitole podrobne a chronologicky opisujem proces implementácie webového portálu. Vývoj bol rozdelený do troch logicky na seba nadväzujúcich fáz, presne v takom poradí, v akom prebiehal reálny vývoj. Najprv bola vybudovaná kompletná **backendová vrstva** (serverová aplikačná logika a aplikačné programovacie rozhranie – API). Túto vrstvu sme v počiatočnej fáze testovali len prostredníctvom minimalistického a dočasného používateľského rozhrania (základné HTML/JS formuláre a testovacie HTTP požiadavky). Až po plnej stabilizácii aplikačnej logiky sme pristúpili k vývoju moderného **frontendového používateľského rozhrania**. Paralelne s týmito fázami, so silným dôrazom v záverečných fázach vývoja, sme navrhovali a optimalizovali **databázovú štruktúru** na spoľahlivé uchovávanie dát a pokročilú manipuláciu s nimi.
+V predchádzajúcej kapitole sme podrobne predstavili návrh celého riešenia – od špecifikácie funkčných požiadaviek, cez výber technologického zásobníka, až po definíciu dátového modelu a architektúry systému. Všetky tieto návrhové rozhodnutia vytvorili stabilný koncepčný základ, na ktorom bolo možné začať skutočnú implementáciu. Táto kapitola nadväzuje na návrh a podrobne, chronologicky dokumentuje celý proces transformácie navrhnutého riešenia do funkčného softvérového produktu.
+
+Vývoj portálu sme metodicky rozdelili do troch logicky na seba nadväzujúcich fáz, ktoré presne zodpovedajú reálnemu postupu práce v projekte. Takéto fázovanie nám umožnilo v každom kroku stavať na overených výstupoch predchádzajúcej etapy, minimalizovať technické riziko a udržať systém v stabilnom stave počas celého vývojového cyklu.
+
+**Prvá fáza – Backend (Podkapitola 4.1)** sa sústredila na vybudovanie kompletnej serverovej aplikačnej logiky a aplikačného programovacieho rozhrania (API). V tomto štádiu sme abstrahovali od vizuálnej prezentácie a funkcionalitu overovali výhradne prostredníctvom minimalistických testovacích formulárov a priamych HTTP požiadaviek. Cieľom bolo zabezpečiť, aby jadro systému – spracovanie dát, autentifikácia, autorizácia a bezpečnostné mechanizmy – fungovalo autonómne a nezávisle od používateľského rozhrania.
+
+**Druhá fáza – Frontend (Podkapitola 4.2)** bola zahájená až po úplnej stabilizácii backendovej vrstvy. V tejto etape sme navrhli a implementovali moderné jednostránkové používateľské rozhranie (SPA), ktoré asynchrónne komunikuje s API vytvoreným v prvej fáze. Dôraz bol kladený na interaktívnosť, responzívnosť a celkový používateľský zážitok.
+
+**Tretia fáza – Databáza (Podkapitola 4.3)** prebiehala čiastočne paralelne s oboma predchádzajúcimi fázami, avšak najintenzívnejšia práca na optimalizácii a pokročilých dátových štruktúrach sa sústredila do záverečného obdobia vývoja. Zameriavali sme sa na spoľahlivé uchovávanie dát, výkonnostné ladenie pomocou indexovania a implementáciu flexibilných schém pre heterogénne metadáta.
+
+Každá z uvedených podkapitol začína stručným opisom inštalácie a konfigurácie príslušného prostredia, pokračuje prezentáciou základov implementácie a následne sa venuje technicky najnáročnejším aspektom danej vrstvy. Zdrojové kódy sú v texte ilustrované anotovanými ukážkami, ktorých kompletné referencie na príslušné súbory v repozitári sú zhrnuté na konci každej podkapitoly.
 
 ---
 

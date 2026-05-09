@@ -3,7 +3,7 @@
     <div class="nav-inner">
       <!-- Left: Navigation links -->
       <div class="nav-left">
-        <RouterLink to="/" class="nav-link">{{ t('nav.home') }}</RouterLink>
+        <RouterLink :to="isLoggedIn ? '/home' : '/'" class="nav-link">{{ t('nav.home') }}</RouterLink>
         <RouterLink v-if="canAddGame && !isAdmin" to="/add-project" class="nav-link">{{ t('nav.add_project') }}</RouterLink>
         <RouterLink v-if="isAdmin" to="/admin" class="nav-link nav-link-admin">{{ t('nav.admin_panel') }}</RouterLink>
         <button class="nav-link nav-link-btn" @click="showGuideDialog = true">{{ t('nav.guide') }}</button>
@@ -632,6 +632,13 @@ onMounted(async () => {
   const storedTheme = localStorage.getItem(THEME_KEY)
   applyTheme(storedTheme === 'light' ? 'light' : 'dark')
 
+  // Register event listeners BEFORE async work to prevent race conditions
+  // (e.g. App.vue inactivity logout firing while axios.get is still in flight)
+  window.addEventListener('login', handleLoginEvent)
+  window.addEventListener('logout', handleLogoutEvent)
+  window.addEventListener('team-changed', handleTeamChangedEvent)
+  window.addEventListener('scroll', handleScroll, { passive: true })
+
   const token = localStorage.getItem('access_token')
   if (token) {
     try {
@@ -656,17 +663,14 @@ onMounted(async () => {
       localStorage.removeItem('user')
       isLoggedIn.value = false
       isAdmin.value = false
+      currentUser.value = null
+      userName.value = ''
+      canAddGame.value = false
       if (router.currentRoute.value.meta.requiresAuth) {
         router.push('/login')
       }
     }
   }
-
-  // Add event listeners
-  window.addEventListener('login', handleLoginEvent)
-  window.addEventListener('logout', handleLogoutEvent)
-  window.addEventListener('team-changed', handleTeamChangedEvent)
-  window.addEventListener('scroll', handleScroll, { passive: true })
 
   // Initialize scrum master flag from persisted active team
   refreshActiveTeamStatus()
@@ -681,6 +685,16 @@ function handleLogoutEvent() {
   localStorage.removeItem('access_token')
   localStorage.removeItem('user')
 }
+
+// On every route change: if navbar still shows logged-in state but token is gone, clear it
+watch(
+  () => router.currentRoute.value.path,
+  () => {
+    if (isLoggedIn.value && !localStorage.getItem('access_token')) {
+      handleLogoutEvent()
+    }
+  }
+)
 
 // Cleanup event listeners on unmount to prevent memory leaks
 onUnmounted(() => {
@@ -899,10 +913,10 @@ async function saveProfile() {
   position: relative;
 }
 .nav-link:hover { color: var(--color-text); background: var(--color-hover-bg); }
-.nav-link.router-link-active {
+.nav-link.router-link-exact-active {
   color: var(--color-accent);
 }
-.nav-link.router-link-active::after {
+.nav-link.router-link-exact-active::after {
   content: '';
   position: absolute;
   bottom: -2px;

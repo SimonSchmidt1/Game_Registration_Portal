@@ -27,6 +27,7 @@ const routes = [
   { path: '/project/:id', name: 'ProjectDetail', component: ProjectView },
   { path: '/team/:id', name: 'TeamDetail', component: TeamView },
   { path: '/admin', name: 'Admin', component: AdminView, meta: { requiresAuth: true, requiresAdmin: true } },
+  { path: '/category/:type/:value', name: 'CategoryDetail', component: () => import('../views/CategoryView.vue') },
   { path: '/add', name: 'AddGame', component: AddGameView, meta: { requiresAuth: true } }, // Backward compatibility
   { path: '/game/:id', name: 'GameDetail', component: GameView }, // Backward compatibility
 ]

@@ -46,6 +46,18 @@
 
       <form v-else @submit.prevent="submitForm" class="apv-form">
 
+        <!-- Missing items banner (edit mode only) -->
+        <div v-if="isEditMode && missingItems.length" class="apv-missing-banner">
+          <i class="pi pi-exclamation-circle apv-missing-icon"></i>
+          <div class="apv-missing-body">
+            <strong class="apv-missing-title">Tento projekt nemá vyplnené:</strong>
+            <ul class="apv-missing-list">
+              <li v-for="item in missingItems" :key="item.key">{{ item.label }}</li>
+            </ul>
+            <p class="apv-missing-hint">Doplňte chýbajúce položky pre kompletný profil projektu.</p>
+          </div>
+        </div>
+
         <!-- ① Základné informácie -->
         <div class="apv-section">
           <div class="apv-section-header">
@@ -90,10 +102,12 @@
             <div class="apv-field">
               <label class="apv-label">{{ t('add_project.subject_label') }} <span class="apv-req">*</span></label>
               <Dropdown v-model="subject" :options="subjects" optionLabel="label" optionValue="value" :placeholder="t('add_project.subject_placeholder')" class="apv-input" />
+              <InputText v-if="subject === '__custom__'" v-model="customSubject" placeholder="Napr. Robotika, Programovanie, Biológia..." class="apv-input" maxlength="255" />
             </div>
             <div class="apv-field">
               <label class="apv-label">{{ t('add_project.uni_subject_label') }} <span class="apv-req">*</span></label>
               <Dropdown v-model="predmet" :options="predmety" optionLabel="label" optionValue="value" :placeholder="t('add_project.uni_subject_placeholder')" class="apv-input" />
+              <InputText v-if="predmet === '__custom__'" v-model="customPredmet" placeholder="Napr. Počítačová grafika, Umelá inteligencia..." class="apv-input" maxlength="255" />
             </div>
           </div>
         </div>
@@ -106,15 +120,15 @@
           </div>
           <div class="apv-fields">
             <!-- Splash -->
-            <div class="apv-field">
-              <label class="apv-label">{{ t('add_project.splash_section') }} <span v-if="!isEditMode || !existingProject?.splash_screen_path" class="apv-req">*</span></label>
+            <div class="apv-field" :class="{ 'apv-field-missing': isItemMissing('splash_screen') }">
+              <label class="apv-label">{{ t('add_project.splash_section') }} <span v-if="!isEditMode || !existingProject?.splash_screen_path" class="apv-req">*</span><span v-if="isItemMissing('splash_screen')" class="apv-missing-tag">CHÝBA</span></label>
               <p class="apv-hint">{{ t('add_project.splash_recommended') }}</p>
-              <FileUpload name="splash_screen" mode="basic" accept="image/*" :maxFileSize="8388608" :chooseLabel="t('add_project.choose_image_btn')" @select="onFileSelect($event, 'splash_screen')" @clear="onFileClear('splash_screen')" />
-              <p v-if="files.splash_screen.name" class="apv-file-name"><i class="pi pi-check-circle"></i> {{ files.splash_screen.name }}</p>
+              <FileUpload :key="fileUploadKeys.splash_screen" name="splash_screen" mode="basic" accept="image/*" :maxFileSize="15728640" :chooseLabel="t('add_project.choose_image_btn')" @select="onFileSelect($event, 'splash_screen')" @clear="onFileClear('splash_screen')" />
+              <p v-if="files.splash_screen.name" class="apv-file-name"><i class="pi pi-check-circle"></i> <span class="apv-file-name-text">{{ files.splash_screen.name }}</span><button type="button" class="apv-file-clear" @click="onFileClear('splash_screen')" :title="t('add_project.clear_file_btn')" :aria-label="t('add_project.clear_file_btn')"><span class="apv-file-clear-text">{{ t('add_project.clear_file_btn') }}</span><i class="pi pi-times"></i></button></p>
             </div>
             <!-- Video -->
-            <div class="apv-field">
-              <label class="apv-label">{{ t('add_project.video_section') }}</label>
+            <div class="apv-field" :class="{ 'apv-field-missing': isItemMissing('video') }">
+              <label class="apv-label">{{ t('add_project.video_section') }}<span v-if="isItemMissing('video')" class="apv-missing-tag">CHÝBA</span></label>
               <div class="apv-toggle">
                 <button type="button" :class="['apv-toggle-btn', videoType === 'upload' ? 'apv-toggle-active' : '']" @click="videoType = 'upload'">{{ t('add_project.upload_file_btn') }}</button>
                 <button type="button" :class="['apv-toggle-btn', videoType === 'url' ? 'apv-toggle-active' : '']" @click="videoType = 'url'">{{ t('add_project.youtube_link_btn') }}</button>
@@ -123,9 +137,9 @@
                 <InputText v-model="videoUrl" placeholder="https://www.youtube.com/watch?v=..." class="apv-input" />
               </div>
               <div v-else class="apv-toggle-content">
-                <FileUpload name="video" mode="basic" accept="video/*" :maxFileSize="268435456" :chooseLabel="t('add_project.choose_video_btn')" @select="onFileSelect($event, 'video')" @clear="onFileClear('video')" />
+                <FileUpload :key="fileUploadKeys.video" name="video" mode="basic" accept="video/*" :maxFileSize="1073741824" :chooseLabel="t('add_project.choose_video_btn')" @select="onFileSelect($event, 'video')" @clear="onFileClear('video')" />
                 <p class="apv-hint">{{ t('add_project.video_hint') }}</p>
-                <p v-if="files.video.name" class="apv-file-name"><i class="pi pi-check-circle"></i> {{ files.video.name }}</p>
+                <p v-if="files.video.name" class="apv-file-name"><i class="pi pi-check-circle"></i> <span class="apv-file-name-text">{{ files.video.name }}</span><button type="button" class="apv-file-clear" @click="onFileClear('video')" :title="t('add_project.clear_file_btn')" :aria-label="t('add_project.clear_file_btn')"><span class="apv-file-clear-text">{{ t('add_project.clear_file_btn') }}</span><i class="pi pi-times"></i></button></p>
               </div>
             </div>
           </div>
@@ -138,36 +152,50 @@
             <h2 class="apv-section-title">{{ t('add_project.files_section') }}</h2>
           </div>
           <div class="apv-fields">
-            <div class="apv-field">
-              <label class="apv-label">{{ t('add_project.doc_label') }}</label>
-              <FileUpload name="documentation" mode="basic" accept=".pdf,.docx,.zip,.rar" :maxFileSize="10485760" :chooseLabel="t('add_project.choose_doc_btn')" @select="onFileSelect($event, 'documentation')" @clear="onFileClear('documentation')" />
+            <div class="apv-field" :class="{ 'apv-field-missing': isItemMissing('documentation') }">
+              <label class="apv-label">{{ t('add_project.doc_label') }}<span v-if="isItemMissing('documentation')" class="apv-missing-tag">CHÝBA</span></label>
+              <FileUpload :key="fileUploadKeys.documentation" name="documentation" mode="basic" accept=".pdf,.docx,.zip,.rar,.7z" :maxFileSize="73400320" :chooseLabel="t('add_project.choose_doc_btn')" @select="onFileSelect($event, 'documentation')" @clear="onFileClear('documentation')" />
               <p class="apv-hint">{{ t('add_project.doc_hint') }}</p>
-              <p v-if="files.documentation.name" class="apv-file-name"><i class="pi pi-check-circle"></i> {{ files.documentation.name }}</p>
+              <p v-if="files.documentation.name" class="apv-file-name"><i class="pi pi-check-circle"></i> <span class="apv-file-name-text">{{ files.documentation.name }}</span><button type="button" class="apv-file-clear" @click="onFileClear('documentation')" :title="t('add_project.clear_file_btn')" :aria-label="t('add_project.clear_file_btn')"><span class="apv-file-clear-text">{{ t('add_project.clear_file_btn') }}</span><i class="pi pi-times"></i></button></p>
+              <label class="apv-hide-toggle" :class="{ 'apv-hide-toggle--active': hiddenDownloads.includes('documentation') }">
+                <input type="checkbox" value="documentation" v-model="hiddenDownloads" class="apv-hide-checkbox" />
+                <i :class="hiddenDownloads.includes('documentation') ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
+                <span>{{ hiddenDownloads.includes('documentation') ? 'Stiahnutie skryté' : 'Stiahnutie viditeľné' }}</span>
+              </label>
             </div>
-            <div class="apv-field">
-              <label class="apv-label">{{ t('add_project.pres_label') }}</label>
-              <FileUpload name="presentation" mode="basic" accept=".pdf,.ppt,.pptx" :maxFileSize="15728640" :chooseLabel="t('add_project.choose_pres_btn')" @select="onFileSelect($event, 'presentation')" @clear="onFileClear('presentation')" />
+            <div class="apv-field" :class="{ 'apv-field-missing': isItemMissing('presentation') }">
+              <label class="apv-label">{{ t('add_project.pres_label') }}<span v-if="isItemMissing('presentation')" class="apv-missing-tag">CHÝBA</span></label>
+              <FileUpload :key="fileUploadKeys.presentation" name="presentation" mode="basic" accept=".pdf,.ppt,.pptx" :maxFileSize="52428800" :chooseLabel="t('add_project.choose_pres_btn')" @select="onFileSelect($event, 'presentation')" @clear="onFileClear('presentation')" />
               <p class="apv-hint">{{ t('add_project.pres_hint') }}</p>
-              <p v-if="files.presentation.name" class="apv-file-name"><i class="pi pi-check-circle"></i> {{ files.presentation.name }}</p>
+              <p v-if="files.presentation.name" class="apv-file-name"><i class="pi pi-check-circle"></i> <span class="apv-file-name-text">{{ files.presentation.name }}</span><button type="button" class="apv-file-clear" @click="onFileClear('presentation')" :title="t('add_project.clear_file_btn')" :aria-label="t('add_project.clear_file_btn')"><span class="apv-file-clear-text">{{ t('add_project.clear_file_btn') }}</span><i class="pi pi-times"></i></button></p>
+              <label class="apv-hide-toggle" :class="{ 'apv-hide-toggle--active': hiddenDownloads.includes('presentation') }">
+                <input type="checkbox" value="presentation" v-model="hiddenDownloads" class="apv-hide-checkbox" />
+                <i :class="hiddenDownloads.includes('presentation') ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
+                <span>{{ hiddenDownloads.includes('presentation') ? 'Stiahnutie skryté' : 'Stiahnutie viditeľné' }}</span>
+              </label>
             </div>
-            <div class="apv-field">
-              <label class="apv-label">{{ t('add_project.src_label') }}</label>
-              <FileUpload name="source_code" mode="basic" accept=".zip,.rar" :maxFileSize="209715200" :chooseLabel="t('add_project.choose_src_btn')" @select="onFileSelect($event, 'source_code')" @clear="onFileClear('source_code')" />
+            <div class="apv-field" :class="{ 'apv-field-missing': isItemMissing('source_code') }">
+              <label class="apv-label">{{ t('add_project.src_label') }}<span v-if="isItemMissing('source_code')" class="apv-missing-tag">CHÝBA</span></label>
+              <FileUpload :key="fileUploadKeys.source_code" name="source_code" mode="basic" accept=".zip,.rar,.7z" :maxFileSize="1610612736" :chooseLabel="t('add_project.choose_src_btn')" @select="onFileSelect($event, 'source_code')" @clear="onFileClear('source_code')" />
               <p class="apv-hint">{{ t('add_project.src_hint') }}</p>
-              <p v-if="files.source_code.name" class="apv-file-name"><i class="pi pi-check-circle"></i> {{ files.source_code.name }}</p>
+              <p v-if="files.source_code.name" class="apv-file-name"><i class="pi pi-check-circle"></i> <span class="apv-file-name-text">{{ files.source_code.name }}</span><button type="button" class="apv-file-clear" @click="onFileClear('source_code')" :title="t('add_project.clear_file_btn')" :aria-label="t('add_project.clear_file_btn')"><span class="apv-file-clear-text">{{ t('add_project.clear_file_btn') }}</span><i class="pi pi-times"></i></button></p>
+              <label class="apv-hide-toggle" :class="{ 'apv-hide-toggle--active': hiddenDownloads.includes('source_code') }">
+                <input type="checkbox" value="source_code" v-model="hiddenDownloads" class="apv-hide-checkbox" />
+                <i :class="hiddenDownloads.includes('source_code') ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
+                <span>{{ hiddenDownloads.includes('source_code') ? 'Stiahnutie skryté' : 'Stiahnutie viditeľné' }}</span>
+              </label>
             </div>
-            <div class="apv-field">
-              <label class="apv-label">{{ t('add_project.export_label') }}</label>
+            <div class="apv-field" :class="{ 'apv-field-missing': isItemMissing('export') }">
+              <label class="apv-label">{{ t('add_project.export_label') }}<span v-if="isItemMissing('export')" class="apv-missing-tag">CHÝBA</span></label>
               <Dropdown v-model="exportType" :options="exportTypeOptions" optionLabel="label" optionValue="value" :placeholder="t('add_project.export_type_placeholder')" class="apv-input" style="margin-bottom:8px" />
-              <FileUpload name="export" mode="basic" accept=".zip,.rar,.exe,.apk,.ipa" :maxFileSize="268435456" :chooseLabel="t('add_project.choose_export_btn')" @select="onFileSelect($event, 'export')" @clear="onFileClear('export')" />
+              <FileUpload :key="fileUploadKeys.export" name="export" mode="basic" accept=".zip,.rar,.7z,.exe,.apk,.ipa" :maxFileSize="3221225472" :chooseLabel="t('add_project.choose_export_btn')" @select="onFileSelect($event, 'export')" @clear="onFileClear('export')" />
               <p class="apv-hint">{{ t('add_project.export_hint') }}</p>
-              <p v-if="files.export.name" class="apv-file-name"><i class="pi pi-check-circle"></i> {{ files.export.name }}</p>
-            </div>
-            <div class="apv-field">
-              <label class="apv-label">{{ t('add_project.project_folder_label') }}</label>
-              <FileUpload name="project_folder" mode="basic" accept=".zip,.rar" :maxFileSize="20971520" :chooseLabel="t('add_project.choose_folder_btn')" @select="onFileSelect($event, 'project_folder')" @clear="onFileClear('project_folder')" />
-              <p class="apv-hint">{{ t('add_project.project_folder_hint') }}</p>
-              <p v-if="files.project_folder.name" class="apv-file-name"><i class="pi pi-check-circle"></i> {{ files.project_folder.name }}</p>
+              <p v-if="files.export.name" class="apv-file-name"><i class="pi pi-check-circle"></i> <span class="apv-file-name-text">{{ files.export.name }}</span><button type="button" class="apv-file-clear" @click="onFileClear('export')" :title="t('add_project.clear_file_btn')" :aria-label="t('add_project.clear_file_btn')"><span class="apv-file-clear-text">{{ t('add_project.clear_file_btn') }}</span><i class="pi pi-times"></i></button></p>
+              <label class="apv-hide-toggle" :class="{ 'apv-hide-toggle--active': hiddenDownloads.includes('export') }">
+                <input type="checkbox" value="export" v-model="hiddenDownloads" class="apv-hide-checkbox" />
+                <i :class="hiddenDownloads.includes('export') ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
+                <span>{{ hiddenDownloads.includes('export') ? 'Stiahnutie skryté' : 'Stiahnutie viditeľné' }}</span>
+              </label>
             </div>
           </div>
         </div>
@@ -219,15 +247,9 @@
                 <label class="apv-label">{{ t('add_project.tech_stack_label') }}</label>
                 <InputText v-model="techStack" placeholder="Flutter, Firebase" class="apv-input" />
               </div>
-              <div class="apv-field">
-                <label class="apv-label">{{ t('add_project.apk_label') }}</label>
-                <FileUpload name="apk_file" mode="basic" accept=".apk" :maxFileSize="268435456" :chooseLabel="t('add_project.choose_apk_btn')" @select="onFileSelect($event, 'apk_file')" @clear="onFileClear('apk_file')" />
-                <p v-if="files.apk_file.name" class="apv-file-name"><i class="pi pi-check-circle"></i> {{ files.apk_file.name }}</p>
-              </div>
-              <div class="apv-field">
-                <label class="apv-label">{{ t('add_project.ios_label') }}</label>
-                <FileUpload name="ios_file" mode="basic" accept=".ipa,.zip" :maxFileSize="268435456" :chooseLabel="t('add_project.choose_ios_btn')" @select="onFileSelect($event, 'ios_file')" @clear="onFileClear('ios_file')" />
-                <p v-if="files.ios_file.name" class="apv-file-name"><i class="pi pi-check-circle"></i> {{ files.ios_file.name }}</p>
+              <div class="apv-mobile-note">
+                <i class="pi pi-info-circle"></i>
+                <span>APK alebo IPA súbor nahrajte v sekcii <strong>④ Súbory → Export / build</strong> (akceptuje <code>.apk</code>, <code>.ipa</code>, <code>.zip</code>, atď.).</span>
               </div>
             </template>
 
@@ -278,19 +300,21 @@
                 </div>
                 <div class="apv-toggle-content">
                   <div v-if="webglMode === 'build'">
-                    <FileUpload name="webgl_build" mode="basic" accept=".zip" :maxFileSize="104857600" :chooseLabel="t('add_project.webgl_build_btn')" @select="onFileSelect($event, 'webgl_build')" @clear="onFileClear('webgl_build')" />
-                    <p v-if="files.webgl_build.name" class="apv-file-name"><i class="pi pi-check-circle"></i> {{ files.webgl_build.name }}</p>
+                    <FileUpload :key="fileUploadKeys.webgl_build" name="webgl_build" mode="basic" accept=".zip" :maxFileSize="262144000" :chooseLabel="t('add_project.webgl_build_btn')" @select="onFileSelect($event, 'webgl_build')" @clear="onFileClear('webgl_build')" />
+                    <p v-if="files.webgl_build.name" class="apv-file-name"><i class="pi pi-check-circle"></i> <span class="apv-file-name-text">{{ files.webgl_build.name }}</span><button type="button" class="apv-file-clear" @click="onFileClear('webgl_build')" :title="t('add_project.clear_file_btn')" :aria-label="t('add_project.clear_file_btn')"><span class="apv-file-clear-text">{{ t('add_project.clear_file_btn') }}</span><i class="pi pi-times"></i></button></p>
                     <p class="apv-hint">{{ t('add_project.webgl_build_hint') }}</p>
                     <div class="apv-webgl-warn">
                       <div class="apv-webgl-warn-row">
-                        <i class="pi pi-exclamation-triangle apv-webgl-warn-icon"></i>
-                        <span class="apv-webgl-warn-title">Pred nahraním skontrolujte tieto nastavenia v Unity:</span>
+                        <i class="pi pi-info-circle apv-webgl-warn-icon"></i>
+                        <span class="apv-webgl-warn-title">Príručka pre WebGL upload</span>
                       </div>
                       <ul class="apv-webgl-warn-list">
-                        <li><strong>Compression Format → Disabled</strong> — Brotli/Gzip komprimované buildy sa nedajú prehrať na tomto serveri</li>
-                        <li><strong>Formát archívu: ZIP</strong> — RAR a iné formáty nie sú podporované</li>
-                        <li><strong>Max. veľkosť ZIP: 100 MB</strong>, nekomprimované súbory: 200 MB</li>
-                        <li><strong>index.html musí byť v archíve</strong> — Unity WebGL build ho vždy obsahuje</li>
+                        <li><strong>Štruktúra ZIPu:</strong> archív musí obsahovať <code>index.html</code> (v koreni alebo o jednu úroveň hlbšie). Pri Unity buildoch zazipujte celý výstupný priečinok vrátane podpriečinkov <code>Build/</code> a <code>TemplateData/</code>.</li>
+                        <li><strong>Compression Format → Disabled</strong> v Unity Player Settings — Brotli/Gzip komprimované buildy sa nedajú prehrať priamo na tomto serveri.</li>
+                        <li><strong>Formát archívu: iba ZIP</strong> — RAR, 7Z a iné formáty nie sú podporované.</li>
+                        <li><strong>Max. veľkosť ZIP: 250 MB</strong> (komprimovane), po extrakcii max. <strong>500 MB</strong>, max. počet súborov v archíve: <strong>500</strong>.</li>
+                        <li><strong>Povolené prípony:</strong> <code>.html .js .wasm .data .json .css</code> · obrázky <code>.png .jpg .webp .svg .gif .ico</code> · fonty <code>.ttf .woff .woff2 .otf</code> · audio <code>.mp3 .mp4 .ogg .wav .webm</code> · 3D <code>.glb .gltf .bin .fbx .obj</code>. Iné prípony archív odmietnu.</li>
+                        <li><strong>Bez ciest s <code>..</code></strong> — archívy s path traversal sú z bezpečnostných dôvodov odmietnuté.</li>
                       </ul>
                       <p class="apv-webgl-warn-path">Unity: <em>File → Build Settings → Player Settings → Publishing Settings → Compression Format → Disabled</em></p>
                     </div>
@@ -326,7 +350,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { apiFetch } from '@/utils/apiFetch'
@@ -382,13 +406,55 @@ const files = ref({
   export: { file: null, name: '' },
   documentation: { file: null, name: '' },
   presentation: { file: null, name: '' },
-  project_folder: { file: null, name: '' },
-  apk_file: { file: null, name: '' },
-  ios_file: { file: null, name: '' },
   webgl_build: { file: null, name: '' }
 })
 
+// Counters bumped on clear() — used as :key on FileUpload to force a clean remount
+// (PrimeVue basic FileUpload doesn't reliably expose its internal state otherwise)
+const fileUploadKeys = ref({
+  video: 0,
+  splash_screen: 0,
+  source_code: 0,
+  export: 0,
+  documentation: 0,
+  presentation: 0,
+  webgl_build: 0
+})
+
 const exportType = ref(null)
+const hiddenDownloads = ref([])
+
+// ── Edit mode: detection of missing optional content ─────────────
+// Mirrors the admin panel's "completeness" check (splash, video, doc, pres, src, export)
+// Reactive: indicators disappear as soon as the user uploads a new file in this session.
+const missingItems = computed(() => {
+  if (!isEditMode.value || !existingProject.value) return []
+  const ep = existingProject.value
+  const items = []
+
+  if (!ep.splash_screen_path && !files.value.splash_screen.file) {
+    items.push({ key: 'splash_screen', label: 'Splash screen' })
+  }
+  if (!ep.video_path && !ep.video_url && !files.value.video.file && !videoUrl.value) {
+    items.push({ key: 'video', label: 'Video alebo YouTube odkaz' })
+  }
+  const fileChecks = [
+    ['documentation', 'Dokumentácia'],
+    ['presentation', 'Prezentácia'],
+    ['source_code', 'Zdrojový kód'],
+    ['export', 'Export / build'],
+  ]
+  for (const [key, label] of fileChecks) {
+    if (!ep.files?.[key] && !files.value[key].file) {
+      items.push({ key, label })
+    }
+  }
+  return items
+})
+
+function isItemMissing(key) {
+  return missingItems.value.some(i => i.key === key)
+}
 const exportTypeOptions = [
   { label: 'Standalone aplikácia', value: 'standalone' },
   { label: 'WebGL build', value: 'webgl' },
@@ -411,16 +477,23 @@ const subjects = computed(() => [
   { label: t('subjects.informatics'), value: 'Informatika' },
   { label: t('subjects.graphics'), value: 'Grafika' },
   { label: t('subjects.chemistry'), value: 'Chémia' },
-  { label: t('subjects.physics'), value: 'Fyzika' }
+  { label: t('subjects.physics'), value: 'Fyzika' },
+  { label: 'Iný (zadať vlastný)...', value: '__custom__' }
 ])
 
+const PREDEFINED_SUBJECTS = ['Slovenský jazyk', 'Matematika', 'Dejepis', 'Geografia', 'Informatika', 'Grafika', 'Chémia', 'Fyzika']
+const customSubject = ref('')
+
+const PREDEFINED_PREDMETY = ['Grafika', 'Multimediálne systémy', 'Grafika 2', 'Systémy Virtuálnej Reality', 'Tímový projekt', 'Internetové Technológie']
+const customPredmet = ref('')
 const predmety = ref([
   { label: 'Grafika', value: 'Grafika' },
   { label: 'Multimediálne systémy', value: 'Multimediálne systémy' },
   { label: 'Grafika 2', value: 'Grafika 2' },
   { label: 'Systémy Virtuálnej Reality', value: 'Systémy Virtuálnej Reality' },
   { label: 'Tímový projekt', value: 'Tímový projekt' },
-  { label: 'Internetové Technológie', value: 'Internetové Technológie' }
+  { label: 'Internetové Technológie', value: 'Internetové Technológie' },
+  { label: 'Iný (zadať vlastný)...', value: '__custom__' }
 ])
 
 const availableYears = computed(() => {
@@ -464,7 +537,11 @@ function onFileSelect(event, type) {
 function onFileClear(type) {
   files.value[type].file = null
   files.value[type].name = ''
+  if (fileUploadKeys.value[type] !== undefined) {
+    fileUploadKeys.value[type]++
+  }
 }
+
 
 async function loadUserTeamStatus() {
   loadingTeam.value = true
@@ -521,8 +598,20 @@ async function loadProjectForEdit() {
       name.value = existingProject.value.title
       schoolType.value = existingProject.value.school_type
       yearOfStudy.value = existingProject.value.year_of_study
-      subject.value = existingProject.value.subject
-      predmet.value = existingProject.value.predmet
+      if (PREDEFINED_SUBJECTS.includes(existingProject.value.subject)) {
+        subject.value = existingProject.value.subject
+        customSubject.value = ''
+      } else {
+        subject.value = '__custom__'
+        customSubject.value = existingProject.value.subject || ''
+      }
+      if (PREDEFINED_PREDMETY.includes(existingProject.value.predmet)) {
+        predmet.value = existingProject.value.predmet
+        customPredmet.value = ''
+      } else {
+        predmet.value = '__custom__'
+        customPredmet.value = existingProject.value.predmet || ''
+      }
       releaseDate.value = existingProject.value.release_date ? new Date(existingProject.value.release_date) : null
       description.value = existingProject.value.description || ''
       videoUrl.value = existingProject.value.video_url || ''
@@ -541,6 +630,7 @@ async function loadProjectForEdit() {
       packageName.value = meta.package_name || ''
       platform.value = meta.platform || null
       techStack.value = Array.isArray(meta.tech_stack) ? meta.tech_stack.join(', ') : (meta.tech_stack || '')
+      hiddenDownloads.value = Array.isArray(meta.hidden_downloads) ? meta.hidden_downloads : []
       
       // Set available years based on school type (computed, no manual call needed)
       
@@ -575,8 +665,16 @@ async function submitForm() {
     toast.add({ severity: 'warn', summary: t('add_project.missing_subject_title'), detail: t('add_project.missing_subject_desc'), life: 4000 })
     return
   }
+  if (subject.value === '__custom__' && !customSubject.value.trim()) {
+    toast.add({ severity: 'warn', summary: t('add_project.missing_subject_title'), detail: 'Zadajte vlastný názov predmetu.', life: 4000 })
+    return
+  }
   if (!predmet.value) {
     toast.add({ severity: 'warn', summary: t('add_project.missing_uni_subject_title'), detail: t('add_project.missing_uni_subject_desc'), life: 4000 })
+    return
+  }
+  if (predmet.value === '__custom__' && !customPredmet.value.trim()) {
+    toast.add({ severity: 'warn', summary: t('add_project.missing_uni_subject_title'), detail: 'Zadajte vlastný názov uni predmetu.', life: 4000 })
     return
   }
   if (!name.value || !name.value.trim()) {
@@ -608,8 +706,8 @@ async function submitForm() {
     } else if (yearOfStudy.value) {
       formData.append('year_of_study', yearOfStudy.value)
     }
-    formData.append('subject', subject.value)
-    formData.append('predmet', predmet.value)
+    formData.append('subject', subject.value === '__custom__' ? customSubject.value.trim() : subject.value)
+    formData.append('predmet', predmet.value === '__custom__' ? customPredmet.value.trim() : predmet.value)
     formData.append('description', description.value || '')
     // Always send release_date when editing (even if null to clear it)
     if (releaseDate.value) {
@@ -635,7 +733,6 @@ async function submitForm() {
       formData.append('export', files.value.export.file)
       if (exportType.value) formData.append('export_type', exportType.value)
     }
-    if (files.value.project_folder.file) formData.append('project_folder', files.value.project_folder.file)
 
     // Type-specific meta/files (keep for backward compatibility and additional metadata)
     if (projectType.value === 'game') {
@@ -649,8 +746,6 @@ async function submitForm() {
     }
     if (projectType.value === 'mobile_app') {
       if (platform.value) formData.append('platform', platform.value)
-      if (files.value.apk_file.file) formData.append('apk_file', files.value.apk_file.file)
-      if (files.value.ios_file.file) formData.append('ios_file', files.value.ios_file.file)
       if (githubUrl.value) formData.append('github_url', githubUrl.value)
       if (techStack.value) formData.append('tech_stack', techStack.value)
     }
@@ -671,6 +766,8 @@ async function submitForm() {
       if (githubUrl.value) formData.append('github_url', githubUrl.value)
       if (techStack.value) formData.append('tech_stack', techStack.value)
     }
+
+    formData.append('hidden_downloads', JSON.stringify(hiddenDownloads.value))
 
     const url = isEditMode.value ? `${API_URL}/api/projects/${projectId.value}` : `${API_URL}/api/projects`
     
@@ -756,7 +853,9 @@ function resetForm() {
   schoolType.value = null
   yearOfStudy.value = null
   subject.value = null
+  customSubject.value = ''
   predmet.value = null
+  customPredmet.value = ''
   releaseDate.value = null
   description.value = ''
   videoType.value = 'upload'
@@ -770,6 +869,8 @@ function resetForm() {
   packageName.value = ''
   npmUrl.value = ''
   Object.keys(files.value).forEach(k => files.value[k] = { file: null, name: '' })
+  Object.keys(fileUploadKeys.value).forEach(k => fileUploadKeys.value[k]++)
+  hiddenDownloads.value = []
 }
 
 onMounted(() => {
@@ -974,8 +1075,50 @@ onMounted(() => {
   color: #4ade80;
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   margin: 0;
+  min-width: 0;
+}
+.apv-file-name-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.apv-file-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  gap: 6px;
+  height: 24px;
+  padding: 0 11px;
+  margin-left: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: border-color 0.15s, background 0.15s, color 0.15s, transform 0.15s;
+}
+.apv-file-clear i { font-size: 0.65rem; line-height: 1; }
+.apv-file-clear-text { line-height: 1; }
+.apv-file-clear:hover {
+  border-color: rgba(239, 68, 68, 0.55);
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+}
+.apv-file-clear:active { transform: scale(0.96); }
+.apv-file-clear:focus-visible {
+  outline: 2px solid rgba(239, 68, 68, 0.6);
+  outline-offset: 2px;
 }
 
 .apv-webgl-warn {
@@ -1137,5 +1280,157 @@ onMounted(() => {
   .steam-page { padding: 16px 14px 48px; }
   .apv-fields-2col { grid-template-columns: 1fr; }
   .apv-title { font-size: 1.35rem; }
+}
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* MOBILE-APP NOTE — points user to Export field for APK/IPA      */
+/* ═══════════════════════════════════════════════════════════════ */
+.apv-mobile-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(var(--color-accent-rgb), 0.06);
+  border: 1px solid rgba(var(--color-accent-rgb), 0.22);
+  border-radius: 8px;
+  font-size: 0.83rem;
+  color: var(--color-text);
+  line-height: 1.45;
+}
+.apv-mobile-note i { font-size: 1rem; color: var(--color-accent); flex-shrink: 0; }
+.apv-mobile-note code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8em;
+  padding: 1px 5px;
+  background: rgba(0,0,0,0.18);
+  border-radius: 3px;
+}
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* HIDE DOWNLOAD TOGGLE                                           */
+/* ═══════════════════════════════════════════════════════════════ */
+.apv-hide-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  margin-top: 2px;
+  padding: 5px 10px 5px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+  user-select: none;
+  background: transparent;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  align-self: flex-start;
+}
+
+.apv-hide-toggle:hover {
+  border-color: rgba(var(--color-accent-rgb), 0.3);
+  background: rgba(var(--color-accent-rgb), 0.04);
+  color: var(--color-text);
+}
+
+.apv-hide-toggle--active {
+  border-color: rgba(234, 179, 8, 0.4);
+  background: rgba(234, 179, 8, 0.07);
+  color: #d97706;
+}
+
+.apv-hide-toggle--active:hover {
+  border-color: rgba(234, 179, 8, 0.6);
+  background: rgba(234, 179, 8, 0.12);
+}
+
+.apv-hide-checkbox {
+  width: 13px;
+  height: 13px;
+  cursor: pointer;
+  margin: 0;
+  accent-color: #d97706;
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* MISSING ITEMS — compact banner + per-field tag (edit mode)      */
+/* ═══════════════════════════════════════════════════════════════ */
+.apv-missing-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.10) 0%, rgba(239, 68, 68, 0.04) 100%);
+  border: 1px solid rgba(239, 68, 68, 0.28);
+  border-radius: 10px;
+  margin-bottom: 4px;
+}
+
+.apv-missing-icon {
+  font-size: 1rem;
+  color: #ef4444;
+  flex-shrink: 0;
+}
+
+.apv-missing-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+}
+
+.apv-missing-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #fecaca;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Inline list of missing chips replaces the bullet list */
+.apv-missing-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.apv-missing-list li {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #fecaca;
+  background: rgba(239, 68, 68, 0.18);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 999px;
+  line-height: 1.5;
+}
+
+/* Hide the secondary hint to keep the banner compact */
+.apv-missing-hint { display: none; }
+
+/* Per-field tag only — no surrounding red box */
+.apv-missing-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 7px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #fff;
+  background: #ef4444;
+  border-radius: 999px;
+  vertical-align: middle;
+  text-transform: uppercase;
 }
 </style>

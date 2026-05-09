@@ -811,13 +811,14 @@ const closeCreateTeamDialog = () => {
 // Filters
 // -------------------------
 const search = ref('')
-const types = ref([
-  { label: 'Všetky', value: 'all' },
-  { label: 'Hra', value: 'game' },
-  { label: 'Web App', value: 'web_app' },
-  { label: 'Mobile App', value: 'mobile_app' },
-  { label: 'Knižnica', value: 'library' },
-  { label: 'Iné', value: 'other' }
+const types = computed(() => [
+  { label: t('filter.all_types'), value: 'all' },
+  { label: t('project_types.game'), value: 'game' },
+  { label: t('project_types.web_app'), value: 'web_app' },
+  { label: t('project_types.mobile_app'), value: 'mobile_app' },
+  { label: t('project_types.library'), value: 'library' },
+  { label: t('project_types.webgl'), value: 'webgl' },
+  { label: t('project_types.other'), value: 'other' }
 ])
 const selectedType = ref('all')
 const games = ref([])
@@ -851,7 +852,8 @@ const filterSubjects = ref([
   { label: 'Informatika', value: 'Informatika' },
   { label: 'Grafika', value: 'Grafika' },
   { label: 'Chémia', value: 'Chémia' },
-  { label: 'Fyzika', value: 'Fyzika' }
+  { label: 'Fyzika', value: 'Fyzika' },
+  { label: 'Iné kategórie', value: '__other__' }
 ])
 const availableFilterYears = computed(() => {
   if (!filterSchoolType.value) return [{ label: 'Všetky ročníky', value: null }]

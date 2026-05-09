@@ -33,9 +33,9 @@
           <div class="pv-hero-top">
             <h1 class="pv-title">{{ project.title }}</h1>
             <div class="pv-badges">
-              <span v-if="project.school_type" class="pv-badge pv-badge-info">{{ getSchoolTypeLabel(project.school_type) }}</span>
-              <span v-if="project.year_of_study" class="pv-badge pv-badge-info">{{ project.year_of_study }}. ročník</span>
-              <span v-if="project.subject" class="pv-badge pv-badge-info">{{ project.subject }}</span>
+              <span v-if="project.school_type" class="pv-badge pv-badge-info pv-badge-link" @click="goToCategory('school_type', project.school_type)">{{ getSchoolTypeLabel(project.school_type) }}</span>
+              <span v-if="project.year_of_study" class="pv-badge pv-badge-info pv-badge-link" @click="goToCategory('year_of_study', project.year_of_study)">{{ project.year_of_study }}. ročník</span>
+              <span v-if="project.subject" class="pv-badge pv-badge-info pv-badge-link" @click="goToCategory('subject', project.subject)">{{ project.subject }}</span>
               <span v-if="project.predmet" class="pv-badge pv-badge-info">{{ project.predmet }}</span>
             </div>
           </div>
@@ -58,9 +58,9 @@
           <!-- Tags row -->
           <div class="pv-tags">
             <span class="pv-tag pv-tag-team" @click="goToTeam(project.team?.id)">{{ project.team?.name || t('common.unknown_team') }}</span>
-            <span v-if="project.academic_year" class="pv-tag">{{ project.academic_year.name }}</span>
+            <span v-if="project.academic_year" class="pv-tag pv-tag-link" @click="goToCategory('academic_year_id', project.academic_year.id)">{{ project.academic_year.name }}</span>
             <span v-if="project.release_date" class="pv-tag">{{ formatDate(project.release_date) }}</span>
-            <span class="pv-tag pv-tag-accent">{{ t('project_types.' + project.type) || project.type }}</span>
+            <span class="pv-tag pv-tag-accent pv-tag-link" @click="goToCategory('type', project.type)">{{ t('project_types.' + project.type) || project.type }}</span>
             <span class="pv-tag pv-tag-views"><i class="pi pi-eye" aria-hidden="true"></i> {{ formatViews(project.views) }}</span>
           </div>
         </div>
@@ -278,25 +278,25 @@
       <section class="pv-card pv-animate" style="--delay:5">
         <h2 class="pv-section-title">{{ t('project.downloads_section') }}</h2>
         <div class="pv-downloads">
-          <button v-if="project.files?.documentation" class="pv-dl-item" @click="downloadFile(project.files.documentation)">
+          <button v-if="project.files?.documentation && !isDownloadHidden('documentation')" class="pv-dl-item" @click="downloadFile(project.files.documentation)">
             <span>{{ t('project.download_doc') }}</span>
           </button>
-          <button v-if="project.files?.presentation" class="pv-dl-item" @click="downloadFile(project.files.presentation)">
+          <button v-if="project.files?.presentation && !isDownloadHidden('presentation')" class="pv-dl-item" @click="downloadFile(project.files.presentation)">
             <span>{{ t('project.download_pres') }}</span>
           </button>
-          <button v-if="project.files?.source_code" class="pv-dl-item" @click="downloadFile(project.files.source_code)">
+          <button v-if="project.files?.source_code && !isDownloadHidden('source_code')" class="pv-dl-item" @click="downloadFile(project.files.source_code)">
             <span>{{ t('project.download_src') }}</span>
           </button>
-          <button v-if="project.files?.export" class="pv-dl-item" @click="downloadFile(project.files.export)">
+          <button v-if="project.files?.export && !isDownloadHidden('export')" class="pv-dl-item" @click="downloadFile(project.files.export)">
             <span>{{ getExportLabel() }}</span>
           </button>
-          <button v-if="project.files?.project_folder" class="pv-dl-item" @click="downloadFile(project.files.project_folder)">
+          <button v-if="project.files?.project_folder && !isDownloadHidden('project_folder')" class="pv-dl-item" @click="downloadFile(project.files.project_folder)">
             <span>{{ t('project.download_folder') }}</span>
           </button>
-          <button v-if="!project.files?.export && project.files?.apk_file" class="pv-dl-item" @click="downloadFile(project.files.apk_file)">
+          <button v-if="!project.files?.export && project.files?.apk_file && !isDownloadHidden('apk_file')" class="pv-dl-item" @click="downloadFile(project.files.apk_file)">
             <span>{{ t('project.download_apk') }}</span>
           </button>
-          <button v-if="!project.files?.export && project.files?.ios_file" class="pv-dl-item" @click="downloadFile(project.files.ios_file)">
+          <button v-if="!project.files?.export && project.files?.ios_file && !isDownloadHidden('ios_file')" class="pv-dl-item" @click="downloadFile(project.files.ios_file)">
             <span>{{ t('project.download_ios') }}</span>
           </button>
           <p v-if="!hasAnyFiles" class="pv-no-files">{{ t('project.no_files') }}</p>
@@ -356,15 +356,31 @@ const seeking = ref(false)
 const techStack = ref([])
 const hasAnyMetadata = ref(false)
 
+function isDownloadHidden(field) {
+  return project.value?.metadata?.hidden_downloads?.includes(field) ?? false
+}
+
 const hasAnyFiles = computed(() => {
   const files = project.value?.files || {}
-  return !!(files.documentation || files.presentation || files.source_code || files.export || files.project_folder || files.apk_file || files.ios_file)
+  return !!(
+    (files.documentation && !isDownloadHidden('documentation')) ||
+    (files.presentation && !isDownloadHidden('presentation')) ||
+    (files.source_code && !isDownloadHidden('source_code')) ||
+    (files.export && !isDownloadHidden('export')) ||
+    (files.project_folder && !isDownloadHidden('project_folder')) ||
+    (!files.export && files.apk_file && !isDownloadHidden('apk_file')) ||
+    (!files.export && files.ios_file && !isDownloadHidden('ios_file'))
+  )
 })
 
 function getExportLabel() {
+  const path = project.value?.files?.export || ''
+  if (/\.apk$/i.test(path)) return t('project.download_apk')
+  if (/\.ipa$/i.test(path)) return t('project.download_ios')
+
   const exportType = project.value?.metadata?.export_type
   if (!exportType) return t('project.download_export')
-  
+
   const labels = {
     'standalone': t('project.download_standalone'),
     'webgl': t('project.download_webgl'),
@@ -546,6 +562,10 @@ function goToTeam(teamId){
   router.push(`/team/${teamId}`)
 }
 function goBack(){ router.push(isGuest.value ? '/guest' : '/') }
+function goToCategory(type, value) {
+  if (!value && value !== 0) return
+  router.push(`/category/${type}/${encodeURIComponent(value)}`)
+}
 function getSchoolTypeLabel(type) {
   const map = {
     'zs': 'ZŠ',
@@ -1511,5 +1531,25 @@ onUnmounted(()=>{ if(fsHandler) document.removeEventListener('fullscreenchange',
   .pv-title { font-size: 1.5rem; }
   .pv-meta-grid { grid-template-columns: 1fr; }
   .pv-members-grid { grid-template-columns: 1fr; }
+}
+
+/* ── Clickable category badges / tags ── */
+.pv-badge-link {
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.pv-badge-link:hover {
+  background: rgba(var(--color-accent-rgb), 0.2);
+  border-color: rgba(var(--color-accent-rgb), 0.45);
+  color: var(--color-accent);
+}
+
+.pv-tag-link {
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+}
+.pv-tag-link:hover {
+  opacity: 0.8;
+  border-color: rgba(var(--color-accent-rgb), 0.5);
 }
 </style>

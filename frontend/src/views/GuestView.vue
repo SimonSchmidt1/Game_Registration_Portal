@@ -213,11 +213,12 @@ const { t } = useI18n()
 
 const search = ref('')
 const types = computed(() => [
-  { label: t('project_types.all'), value: 'all' },
+  { label: t('filter.all_types'), value: 'all' },
   { label: t('project_types.game'), value: 'game' },
-  { label: 'Web App', value: 'web_app' },
-  { label: 'Mobile App', value: 'mobile_app' },
+  { label: t('project_types.web_app'), value: 'web_app' },
+  { label: t('project_types.mobile_app'), value: 'mobile_app' },
   { label: t('project_types.library'), value: 'library' },
+  { label: t('project_types.webgl'), value: 'webgl' },
   { label: t('project_types.other'), value: 'other' }
 ])
 const selectedType = ref('all')
@@ -251,7 +252,8 @@ const filterSubjects = computed(() => [
   { label: t('subjects.informatics'), value: 'Informatika' },
   { label: t('subjects.graphics'), value: 'Grafika' },
   { label: t('subjects.chemistry'), value: 'Chémia' },
-  { label: t('subjects.physics'), value: 'Fyzika' }
+  { label: t('subjects.physics'), value: 'Fyzika' },
+  { label: 'Iné kategórie', value: '__other__' }
 ])
 const availableFilterYears = computed(() => {
   if (!filterSchoolType.value) return [{ label: t('filter.all_years'), value: null }]

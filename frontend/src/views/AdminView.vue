@@ -37,36 +37,31 @@
         <div class="flex flex-wrap justify-center gap-3 w-full admin-elevated-card admin-action-strip rounded-2xl p-5 shadow-lg">
           <Button
             :label="t('admin.register_user_btn')"
-            icon="pi pi-user-plus"
-            class="p-button-secondary p-button-outlined admin-action-btn-styled admin-icon-btn admin-action-uniform rounded-xl px-5"
+            class="p-button-secondary p-button-outlined admin-action-btn-styled admin-action-uniform rounded-xl px-5"
             @click="showRegisterUserDialog = true"
             :title="t('admin.register_user_btn')"
           />
           <Button
             :label="t('admin.create_team_btn')"
-            icon="pi pi-users"
-            class="p-button-secondary p-button-outlined admin-action-btn-styled admin-icon-btn admin-action-uniform rounded-xl px-5"
+            class="p-button-secondary p-button-outlined admin-action-btn-styled admin-action-uniform rounded-xl px-5"
             @click="openCreateTeamDialog"
             :title="t('admin.create_team_btn')"
           />
           <Button
             label="Pridať projekt"
-            icon="pi pi-plus-circle"
-            class="p-button-secondary p-button-outlined admin-action-btn-styled admin-icon-btn admin-action-uniform rounded-xl px-5"
+            class="p-button-secondary p-button-outlined admin-action-btn-styled admin-action-uniform rounded-xl px-5"
             @click="openPickTeamDialog"
             title="Pridať projekt pre vybraný tím"
           />
           <Button
             :label="t('admin.add_year_btn')"
-            icon="pi pi-calendar-plus"
-            class="p-button-secondary p-button-outlined admin-action-btn-styled admin-icon-btn admin-action-uniform rounded-xl px-5"
+            class="p-button-secondary p-button-outlined admin-action-btn-styled admin-action-uniform rounded-xl px-5"
             @click="openAddAcademicYearDialog"
             :title="t('admin.add_year_btn')"
           />
           <Button
             :label="t('admin.manage_users_btn')"
-            icon="pi pi-id-card"
-            class="p-button-secondary p-button-outlined admin-action-btn-styled admin-icon-btn admin-action-uniform rounded-xl px-5"
+            class="p-button-secondary p-button-outlined admin-action-btn-styled admin-action-uniform rounded-xl px-5"
             @click="openUsersManagementDialog"
             :title="t('admin.manage_users_btn')"
           />
@@ -240,24 +235,21 @@
                 </td>
                 <td class="px-4 py-4 text-center" @click.stop>
                   <div class="flex justify-center gap-1 admin-row-actions">
-                    <Button 
+                    <Button
                       :label="t('common.detail')"
-                      icon="pi pi-eye"
-                      class="p-button-sm p-button-text p-button-rounded admin-icon-btn"
+                      class="p-button-sm p-button-text p-button-rounded"
                       @click="showTeamDetails(team)"
                       :title="t('common.detail')"
                     />
-                    <Button 
+                    <Button
                       :label="t('common.edit')"
-                      icon="pi pi-pencil"
-                      class="p-button-sm p-button-text p-button-rounded admin-icon-btn"
+                      class="p-button-sm p-button-text p-button-rounded"
                       @click="showEditDialog(team)"
                       :title="t('common.edit')"
                     />
-                    <Button 
+                    <Button
                       :label="t('common.delete')"
-                      icon="pi pi-trash"
-                      class="p-button-sm p-button-text p-button-rounded p-button-danger admin-icon-btn"
+                      class="p-button-sm p-button-text p-button-rounded p-button-danger"
                       @click="confirmDeleteTeam(team)"
                       :title="t('common.delete')"
                     />
@@ -279,7 +271,6 @@
                       <p class="text-gray-400 mb-4">{{ t('admin.no_team_projects') }}</p>
                       <Button
                         label="Pridať projekt"
-                        icon="pi pi-plus-circle"
                         class="p-button-success admin-add-project-cta px-5 py-2 rounded-xl"
                         @click="addProjectForTeam(team)"
                         title="Pridať prvý projekt pre tento tím"
@@ -291,7 +282,6 @@
                       <div class="flex justify-end mb-4">
                         <Button
                           label="Pridať projekt"
-                          icon="pi pi-plus-circle"
                           class="p-button-sm p-button-success admin-add-project-cta"
                           @click="addProjectForTeam(team)"
                           title="Pridať nový projekt pre tento tím"
@@ -331,24 +321,21 @@
 
                             <!-- Right side: Actions -->
                             <div class="flex gap-1 self-end sm:self-auto admin-row-actions">
-                              <Button 
+                              <Button
                                 :label="t('common.detail')"
-                                icon="pi pi-eye"
-                                class="p-button-sm p-button-text p-button-rounded admin-icon-btn"
+                                class="p-button-sm p-button-text p-button-rounded"
                                 @click="viewProjectDetail(project.id)"
                                 :title="t('common.detail')"
                               />
-                              <Button 
+                              <Button
                                 :label="t('common.edit')"
-                                icon="pi pi-pencil"
-                                class="p-button-sm p-button-text p-button-rounded admin-icon-btn"
+                                class="p-button-sm p-button-text p-button-rounded"
                                 @click="editProject(project.id)"
                                 :title="t('common.edit')"
                               />
-                              <Button 
+                              <Button
                                 :label="t('common.delete')"
-                                icon="pi pi-trash"
-                                class="p-button-sm p-button-text p-button-rounded p-button-danger admin-icon-btn"
+                                class="p-button-sm p-button-text p-button-rounded p-button-danger"
                                 @click="confirmDeleteProject(project)"
                                 :title="t('common.delete')"
                               />
@@ -471,8 +458,8 @@
               :options="scrumMasterCandidates"
               optionLabel="name"
               optionValue="id"
-  
               placeholder="Zmeniť Scrum Mastera"
+              emptyMessage="Žiadne dostupné možnosti"
               class="w-full sm:w-64"
               @change="confirmChangeScrumMaster"
             >

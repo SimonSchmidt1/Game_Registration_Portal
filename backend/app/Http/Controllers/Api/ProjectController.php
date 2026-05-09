@@ -193,7 +193,8 @@ class ProjectController extends Controller
         if ($request->has('search') && $request->search) {
             $query->where(function($q) use ($request) {
                 $q->where('title', 'like', '%' . $request->search . '%')
-                  ->orWhere('description', 'like', '%' . $request->search . '%');
+                  ->orWhere('description', 'like', '%' . $request->search . '%')
+                  ->orWhere('subject', 'like', '%' . $request->search . '%');
             });
         }
 
@@ -206,7 +207,12 @@ class ProjectController extends Controller
         }
 
         if ($request->has('subject') && $request->subject !== 'all' && $request->subject !== null) {
-            $query->where('subject', $request->subject);
+            if ($request->subject === '__other__') {
+                $predefined = ['Slovenský jazyk', 'Matematika', 'Dejepis', 'Geografia', 'Informatika', 'Grafika', 'Chémia', 'Fyzika'];
+                $query->whereNotIn('subject', $predefined);
+            } else {
+                $query->where('subject', $request->subject);
+            }
         }
 
         if ($request->has('academic_year_id') && $request->academic_year_id !== 'all') {
@@ -229,8 +235,8 @@ class ProjectController extends Controller
             'release_date' => 'nullable|date',
             'academic_year_id' => 'nullable|exists:academic_years,id',
             'team_id' => 'required|exists:teams,id',
-            'splash_screen' => 'nullable|image|max:8192',
-            'video' => ['nullable', 'file', 'mimes:mp4,webm,mov', 'max:102400', new VideoMaxResolution(1920, 1080)],
+            'splash_screen' => 'nullable|image|max:15360',
+            'video' => ['nullable', 'file', 'mimes:mp4,webm,mov', 'max:1048576', new VideoMaxResolution(1920, 1080)],
             'video_url' => 'nullable|url',
         ]);
 
@@ -316,11 +322,15 @@ class ProjectController extends Controller
 
                 foreach ($this->getFileFieldsForType($request->type) as $field => $config) {
                     if ($request->hasFile($field)) {
-                        $files[$field] = $request->file($field)->store("projects/{$request->type}/{$config['folder']}", 'public');
+                        $files[$field] = $this->storeWithOriginalName(
+                            $request->file($field),
+                            "projects/{$request->type}/{$config['folder']}"
+                        );
                     }
                 }
 
                 $metadata = $this->extractMetadata($request);
+                $metadata['hidden_downloads'] = $this->parseHiddenDownloads($request);
 
                 // Ensure academic_year_id is set: use latest academic year (by id) if not provided
                 $academicYearId = $validated['academic_year_id'] ?? AcademicYear::orderByDesc('id')->value('id');
@@ -500,10 +510,10 @@ class ProjectController extends Controller
             'predmet' => 'required|string|max:100',
             'release_date' => 'nullable|date',
             'academic_year_id' => 'nullable|exists:academic_years,id',
-            'splash_screen' => 'nullable|image|max:8192',
-            'video' => ['nullable', 'file', 'mimes:mp4,webm,mov', 'max:102400', new VideoMaxResolution(1920, 1080)],
+            'splash_screen' => 'nullable|image|max:15360',
+            'video' => ['nullable', 'file', 'mimes:mp4,webm,mov', 'max:1048576', new VideoMaxResolution(1920, 1080)],
             'video_url' => 'nullable|url',
-            'project_folder' => 'nullable|file|mimes:zip,rar|max:20480',
+            'project_folder' => 'nullable|file|mimes:zip,rar,7z|max:20480',
         ]);
 
         // Validate year_of_study range if provided
@@ -592,12 +602,15 @@ class ProjectController extends Controller
 
         foreach ($this->getFileFieldsForType($projectType) as $field => $config) {
             if ($request->hasFile($field)) {
-                // Delete old file if exists
+                // Delete old file (and its UUID subdirectory if empty)
                 if (isset($currentFiles[$field])) {
-                    Storage::disk('public')->delete($currentFiles[$field]);
+                    $this->deleteProjectFile($currentFiles[$field]);
                 }
-                // Store new file
-                $newFiles[$field] = $request->file($field)->store("projects/{$projectType}/{$config['folder']}", 'public');
+                // Store new file preserving original filename
+                $newFiles[$field] = $this->storeWithOriginalName(
+                    $request->file($field),
+                    "projects/{$projectType}/{$config['folder']}"
+                );
             }
         }
 
@@ -606,6 +619,7 @@ class ProjectController extends Controller
         // Handle metadata update
         $currentMetadata = $project->metadata ?? [];
         $newMetadata = array_merge($currentMetadata, $this->extractMetadata($request));
+        $newMetadata['hidden_downloads'] = $this->parseHiddenDownloads($request, $currentMetadata['hidden_downloads'] ?? []);
 
         // Handle WebGL build upload on update
         if ($validated['type'] === 'webgl') {
@@ -657,11 +671,11 @@ class ProjectController extends Controller
     {
         // Universal file uploads for all project types
         $universalValidation = [
-            'documentation' => 'nullable|file|mimes:pdf,docx,zip,rar|max:10240', // 10MB - PDF, DOCX, ZIP, or RAR
-            'presentation' => 'nullable|file|mimes:pdf,ppt,pptx|max:15360', // 15MB
-            'source_code' => 'nullable|file|mimes:zip,rar|max:204800', // 200MB
-            'export' => 'nullable|file|mimes:zip,rar,exe,apk,ipa|max:512000', // 500MB
-            'project_folder' => 'nullable|file|mimes:zip,rar|max:20480', // 20MB
+            'documentation' => 'nullable|file|mimes:pdf,docx,zip,rar,7z|max:71680', // 70MB
+            'presentation' => 'nullable|file|mimes:pdf,ppt,pptx|max:51200', // 50MB
+            'source_code' => 'nullable|file|mimes:zip,rar,7z|max:1572864', // 1.5GB
+            'export' => 'nullable|file|mimes:zip,rar,7z,exe,apk,ipa|max:3145728', // 3GB
+            'project_folder' => 'nullable|file|mimes:zip,rar,7z|max:20480', // 20MB
             'export_type' => 'nullable|in:standalone,webgl,mobile,executable',
             'tech_stack' => 'nullable|string',
             'github_url' => 'nullable|url',
@@ -671,12 +685,14 @@ class ProjectController extends Controller
         $typeSpecific = match($type) {
             'game' => [],
             'web_app' => ['live_url' => 'nullable|url'],
-            'mobile_app' => ['platform' => 'nullable|in:android,ios,both'],
+            'mobile_app' => [
+                'platform' => 'nullable|in:android,ios,both',
+            ],
             'library' => ['package_name' => 'nullable|string', 'npm_url' => 'nullable|url'],
             'other' => ['live_url' => 'nullable|url'],
             'webgl' => [
                 'webgl_url'   => 'nullable|url',
-                'webgl_build' => 'nullable|file|mimes:zip|max:102400', // 100MB zip
+                'webgl_build' => 'nullable|file|mimes:zip|max:256000', // 250MB zip
             ],
             default => [],
         };
@@ -686,7 +702,6 @@ class ProjectController extends Controller
 
     private function getFileFieldsForType($type)
     {
-        // Universal file fields for all project types
         return [
             'documentation' => ['folder' => 'documentation'],
             'presentation' => ['folder' => 'presentations'],
@@ -694,6 +709,40 @@ class ProjectController extends Controller
             'export' => ['folder' => 'exports'],
             'project_folder' => ['folder' => 'folders'],
         ];
+    }
+
+    private function storeWithOriginalName(\Illuminate\Http\UploadedFile $file, string $basePath): string
+    {
+        $uuid = Str::uuid()->toString();
+        $safeName = $this->sanitizeFilename($file->getClientOriginalName());
+        return $file->storeAs("{$basePath}/{$uuid}", $safeName, 'public');
+    }
+
+    private function sanitizeFilename(string $name): string
+    {
+        $ext  = pathinfo($name, PATHINFO_EXTENSION);
+        $base = pathinfo($name, PATHINFO_FILENAME);
+        $base = preg_replace('/[^\w\s\-.]/', '', $base);
+        $base = trim(preg_replace('/\s+/', '_', $base));
+        if (!$base) $base = 'file';
+        return $ext ? "{$base}.{$ext}" : $base;
+    }
+
+    private function deleteProjectFile(string $path): void
+    {
+        Storage::disk('public')->delete($path);
+        // Remove UUID subdirectory if it is now empty
+        $dir = dirname($path);
+        if ($dir && $dir !== '.') {
+            try {
+                $remaining = Storage::disk('public')->files($dir);
+                if (empty($remaining)) {
+                    Storage::disk('public')->deleteDirectory($dir);
+                }
+            } catch (\Exception $e) {
+                // Non-critical — leave orphaned empty directory rather than crashing
+            }
+        }
     }
 
     /**
@@ -710,7 +759,7 @@ class ProjectController extends Controller
                               'ttf','otf','woff','woff2',
                               'atlas','xml','vert','frag'];
         $maxFiles   = 500;
-        $maxBytes   = 200 * 1024 * 1024; // 200MB uncompressed
+        $maxBytes   = 500 * 1024 * 1024; // 500MB uncompressed
 
         $za = new \ZipArchive();
         if ($za->open($zip->getRealPath()) !== true) {
@@ -885,6 +934,19 @@ HTACCESS;
             $file->isDir() ? rmdir($file->getRealPath()) : unlink($file->getRealPath());
         }
         rmdir($path);
+    }
+
+    private function parseHiddenDownloads(Request $request, array $fallback = []): array
+    {
+        if (!$request->has('hidden_downloads')) {
+            return $fallback;
+        }
+        $decoded = json_decode($request->input('hidden_downloads'), true);
+        if (!is_array($decoded)) {
+            return $fallback;
+        }
+        $allowed = ['documentation', 'presentation', 'source_code', 'export', 'project_folder', 'apk_file', 'ios_file'];
+        return array_values(array_intersect($decoded, $allowed));
     }
 
     private function extractMetadata(Request $request)

@@ -40,7 +40,7 @@ function onScroll() {
   }, 600)
 }
 
-const INACTIVITY_TIMEOUT = 5 * 60 * 1000 // 5 minutes in milliseconds
+const INACTIVITY_TIMEOUT = 20 * 60 * 1000 // 20 minutes in milliseconds
 let inactivityTimer = null
 
 const logout = () => {
